@@ -4,7 +4,6 @@ dist
 build
 coverage
 package-lock.json
-package.json
 .DS_Store
 .vscode
 .idea
