@@ -6,7 +6,7 @@ export const CheckDbConnection = async (mongoUri) => {
     do{
         try {
             const dbConnection = await mongoose.connect(mongoUri,{dbName:"cms"});
-            logger.info("mongodb Connection successful",dbConnection.connection.host);
+            logger.info(`mongodb Connection successful ${dbConnection.connection.host}`);
             isConnected = true;
         } catch (error) {
             logger.error("Error connecting to MongoDB:", error);

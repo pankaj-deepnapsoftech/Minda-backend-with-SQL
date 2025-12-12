@@ -1,12 +1,15 @@
 import winston from "winston";
 
-// Create a logger
 export const logger = winston.createLogger({
-  level: 'info', // minimum level of messages to log
-  format: winston.format.simple(), // simple text format
+  level: "info",
+  format: winston.format.combine(
+    winston.format.colorize(),       // 🔥 adds colors
+    winston.format.timestamp(),      // optional: timestamp
+    winston.format.printf(({ level, message }) => {
+      return `[${level}]=====>>> : ${message}`;
+    })
+  ),
   transports: [
-    new winston.transports.Console(), // log to console
+    new winston.transports.Console(),
   ],
 });
-
-

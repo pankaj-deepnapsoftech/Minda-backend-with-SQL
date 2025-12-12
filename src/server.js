@@ -25,7 +25,6 @@ export const Start = (app) => {
 }
 
 function middlewares(app){
-    // Initialize middlewares here
     app.use(json({limit:"20mb"}));
     app.use(urlencoded({extended:true,limit:"20mb"}));
     app.use(cors({

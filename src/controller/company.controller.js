@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { comanyUpdateService, companyCreateService, companyListService, FindCompanyByName } from "../services/company.service.js";
+import { comanyUpdateService, companyCreateService, companyDeleteService, companyListService, FindCompanyByName } from "../services/company.service.js";
 import { AsyncHandler } from "../utils/asyncHandler.js"
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 
@@ -11,7 +11,7 @@ export const createCompany = AsyncHandler(async (req, res) => {
     if (exist) {
         throw new BadRequestError("Company with this name already exists", "createCompany() method error");
     }
-    
+
     const result = await companyCreateService(data);
     return res.status(201).json({
         message: "Company created successfully",
@@ -32,20 +32,32 @@ export const listCompany = AsyncHandler(async (req, res) => {
     });
 });
 
-export const updateCompany = AsyncHandler(async (req,res) => {
-    const {id} = req.params;
+export const updateCompany = AsyncHandler(async (req, res) => {
+    const { id } = req.params;
     const data = req.body;
 
-    const result = await comanyUpdateService(id,data);
-    if(!result){
-        throw new NotFoundError("Company not found","updateCompany() methed error")
+    const result = await comanyUpdateService(id, data);
+    if (!result) {
+        throw new NotFoundError("Company not found", "updateCompany() methed error")
     }
     res.status(StatusCodes.OK).json({
-        message:"Company updated successfully",
-        data:result
+        message: "Company updated successfully",
+        data: result
     });
 });
 
+export const deleteCompany = AsyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const result = await companyDeleteService(id);
+    if (!result) {
+        throw new NotFoundError("Company not found", "deleteCompany() methed error")
+    }
+    res.status(StatusCodes.OK).json({
+        message: "Company deleted successfully",
+        data: result
+    });
+})
 
 
 
