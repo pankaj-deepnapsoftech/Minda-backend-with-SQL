@@ -6,7 +6,7 @@ const companySchema = new Schema({
     company_address:{type:String,required:true},
     gst_no:{type:String,unique:true, sparse: true},
     description:{type:String},
-});
+},{timestamps:true});
 
 export const CompanyModel = model("Company",companySchema);
 

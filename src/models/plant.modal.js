@@ -7,7 +7,7 @@ const plantsSchema = new Schema({
     plant_address:{type:String},
     company_id:{type:Schema.Types.ObjectId,ref:"Company",required:true},
     description:{type:String},
-});
+},{timestamps:true});
 
 export const PlantModel = model("Plant",plantsSchema);
 

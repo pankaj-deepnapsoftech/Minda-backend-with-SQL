@@ -7,6 +7,6 @@ const userSchema = new Schema({
     password:{type:String,required:true},
     desigination:{type:String},
     user_id:{type:String,required:true,unique:true},
-});
+},{timestamps:true});
 
 export const UserModel = model("User",userSchema);

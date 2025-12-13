@@ -63,7 +63,8 @@ function Connections() {
 function StartServer(app) {
     const server = http.createServer(app);
     server.listen(SERVER_PORT, () => {
-        logger.info(`Server started on port ${SERVER_PORT}`);
+        // eslint-disable-next-line no-undef
+        logger.info(`Server will start with process id : ${process.pid} started on port ${SERVER_PORT}`);
     })
 }
 
