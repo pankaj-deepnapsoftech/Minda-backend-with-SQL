@@ -11,8 +11,8 @@ const routes = Router();
 
 
 routes.use("/company",Authorization,companyRoutes);
-routes.use("/plant",plantRoutes);
-routes.use("/roles",roleRoutes);
+routes.use("/plant",Authorization,plantRoutes);
+routes.use("/roles",Authorization,roleRoutes);
 routes.use("/users",usersRoutes);
 
 
