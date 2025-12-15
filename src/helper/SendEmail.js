@@ -1,22 +1,32 @@
-import {fileURLToPath} from "url";
-import path from path;
+import { fileURLToPath } from "url";
+import path from "path";
+import ejs from "ejs";
 
-// -------------------------- locl import -----------------------
-import { transport } from "../config/MailTransporter.js"
+// -------------------------- local import -----------------------
+import { transport } from "../config/MailTransporter.js";
+import { logger } from "../utils/logger.js";
 
-const __dirname = 
+// recreate __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
+export const SendMail = async (templateName, templateData, ReceiverInfo) => {
+  try {
+    const templatePath = path.join(__dirname,"../templates",`${templateName}.ejs`);
 
+    // Render EJS template
+    const html = await ejs.renderFile(templatePath, templateData);
 
+    // Send mail
+    await transport.sendMail({
+      from: "noreply@email.com",
+      to: ReceiverInfo.email,
+      subject: ReceiverInfo.subject,
+      html,
+    });
 
-export const SendMail = async (templateName,templateData,ReceiverInfo) =>{
-
-
-    transport.sendMail({
-        from:"@norply.email.com",
-        to:ReceiverInfo.email,
-        subject:ReceiverInfo.subject,
-        html:html
-    })
-
-}
+    logger.log("Email sent successfully");
+  } catch (error) {
+    logger.error("SendMail error:", error);
+  }
+};

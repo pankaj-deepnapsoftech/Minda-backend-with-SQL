@@ -56,12 +56,12 @@ export const LoginUser = AsyncHandler(async (req, res) => {
         httpOnly: true,        // Cookie not accessible via document.cookie
         secure: config.NODE_ENV !== "development",          // Sent only over HTTPS
         maxAge: 30 * 24 * 60 * 60 * 1000, // Lifetime in milliseconds
-        sameSite: "none",    // "strict" | "lax" | "none"
+        sameSite: "strict",    // "strict" | "lax" | "none"
     }).cookie("RT", refreshToken, {
         httpOnly: true,        // Cookie not accessible via document.cookie
         secure: config.NODE_ENV !== "development",          // Sent only over HTTPS
         maxAge: 31 * 24 * 60 * 60 * 1000, // Lifetime in milliseconds
-        sameSite: "none",    // "strict" | "lax" | "none"
+        sameSite: "strict",    // "strict" | "lax" | "none"
     });
 
     res.status(StatusCodes.OK).json({
