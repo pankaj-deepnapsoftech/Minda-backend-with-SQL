@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 
 // ---------------------------- local imports  -------------------------
 import { AsyncHandler } from "../utils/asyncHandler.js";
-import { createUserService, FindUserByEmailOrUserId, FindUserById, UpdateUsersService } from "../services/users.service.js";
+import { createUserService, FindUserByEmailOrUserId, FindUserById, GetUsersService, SearchUsersService, UpdateUsersService } from "../services/users.service.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 import { StatusCodes } from "http-status-codes";
 import { config } from "../config.js";
@@ -33,7 +33,6 @@ export const registerUser = AsyncHandler(async (req, res) => {
         session.endSession()
     }
 });
-
 
 export const LoginUser = AsyncHandler(async (req, res) => {
     const { email, password } = req.body;
@@ -73,7 +72,6 @@ export const LoginUser = AsyncHandler(async (req, res) => {
 
 });
 
-
 export const LogoutUser = AsyncHandler(async (req, res) => {
     const user = req.currentUser;
     if (!user) {
@@ -84,7 +82,6 @@ export const LogoutUser = AsyncHandler(async (req, res) => {
         message: "Logout Successfully"
     })
 });
-
 
 export const LogedInUser = AsyncHandler(async (req, res) => {
     res.status(StatusCodes.OK).json({
@@ -140,3 +137,26 @@ export const RefreshToken = AsyncHandler(async (req, res) => {
 
     await UserModel.findByIdAndUpdate(user._id, { refresh_token: refreshToken })
 });
+
+export const GetAllemployees = AsyncHandler(async (req, res) => {
+    let { limit, page } = req.query;
+    limit = parseInt(limit) || 10;
+    page = parseInt(page) || 1;
+    const skip = (page - 1) * limit;
+    const result = await GetUsersService(skip, limit);
+    res.status(StatusCodes.OK).json({
+        data: result
+    });
+});
+
+export const SearchEmployees = AsyncHandler(async (req, res) => {
+    let { search, limit, page } = req.query;
+    limit = parseInt(limit) || 10;
+    page = parseInt(page) || 1;
+    const skip = (page - 1) * limit;
+    const result = await SearchUsersService(search, skip, limit);
+    res.status(StatusCodes.OK).json({
+        data: result
+    });
+
+})

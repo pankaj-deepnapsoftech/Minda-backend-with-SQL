@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 // ------------------------------- local imports -------------------------------
 import { AsyncHandler } from "../utils/asyncHandler.js";
-import { createRoleService, deleteRoleService, findRoleBuName, getRolesListService, searchRoleByName, updateRoleService } from "../services/role.service.js";
+import { createRoleService, deleteRoleService, findRoleBuName, getAllRoleService, getRolesListService, searchRoleByName, updateRoleService } from "../services/role.service.js";
 import { StatusCodes } from "http-status-codes";
 import { BadRequestError } from "../utils/errorHandler.js";
 
@@ -79,3 +79,10 @@ export const searchRoleData = AsyncHandler(async (req,res) => {
         data:result
     });
 });
+
+export const getAllRoleData = AsyncHandler(async (req,res) => {
+    const data = await getAllRoleService();
+    res.status(StatusCodes.OK).json({
+        data
+    })
+})

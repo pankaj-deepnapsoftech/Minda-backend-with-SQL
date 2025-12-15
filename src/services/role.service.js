@@ -32,6 +32,11 @@ export const searchRoleByName = async (name,skip,limit) => {
     return result;
 }
 
+export const getAllRoleService = async () => {
+    const result = await RoleModel.find({}).select("name").lean();
+    return result;
+}
+
 
 
 
