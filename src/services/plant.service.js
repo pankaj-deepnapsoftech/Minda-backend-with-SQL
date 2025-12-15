@@ -31,6 +31,10 @@ export const plantSearchService = async (query,skip,limit) => {
     return result;
 };
 
+export const AllPlantDataService = async (companyId) => {
+    const result = await PlantModel.find({company_id:companyId}).select("plant_name");
+    return result;
+};
 
 
 

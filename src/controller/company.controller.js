@@ -1,7 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 
 // ------------------  local imports -------------------
-import { comanyUpdateService, companyCreateService, companyDeleteService, companyListService, FindCompanyByName, GetAllSearchItems } from "../services/company.service.js";
+import { comanyUpdateService, companyCreateService, companyDeleteService, companyListService, FindCompanyByName, getAllCompanyesData, GetAllSearchItems } from "../services/company.service.js";
 import { AsyncHandler } from "../utils/asyncHandler.js"
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 
@@ -74,6 +74,12 @@ export const searchCompany = AsyncHandler(async (req,res) => {
     });
 });
 
+export const AllCompaniesData = AsyncHandler(async (req,res) => {
+    const result = await getAllCompanyesData();
+    res.status(StatusCodes.OK).json({
+        data:result
+    });
+})
 
 
 

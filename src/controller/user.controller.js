@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 
 // ---------------------------- local imports  -------------------------
 import { AsyncHandler } from "../utils/asyncHandler.js";
-import { createUserService, FindUserByEmailOrUserId } from "../services/users.service.js";
+import { createUserService, FindUserByEmailOrUserId, FindUserById, UpdateUsersService } from "../services/users.service.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 import { StatusCodes } from "http-status-codes";
 import { config } from "../config.js";
@@ -56,42 +56,87 @@ export const LoginUser = AsyncHandler(async (req, res) => {
     res.cookie("AT", accessToken, {
         httpOnly: true,        // Cookie not accessible via document.cookie
         secure: config.NODE_ENV !== "development",          // Sent only over HTTPS
-        maxAge:  30 * 24 * 60 * 60 * 1000, // Lifetime in milliseconds
+        maxAge: 30 * 24 * 60 * 60 * 1000, // Lifetime in milliseconds
         sameSite: "none",    // "strict" | "lax" | "none"
-    }).cookie("RT",refreshToken,{
+    }).cookie("RT", refreshToken, {
         httpOnly: true,        // Cookie not accessible via document.cookie
         secure: config.NODE_ENV !== "development",          // Sent only over HTTPS
-        maxAge:  31 * 24 * 60 * 60 * 1000, // Lifetime in milliseconds
+        maxAge: 31 * 24 * 60 * 60 * 1000, // Lifetime in milliseconds
         sameSite: "none",    // "strict" | "lax" | "none"
     });
 
     res.status(StatusCodes.OK).json({
-        message:"User login Successfully"
+        message: "User login Successfully"
     });
 
-    await UserModel.findByIdAndUpdate(user._id,{refresh_token:refreshToken})
+    await UserModel.findByIdAndUpdate(user._id, { refresh_token: refreshToken })
 
 });
 
 
-export const LogoutUser = AsyncHandler(async (req,res) =>{
+export const LogoutUser = AsyncHandler(async (req, res) => {
     const user = req.currentUser;
-    if(!user){
-        throw new NotFoundError("user is not authorized","LogoutUser() method error");
+    if (!user) {
+        throw new NotFoundError("user is not authorized", "LogoutUser() method error");
     };
     res.clearCookie("AT").clearCookie("RT");
     res.status(StatusCodes.OK).json({
-        message:"Logout Successfully"
+        message: "Logout Successfully"
     })
 });
 
 
-export const LogedInUser = AsyncHandler(async (req,res) => {
+export const LogedInUser = AsyncHandler(async (req, res) => {
     res.status(StatusCodes.OK).json({
-        user:req?.currentUser
+        user: req?.currentUser
     })
 });
 
-export const UpdateUser = AsyncHandler(async (req,res) =>{
+export const UpdateUser = AsyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const data = req.body;
+    const result = await UpdateUsersService(id, data);
+    if (!result) {
+        throw new NotFoundError("User not found ", "UpdateUser() method error");
+    };
 
-})
+    res.status(StatusCodes.OK).json({
+        message: "User updated successfully",
+        user: result
+    })
+});
+
+export const RefreshToken = AsyncHandler(async (req, res) => {
+    const token = req?.cookies?.AT || req?.headers?.authorization?.split(" ")[1];
+
+    if (!token) {
+        throw new NotFoundError("Token is required field", "RefreshToken() method error")
+    };
+    const payload = jwt.verify(token, config.JWT_SECRET);
+    const user = await FindUserById(payload.id);
+
+    if (!user) {
+        throw new NotFoundError("Invalid user Please try again...", "RefreshToken() method error")
+    }
+
+    const accessToken = jwt.sign({ email: user.email, id: user._id }, config.JWT_SECRET, { expiresIn: "30days" })
+    const refreshToken = jwt.sign({ email: user.email, id: user._id }, config.JWT_SECRET, { expiresIn: "31days" })
+
+    res.cookie("AT", accessToken, {
+        httpOnly: true,        // Cookie not accessible via document.cookie
+        secure: config.NODE_ENV !== "development",          // Sent only over HTTPS
+        maxAge: 30 * 24 * 60 * 60 * 1000, // Lifetime in milliseconds
+        sameSite: "none",    // "strict" | "lax" | "none"
+    }).cookie("RT", refreshToken, {
+        httpOnly: true,        // Cookie not accessible via document.cookie
+        secure: config.NODE_ENV !== "development",          // Sent only over HTTPS
+        maxAge: 31 * 24 * 60 * 60 * 1000, // Lifetime in milliseconds
+        sameSite: "none",    // "strict" | "lax" | "none"
+    });
+
+    res.status(StatusCodes.OK).json({
+        message: "user logedin Successfully"
+    });
+
+    await UserModel.findByIdAndUpdate(user._id, { refresh_token: refreshToken })
+});

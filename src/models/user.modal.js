@@ -12,7 +12,7 @@ const userSchema = new Schema({
     employee_company: { type: Schema.Types.ObjectId, ref: "Company" },
     role: { type: Schema.Types.ObjectId, ref: "Role" },
     terminate: { type: Boolean, required: true, default: false },
-    refresh_token:{type:String}
+    refresh_token: { type: String }
 }, { timestamps: true });
 
 userSchema.pre("save", async function () {
@@ -37,6 +37,26 @@ userSchema.pre("save", async function () {
         this.password = await bcrypt.hash(this.password, 10);
     }
 });
+
+userSchema.pre("findOneAndUpdate", async function () {
+    const update = this.getUpdate();
+
+    if (!update) return;
+
+    const password =
+        update.password || (update.$set && update.$set.password);
+
+    if (!password) return;
+
+    const hashed = await bcrypt.hash(password, 10);
+
+    if (update.password) {
+        update.password = hashed;
+    } else {
+        update.$set.password = hashed;
+    }
+});
+
 
 
 

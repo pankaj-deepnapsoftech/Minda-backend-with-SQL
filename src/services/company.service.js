@@ -32,6 +32,11 @@ export const GetAllSearchItems = async (search, skip, limit) => {
     return result;
 };
 
+export const getAllCompanyesData = async () => {
+    const result = await CompanyModel.find({}).select("company_name").lean();
+    return result
+}
+
 
 
 

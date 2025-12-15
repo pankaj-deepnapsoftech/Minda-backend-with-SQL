@@ -1,4 +1,5 @@
-import { plantCreateService, plantDeleteService, plantlistService, plantSearchService, plantUpdateService } from "../services/plant.service.js";
+import { StatusCodes } from "http-status-codes";
+import { AllPlantDataService, plantCreateService, plantDeleteService, plantlistService, plantSearchService, plantUpdateService } from "../services/plant.service.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
 import { NotFoundError } from "../utils/errorHandler.js";
 
@@ -61,6 +62,13 @@ export const searchPlant = AsyncHandler(async (req,res) => {
     });
 });
 
+export const AllPlantData = AsyncHandler(async (req,res) => {
+    const {id} = req.params;
+    const result = await AllPlantDataService(id);
+    res.status(StatusCodes.OK).json({
+        data:result,
+    });
+})
 
 
 
