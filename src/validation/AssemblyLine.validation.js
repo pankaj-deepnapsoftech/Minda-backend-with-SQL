@@ -28,10 +28,17 @@ export const assemblyValidationSchema = yup.object().shape({
     .matches(objectIdRegex, "Invalid user ID")
     .required("Responsibility is required"),
 
-  process_id: yup
-    .string()
-    .matches(objectIdRegex, "Invalid process ID")
-    .required("Process is required"),
+    
+process_id: yup
+    .array()
+    .of(
+      yup
+        .string()
+        .matches(objectIdRegex, "Invalid process ID")
+        .required("Process ID is required")
+    )
+    .min(1, "At least one process ID is required")
+    .required("Process IDs array is required"),
     part_number:yup.string().required("Part number is required field"),
     part_name:yup.string().required("Part name is required field")
 });
