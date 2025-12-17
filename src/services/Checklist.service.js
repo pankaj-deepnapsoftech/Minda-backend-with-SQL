@@ -22,5 +22,6 @@ export const getCheckListDataService = async (skip,limit) => {
 };
 
 export const SearchCheckListDataService = async (search,process,skip,limit) => {
-    const result = await CheckListModal.find(process ? {process,item:{$regex:search,$options:"i"}} : {item:{$regex:search,$options:"i"}}).sort({_id:-1}).skip(skip).limit(limit)
-}
+    const result = await CheckListModal.find(process ? {process,item:{$regex:search,$options:"i"}} : {item:{$regex:search,$options:"i"}}).sort({_id:-1}).skip(skip).limit(limit).lean();
+    return result;
+};

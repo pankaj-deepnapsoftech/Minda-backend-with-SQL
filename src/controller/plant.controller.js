@@ -51,11 +51,11 @@ export const deletePlant = AsyncHandler(async (req, res) => {
 });
 
 export const searchPlant = AsyncHandler(async (req,res) => {
-    let {search,page,limit} = req.query; 
+    let {company,search,page,limit} = req.query; 
     page = page ? parseInt(page) : 1;
     limit = limit ? parseInt(limit) : 10;
     const skip = (page - 1) * limit;
-    const result = await plantSearchService(search,skip,limit);
+    const result = await plantSearchService(search,company,skip,limit);
     res.status(200).json({
         message: "plant search fetched successfully",
         data: result,

@@ -13,7 +13,7 @@ export const GetUsersService = async (skip,limit) => {
 };
 
 export const GetAllUsersService = async () => {
-    const result = await UserModel.find({  is_admin: false }).select("email user_id").lean();
+    const result = await UserModel.find({  is_admin: false }).select("email user_id full_name").lean();
     return result;
 };
 

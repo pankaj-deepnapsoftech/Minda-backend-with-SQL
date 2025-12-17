@@ -26,8 +26,8 @@ export const getPlantByIdService = async (id) => {
     return result;
 };
 
-export const plantSearchService = async (query,skip,limit) => {
-    const result = await PlantModel.find({$or:[{plant_name:{$regex:query,$options:"i"}},{plant_address:{$regex:query,$options:"i"}}]}).skip(skip).limit(limit).populate("company_id").lean();
+export const plantSearchService = async (query,company,skip,limit) => {
+    const result = await PlantModel.find(company ? {company_id:company,$or:[{plant_name:{$regex:query,$options:"i"}},{plant_address:{$regex:query,$options:"i"}}]} : {$or:[{plant_name:{$regex:query,$options:"i"}},{plant_address:{$regex:query,$options:"i"}}]}).skip(skip).limit(limit).populate("company_id").lean();
     return result;
 };
 
