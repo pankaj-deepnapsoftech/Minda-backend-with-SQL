@@ -25,3 +25,8 @@ export const SearchCheckListDataService = async (search,process,skip,limit) => {
     const result = await CheckListModal.find(process ? {process,item:{$regex:search,$options:"i"}} : {item:{$regex:search,$options:"i"}}).sort({_id:-1}).skip(skip).limit(limit).lean();
     return result;
 };
+
+export const FindChecklistByName = async (name) => {
+    const result = await CheckListModal.findOne({item:name}).lean();
+    return result;
+}

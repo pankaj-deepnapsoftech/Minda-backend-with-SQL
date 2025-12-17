@@ -18,8 +18,19 @@ export const GetAllUsersService = async () => {
 };
 
 
-export const SearchUsersService = async (search,skip,limit) => {
-    const result = await UserModel.find({  is_admin: false,$or:[{email:{$regex:search,$options:'i'}},{user_id:{$regex:search,$options:'i'}}]}).skip(skip).limit(limit).populate([{path:"role"},{path:"employee_company"},{path:"employee_plant"}]).lean();
+export const SearchUsersService = async (company,plant,search="",skip,limit) => {
+    const baseQuery = {  is_admin: false,
+        $or:[{email:{$regex:search,$options:'i'}},{user_id:{$regex:search,$options:'i'}}]
+    };
+     if (company && plant) {
+    baseQuery.employee_company = company;
+    baseQuery.employee_plant = plant;
+  }
+  
+  else if (company) {
+    baseQuery.employee_company = company;
+  }
+    const result = await UserModel.find(baseQuery).skip(skip).limit(limit).populate([{path:"role"},{path:"employee_company"},{path:"employee_plant"}]).lean();
     return result;
 };
 
