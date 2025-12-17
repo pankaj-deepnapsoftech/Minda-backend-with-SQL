@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { createPartsService, DeletePartService, FindPartServiceByName, GetAllPartsService, UpdatePartService } from "../services/part.service.js";
+import { createPartsService, DeletePartService, FindPartServiceByName, GetAllPartsService, getPartsServiceData, UpdatePartService } from "../services/part.service.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 
@@ -53,6 +53,17 @@ export const GetAllParts = AsyncHandler(async (req, res) => {
     const result = await GetAllPartsService();
     res.status(StatusCodes.OK).json({
         data: result
+    })
+});
+
+export const GetAllpartsdata = AsyncHandler(async (req,res) => {
+    let {page,limit} = req.query;
+    page = parseInt(page) || 1;
+    limit = parseInt(limit) || 10;
+    const skip = (page -1) * limit;
+    const data = await getPartsServiceData(skip,limit);
+    res.status(StatusCodes.OK).json({
+        data
     })
 });
 

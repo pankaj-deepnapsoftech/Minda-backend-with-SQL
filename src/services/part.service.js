@@ -26,6 +26,32 @@ export const FindPartServiceByName =  async (data) => {
     return result;
 }
 
+export const getPartsServiceData = async (skip,limit) => {
+    const result = await PartModal.aggregate([
+        {
+            $lookup:{
+                from:"assemblies",
+                localField:"_id",
+                foreignField:"part_id",
+                as:"assemblies",
+                pipeline:[
+                    {
+                        $project:{
+                            assembly_name:1,
+                            assembly_number:1,
+                        }
+                    }
+                ]
+            }
+        },
+        {
+      $addFields: {
+        total_assemblies: { $size: "$assemblies" }
+      }
+    }
+    ]).sort({_id:-1}).skip(skip).limit(limit);
+    return result
+}
 
 
 
