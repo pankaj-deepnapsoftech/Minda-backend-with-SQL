@@ -32,4 +32,6 @@ export const assemblyValidationSchema = yup.object().shape({
     .string()
     .matches(objectIdRegex, "Invalid process ID")
     .required("Process is required"),
+    part_number:yup.string().required("Part number is required field"),
+    part_name:yup.string().required("Part name is required field")
 });

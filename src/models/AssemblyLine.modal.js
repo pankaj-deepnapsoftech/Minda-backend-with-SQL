@@ -7,7 +7,9 @@ const assemblySchema = new Schema({
     company_id:{type:Schema.Types.ObjectId,ref:"Company",required:true},
     plant_id:{type:Schema.Types.ObjectId,ref:"Plant",requred:true},
     responsibility:{type:Schema.Types.ObjectId,ref:"User",required:true},
-    process_id:{type:Schema.Types.ObjectId,ref:"Process",required:true},
+    process_id:{type:[Schema.Types.ObjectId],ref:"Process",required:true},
+    part_name:{type:String,required:true},
+    part_number:{type:String,required:true},
 },{timestamps:true});
 
 
