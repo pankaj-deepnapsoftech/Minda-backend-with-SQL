@@ -4,9 +4,9 @@ import { AsyncHandler } from "../utils/asyncHandler.js";
 
 
 export const createCheckListHistory = AsyncHandler(async (req,res) => {
-    const data = req.body;
+    const data = req.body.data;
     const result = await createChecklistHistory(data);
-    res.status(StatusCodes.OK).json({
+    res.status(StatusCodes.CREATED).json({
         message:"Data Save Successfully",
         data:result
     });
