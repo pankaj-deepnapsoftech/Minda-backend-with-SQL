@@ -10,7 +10,6 @@ const routes = Router();
 routes.route("/create-checklist-history").post(Validater(checkListHistoryRequestSchema),createCheckListHistory);
 routes.route("/update-checklist-history/:id").put(Validater(checkListHistoryItemSchema),updateCheckListHistory);
 routes.route("/get-all-data").get(GetCheckHistoryData)
-routes.route("/")
 
 
 export default routes;

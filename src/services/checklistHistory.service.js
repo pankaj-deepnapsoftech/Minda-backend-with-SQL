@@ -37,7 +37,15 @@ export const UpdateCheckListHistory = async  (id,data) => {
     return result
 };
 
-// export const GetCheckListHistory = async (isadmin,userId)  
+export const GetCheckListHistory = async (isadmin,user_id,skip,limit) => {
+    const result = await CheckListHistoryModal.find(!isadmin ? {user_id} : {}).sort({_id:-1}).skip(skip).limit(limit).populate([
+        {path:"checkList"},
+        {path:"assembly",select:"assembly_name assembly_number"},
+        {path:"process_id"},
+        {path:"user_id",select:"full_name email desigination user_id"},
+    ])
+    return result;
+}  
 
 
 
