@@ -32,6 +32,15 @@ export const findTodayChecklistHistory = async (data) => {
   );
 };
 
+export const UpdateCheckListHistory = async  (id,data) => {
+    const result = await CheckListHistoryModal.findByIdAndUpdate(id,data,{new:true});
+    return result
+};
+
+// export const GetCheckListHistory = async (isadmin,userId)  
+
+
+
 
 
 

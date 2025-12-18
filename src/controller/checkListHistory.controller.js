@@ -1,17 +1,16 @@
 import { StatusCodes } from "http-status-codes";
-import { createChecklistHistory, findTodayChecklistHistory } from "../services/checklistHistory.service.js";
+import { createChecklistHistory, findTodayChecklistHistory, UpdateCheckListHistory } from "../services/checklistHistory.service.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
-import { BadRequestError } from "../utils/errorHandler.js";
+import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 
 
 export const createCheckListHistory = AsyncHandler(async (req, res) => {
   const { data } = req.body;
+  const user_id = req.currentUser._id
 
   // 1️⃣ Validate request
   if (!Array.isArray(data) || data.length === 0) {
-    return res.status(StatusCodes.BAD_REQUEST).json({
-      message: "Data array is required",
-    });
+    throw new NotFoundError("Data array is required","createCheckListHistory() method error");
   }
 
   // 2️⃣ Find today's existing records
@@ -36,7 +35,7 @@ export const createCheckListHistory = AsyncHandler(async (req, res) => {
   }
 
   // 6️⃣ Insert only new records
-  const result = await createChecklistHistory(filteredData);
+  const result = await createChecklistHistory(filteredData.map((item)=>({...item,user_id})));
 
   // 7️⃣ Response
   res.status(StatusCodes.CREATED).json({
@@ -46,4 +45,30 @@ export const createCheckListHistory = AsyncHandler(async (req, res) => {
     data: result,
   });
 });
+
+export const updateCheckListHistory = AsyncHandler(async (req,res) => {
+    const {id} = req.params;
+    const data = req.body;
+    const result = await UpdateCheckListHistory(id,data);
+    if(!result){
+        throw new NotFoundError("Data not found please try again","updateCheckListHistory() method error");
+    };
+    res.status(StatusCodes.OK).json({
+        message:"Data updated successfully",
+        data:result
+    });
+});
+
+export const GetCheckHistoryData = AsyncHandler(async (req,res) => {
+    const user = req.currentUser;
+    let {page,limit} = req.query;
+    page = parseInt(page) || 1;
+    limit = parseInt(limit) || 10;
+    const skip  = (page -1) * limit;
+});
+
+
+
+
+
 

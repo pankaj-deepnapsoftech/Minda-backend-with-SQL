@@ -2,7 +2,7 @@ import * as yup from "yup";
 
 const objectIdRegex = /^[0-9a-fA-F]{24}$/;
 
-const checkListHistoryItemSchema = yup.object({
+export const checkListHistoryItemSchema = yup.object({
   checkList: yup
     .string()
     .matches(objectIdRegex, "Invalid checklist ID")
