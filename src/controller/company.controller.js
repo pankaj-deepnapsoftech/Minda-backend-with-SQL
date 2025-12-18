@@ -4,6 +4,7 @@ import { StatusCodes } from "http-status-codes";
 import { comanyUpdateService, companyCreateService, companyDeleteService, companyListService, FindCompanyByName, getAllCompanyesData, GetAllSearchItems } from "../services/company.service.js";
 import { AsyncHandler } from "../utils/asyncHandler.js"
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
+import { deleteManyPlantsByCompany } from "../services/plant.service.js";
 
 
 
@@ -60,6 +61,8 @@ export const deleteCompany = AsyncHandler(async (req, res) => {
         message: "Company deleted successfully",
         data: result
     });
+
+    await deleteManyPlantsByCompany(id);
 });
 
 export const searchCompany = AsyncHandler(async (req,res) => {

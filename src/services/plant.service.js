@@ -36,6 +36,11 @@ export const AllPlantDataService = async (companyId) => {
     return result;
 };
 
+export const deleteManyPlantsByCompany = async (company_id) => {
+    const result = await PlantModel.deleteMany({company_id});
+    return result;
+}
+
 
 
 
