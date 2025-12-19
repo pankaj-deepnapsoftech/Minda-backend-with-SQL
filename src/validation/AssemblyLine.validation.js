@@ -35,7 +35,7 @@ export const assemblyValidationSchema = yup.object().shape({
       yup
         .string()
         .matches(objectIdRegex, "Invalid process ID")
-        .required("Process ID is required")
+       
     )
     .min(1, "At least one process ID is required"),
 
