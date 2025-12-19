@@ -163,114 +163,126 @@ export const getAssemblyLineFormByResponsibility = async (user, id, process) => 
 };
 
 export const getAssemblyLineTodayReport = async (admin, user_id, skip, limit) => {
-    const result = await AssemblyModal.aggregate([
-        {
-            $match: admin ? {} : { responsibility: new mongoose.Types.ObjectId(user_id) }
-        },
-        { $skip: skip },
-        { $limit: limit },
-        {
-            $lookup: {
-                from: "companies",
-                localField: "company_id",
-                foreignField: "_id",
-                as: "company_id",
-                pipeline: [
-                    {
-                        $project: {
-                            company_address: 1,
-                            company_name: 1,
-                            description: 1,
+    try {
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+    
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+        const result = await AssemblyModal.aggregate([
+            {
+                $match: admin ? {} : { responsibility: new mongoose.Types.ObjectId(user_id) }
+            },
+            { $skip: skip },
+            { $limit: limit },
+            {
+                $lookup: {
+                    from: "companies",
+                    localField: "company_id",
+                    foreignField: "_id",
+                    as: "company_id",
+                    pipeline: [
+                        {
+                            $project: {
+                                company_address: 1,
+                                company_name: 1,
+                                description: 1,
+                            }
                         }
-                    }
-                ]
-            }
-        },
-        {
-            $lookup: {
-                from: "plants",
-                localField: "plant_id",
-                foreignField: "_id",
-                as: "plant_id",
-                pipeline: [
-                    {
-                        $project: {
-                            plant_name: 1,
-                            plant_address: 1,
-                            description: 1
+                    ]
+                }
+            },
+            {
+                $lookup: {
+                    from: "plants",
+                    localField: "plant_id",
+                    foreignField: "_id",
+                    as: "plant_id",
+                    pipeline: [
+                        {
+                            $project: {
+                                plant_name: 1,
+                                plant_address: 1,
+                                description: 1
+                            }
                         }
-                    }
-                ]
-            }
-        },
-        {
-            $lookup: {
-                from: "users",
-                localField: "responsibility",
-                foreignField: "_id",
-                as: "responsibility",
-                pipeline: [
-                    {
-                        $project: {
-                            full_name: 1,
-                            email: 1,
-                            user_id: 1,
-                            desigination: 1
+                    ]
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "responsibility",
+                    foreignField: "_id",
+                    as: "responsibility",
+                    pipeline: [
+                        {
+                            $project: {
+                                full_name: 1,
+                                email: 1,
+                                user_id: 1,
+                                desigination: 1
+                            }
                         }
-                    }
-                ]
-            }
-        },
-        {
-            $addFields: {
-                responsibility: { $arrayElemAt: ["$responsibility", 0] },
-                company_id: { $arrayElemAt: ["$company_id", 0] },
-                plant_id: { $arrayElemAt: ["$plant_id", 0] },
-            }
-        },
-        {
-            $lookup: {
-                from: "processes",
-                localField: "process_id",
-                foreignField: "_id",
-                as: "process_id",
-                pipeline: [
-                    {
-                        $project: {
-                            process_name: 1,
-                            process_no: 1
-                        }
-                    },
-                    {
-                        $lookup: {
-                            from: "checklisthistories",
-                            let: {
-                                processId: "$_id",
-                                responsibilityId: "$$ROOT.responsibility._id"
-                            },
-                            pipeline: [
-                                {
-                                    $match: {
-                                        $expr: {
-                                            $and: [
-                                                { $eq: ["$process_id", "$$processId"] },
-                                                { $eq: ["$assembly", "$$responsibilityId"] }
-                                            ]
+                    ]
+                }
+            },
+            {
+                $addFields: {
+                    ASSEMBLY_ID: "$_id",
+                    responsibility: { $arrayElemAt: ["$responsibility", 0] },
+                    company_id: { $arrayElemAt: ["$company_id", 0] },
+                    plant_id: { $arrayElemAt: ["$plant_id", 0] },
+                }
+            },
+            {
+                $lookup: {
+                    from: "processes",
+                    localField: "process_id",
+                    foreignField: "_id",
+                    as: "process_id",
+                    pipeline: [
+                        {
+                            $project: {
+                                process_name: 1,
+                                process_no: 1
+                            }
+                        },
+                        {
+                            $lookup: {
+                                from: "checklisthistories",
+                                let: {
+                                    processId: "$_id",
+                                    assemblyId: "$$ASSEMBLY_ID"
+                                },
+                                pipeline: [
+                                    {
+                                        $match: {
+                                            $expr: {
+                                                $and: [
+                                                    { $eq: ["$process_id", "$$processId"] },
+                                                    { $eq: ["$assembly", "$$assemblyId"] },
+                                                    { $gte: ["$createdAt", startOfDay] },
+                                                    { $lte: ["$createdAt", endOfDay] }
+                                                ]
+                                            }
                                         }
                                     }
-                                }
-                            ],
-                            as: "today",
-
+                                ],
+                                as: "today"
+                            }
                         }
-                    }
-                ]
+                    ]
+                }
             }
-        },
-
-    ]);
-    return result;
-}
+    
+    
+        ]);
+        return result;
+    } catch (error) {
+        console.log(error)
+    }
+};
 
 
 
