@@ -37,7 +37,7 @@ export const getProcessbySearch = AsyncHandler(async (req, res) => {
     limit = parseInt(limit) || 10;
     page = parseInt(page) || 1;
     const skip = (page - 1) * limit;
-    const result = await searchProcessServiceList(search, skip, limit);
+    const result = await searchProcessServiceList(search?.trim(), skip, limit);
     res.status(StatusCodes.OK).json({
         data: result
     })

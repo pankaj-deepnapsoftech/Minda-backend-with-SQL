@@ -25,7 +25,7 @@ export const getAllAssemblyService = async (skip, limit) => {
 };
 
 
-export const searchAllAssemblyService = async (search, skip, limit) => {
+export const searchAllAssemblyService = async (search="", skip, limit) => {
     const result = await AssemblyModal.find({ $or: [{ assembly_name: { $regex: search, $options: "i" } }, { assembly_number: { $regex: search, $options: "i" } }] }).sort({ _id: -1 }).skip(skip).limit(limit).populate([{ path: "company_id", select: "company_name company_address" }, { path: "plant_id", select: "plant_name plant_address" }, { path: "responsibility", select: "email full_name email user_id desigination" }, { path: "process_id", select: "process_name process_no" }]).lean();
     return result;
 };

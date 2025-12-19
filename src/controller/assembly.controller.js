@@ -35,7 +35,7 @@ export const searchAssemblyData = AsyncHandler(async (req, res) => {
     limit = parseInt(limit) || 10;
     page = parseInt(page) || 1;
     const skip = (page - 1) * limit;
-    const data = await searchAllAssemblyService(search, skip, limit);
+    const data = await searchAllAssemblyService(search?.trim(), skip, limit);
     res.status(StatusCodes.OK).json({
         data
     })
