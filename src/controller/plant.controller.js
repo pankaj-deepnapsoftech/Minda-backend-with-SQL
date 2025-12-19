@@ -57,7 +57,7 @@ export const searchPlant = AsyncHandler(async (req,res) => {
     limit = limit ? parseInt(limit) : 10;
     company = company && new mongoose.Types.ObjectId(company);
     const skip = (page - 1) * limit;
-    const result = await plantSearchService(search,company,skip,limit);
+    const result = await plantSearchService(search?.trim(),company?.trim(),skip,limit);
     res.status(200).json({
         message: "plant search fetched successfully",
         data: result,

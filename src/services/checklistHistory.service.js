@@ -6,7 +6,6 @@ export const createChecklistHistory = async (data) => {
     return result;
 };
 
-
 export const findTodayChecklistHistory = async (data) => {
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
@@ -45,7 +44,7 @@ export const GetCheckListHistory = async (isadmin,user_id,skip,limit) => {
         {path:"user_id",select:"full_name email desigination user_id"},
     ])
     return result;
-}  
+};
 
 
 

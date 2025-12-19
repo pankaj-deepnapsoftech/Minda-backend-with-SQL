@@ -9,6 +9,8 @@ const plantsSchema = new Schema({
     description:{type:String},
 },{timestamps:true});
 
+plantsSchema.index({plant_name:1,company_id:1});
+
 export const PlantModel = model("Plant",plantsSchema);
 
 

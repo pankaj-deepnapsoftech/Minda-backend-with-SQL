@@ -13,6 +13,8 @@ const checkListSchema = new Schema({
     process:{type:Schema.Types.ObjectId,ref:"Process",required:true}
 },{timestamps:true});
 
+checkListSchema.index({item:1,process:1})
+
 export const CheckListModal = model("Checklist",checkListSchema)
 
 

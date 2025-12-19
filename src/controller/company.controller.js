@@ -70,7 +70,7 @@ export const searchCompany = AsyncHandler(async (req,res) => {
     page = page ? parseInt(page) : 1;
     limit = limit ? parseInt(limit) : 10;
     const skip = (page - 1) * limit;
-    const result = await GetAllSearchItems(search,skip,limit);
+    const result = await GetAllSearchItems(search?.trim(),skip,limit);
     res.status(200).json({
         message: "plant search fetched successfully",
         data: result,

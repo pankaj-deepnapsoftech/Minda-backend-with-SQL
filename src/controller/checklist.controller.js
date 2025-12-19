@@ -65,7 +65,7 @@ export const searchCheckList = AsyncHandler(async (req, res) => {
     page = parseInt(page) || 1;
     limit = parseInt(limit) || 10;
     const skip = (page - 1) * limit;
-    const result = await SearchCheckListDataService(search, process, skip, limit);
+    const result = await SearchCheckListDataService(search?.trim(), process?.trim(), skip, limit);
     res.status(StatusCodes.OK).json({
         data: result
     });

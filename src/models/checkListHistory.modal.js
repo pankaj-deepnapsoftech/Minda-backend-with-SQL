@@ -8,7 +8,9 @@ const checkListHistorySchema = new Schema({
     assembly: { type: Schema.Types.ObjectId, ref: "Assembly", required: true },
     process_id: { type: Schema.Types.ObjectId, ref: "Process", required: true },
     user_id:{ type: Schema.Types.ObjectId, ref: "User", required: true },
-    result: { type: String, required: true }
+    result: { type: String, required: true },
+    is_error:{type:Boolean,required:true,default:false},
+    description:{type:String}
 }, { timestamps: true });
 
 checkListHistorySchema.index({
@@ -17,7 +19,7 @@ checkListHistorySchema.index({
     process_id:1,
     result:1
 });
-
+ 
 export const CheckListHistoryModal = model("CheckListHistory", checkListHistorySchema);
 
 

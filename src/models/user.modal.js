@@ -4,7 +4,7 @@ import bcrypt from "bcrypt"
 
 const userSchema = new Schema({
     full_name: { type: String },
-    email: { type: String, required: true, unique: true, index: true },
+    email: { type: String, required: true, unique: true,lowercase: true },
     password: { type: String, required: true },
     desigination: { type: String },
     user_id: { type: String, unique: true, index: true, sparse: true },
@@ -15,6 +15,8 @@ const userSchema = new Schema({
     refresh_token: { type: String },
     is_admin:{type:Boolean,required:true,default:false}
 }, { timestamps: true });
+
+userSchema.index({email:1,user_id:1,employee_plant:1,employee_company:1,role:1});
 
 userSchema.pre("save", async function () {
     if (this.isNew && this.role) {

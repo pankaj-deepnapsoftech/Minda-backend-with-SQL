@@ -6,6 +6,8 @@ const processSchema = new Schema({
     process_no:{type:String,required:true},
 },{timestamps:true});
 
+processSchema.index({process_name:1,process_no:1});
+
 export const ProcessModel = model("Process",processSchema);
 
 

@@ -8,6 +8,8 @@ const companySchema = new Schema({
     description:{type:String},
 },{timestamps:true});
 
+companySchema.index({company_name:1,company_address:1});
+
 export const CompanyModel = model("Company",companySchema);
 
 

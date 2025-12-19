@@ -25,7 +25,7 @@ export const getAllAssemblyService = async (skip, limit) => {
 };
 
 
-export const searchAllAssemblyService = async (search, skip, limit) => {
+export const searchAllAssemblyService = async (search = "", skip, limit) => {
     const result = await AssemblyModal.find({ $or: [{ assembly_name: { $regex: search, $options: "i" } }, { assembly_number: { $regex: search, $options: "i" } }] }).sort({ _id: -1 }).skip(skip).limit(limit).populate([{ path: "company_id", select: "company_name company_address" }, { path: "plant_id", select: "plant_name plant_address" }, { path: "responsibility", select: "email full_name email user_id desigination" }, { path: "process_id", select: "process_name process_no" }]).lean();
     return result;
 };
@@ -43,23 +43,23 @@ export const getAllAssemblyDataService = async () => {
 export const getAssemblyLineByResponsibility = async (responsibility) => {
     const result = await AssemblyModal.aggregate([
         {
-            $match:{
-                responsibility:new mongoose.Types.ObjectId(responsibility)
+            $match: {
+                responsibility: new mongoose.Types.ObjectId(responsibility)
             }
         },
         {
-            $lookup:{
-                from:"processes",
-                localField:"process_id",
-                foreignField:"_id",
-                as:"process_id"
+            $lookup: {
+                from: "processes",
+                localField: "process_id",
+                foreignField: "_id",
+                as: "process_id"
             }
         },
         {
-            $project:{
-                assembly_name:1,
-                assembly_number:1,
-                process_id:1
+            $project: {
+                assembly_name: 1,
+                assembly_number: 1,
+                process_id: 1
             }
         }
     ]);
@@ -99,11 +99,11 @@ export const getAssemblyLineFormByResponsibility = async (user, id, process) => 
                 foreignField: "_id",
                 localField: "company_id",
                 as: "company_id",
-                pipeline:[
+                pipeline: [
                     {
-                        $project:{
-                            company_name:1,
-                            company_address:1
+                        $project: {
+                            company_name: 1,
+                            company_address: 1
                         }
                     }
                 ]
@@ -115,11 +115,11 @@ export const getAssemblyLineFormByResponsibility = async (user, id, process) => 
                 foreignField: "_id",
                 localField: "plant_id",
                 as: "plant_id",
-                pipeline:[
+                pipeline: [
                     {
-                        $project:{
-                            plant_name:1,
-                            plant_address:1
+                        $project: {
+                            plant_name: 1,
+                            plant_address: 1
                         }
                     }
                 ]
@@ -159,6 +159,116 @@ export const getAssemblyLineFormByResponsibility = async (user, id, process) => 
             }
         }
     ])
+    return result;
+};
+
+export const getAssemblyLineTodayReport = async (admin, user_id, skip, limit) => {
+    const result = await AssemblyModal.aggregate([
+        {
+            $match: admin ? {} : { responsibility: new mongoose.Types.ObjectId(user_id) }
+        },
+        { $skip: skip },
+        { $limit: limit },
+        {
+            $lookup: {
+                from: "companies",
+                localField: "company_id",
+                foreignField: "_id",
+                as: "company_id",
+                pipeline: [
+                    {
+                        $project: {
+                            company_address: 1,
+                            company_name: 1,
+                            description: 1,
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $lookup: {
+                from: "plants",
+                localField: "plant_id",
+                foreignField: "_id",
+                as: "plant_id",
+                pipeline: [
+                    {
+                        $project: {
+                            plant_name: 1,
+                            plant_address: 1,
+                            description: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "responsibility",
+                foreignField: "_id",
+                as: "responsibility",
+                pipeline: [
+                    {
+                        $project: {
+                            full_name: 1,
+                            email: 1,
+                            user_id: 1,
+                            desigination: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $addFields: {
+                responsibility: { $arrayElemAt: ["$responsibility", 0] },
+                company_id: { $arrayElemAt: ["$company_id", 0] },
+                plant_id: { $arrayElemAt: ["$plant_id", 0] },
+            }
+        },
+        {
+            $lookup: {
+                from: "processes",
+                localField: "process_id",
+                foreignField: "_id",
+                as: "process_id",
+                pipeline: [
+                    {
+                        $project: {
+                            process_name: 1,
+                            process_no: 1
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: "checklisthistories",
+                            let: {
+                                processId: "$_id",
+                                responsibilityId: "$$ROOT.responsibility._id"
+                            },
+                            pipeline: [
+                                {
+                                    $match: {
+                                        $expr: {
+                                            $and: [
+                                                { $eq: ["$process_id", "$$processId"] },
+                                                { $eq: ["$assembly", "$$responsibilityId"] }
+                                            ]
+                                        }
+                                    }
+                                }
+                            ],
+                            as: "today",
+
+                        }
+                    }
+                ]
+            }
+        },
+
+    ]);
     return result;
 }
 

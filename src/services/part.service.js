@@ -26,8 +26,16 @@ export const FindPartServiceByName =  async (data) => {
     return result;
 }
 
-export const getPartsServiceData = async (skip,limit) => {
+export const getPartsServiceData = async (search="",skip,limit) => {
     const result = await PartModal.aggregate([
+        {
+            $match:{
+                $or:[
+                    {part_name: { $regex: search, $options: "i" }},
+                    {part_number: { $regex: search, $options: "i" }}
+                ]
+            }
+        },
         {
             $lookup:{
                 from:"assemblies",
