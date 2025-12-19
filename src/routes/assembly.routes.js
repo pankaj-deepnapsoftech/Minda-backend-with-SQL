@@ -3,7 +3,7 @@ import { Router } from "express";
 // ------------------------- local imports -------------------------------
 import { Validater } from "../middleware/validator.js";
 import { assemblyValidationSchema } from "../validation/AssemblyLine.validation.js";
-import { assemblyLineFormResponsibal, createAssembly, deleteAssemblyData, getAllAssemblyData, getAssemblyData, getAssemblyDataByResponsibal, searchAssemblyData, updateAssemblyData } from "../controller/assembly.controller.js";
+import { assemblyLineDataTodayReport, assemblyLineFormResponsibal, createAssembly, deleteAssemblyData, getAllAssemblyData, getAssemblyData, getAssemblyDataByResponsibal, searchAssemblyData, updateAssemblyData } from "../controller/assembly.controller.js";
 
 
 const routes = Router();
@@ -16,7 +16,8 @@ routes.route("/delete-assembly/:id").delete(deleteAssemblyData);
 routes.route("/update-assembly/:id").put(updateAssemblyData);
 routes.route("/get-assembly-data").get(getAllAssemblyData);
 routes.route("/get-assembly-responsibal").get(getAssemblyDataByResponsibal);
-routes.route("/checklist-form").post(assemblyLineFormResponsibal)
+routes.route("/checklist-form").post(assemblyLineFormResponsibal);
+routes.route("/assembly-report-today").get(assemblyLineDataTodayReport);
 
 
 export default routes;
