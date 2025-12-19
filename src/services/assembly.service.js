@@ -36,60 +36,60 @@ export const searchAllAssemblyService = async (
     limit = 10
 ) => {
 
-      const filterData = {
-          $or: [
-              { assembly_name: { $regex: search, $options: "i" } },
-              { assembly_number: { $regex: search, $options: "i" } }
-          ]
-      };
-  
-      if (company_id) {
-          filterData.company_id = company_id;
-      }
-  
-      if (plant_id) {
-          filterData.plant_id = plant_id;
-      }
-  
-      if (responsibility) {
-          filterData.responsibility = responsibility;
-      }
-  
-      if (process_id) {
-          filterData.process_id = process_id;
-      }
-  
-      if (part_id) {
-          filterData.part_id = part_id;
-      }
-  
-      const result = await AssemblyModal
-          .find(filterData)
-          .sort({ _id: -1 })
-          .skip(Number(skip))
-          .limit(Number(limit))
-          .populate([
-              {
-                  path: "company_id",
-                  select: "company_name company_address"
-              },
-              {
-                  path: "plant_id",
-                  select: "plant_name plant_address"
-              },
-              {
-                  path: "responsibility",
-                  select: "full_name email user_id desigination"
-              },
-              {
-                  path: "process_id",
-                  select: "process_name process_no"
-              }
-          ])
-          .lean();
-  
-      return result;
-  
+    const filterData = {
+        $or: [
+            { assembly_name: { $regex: search, $options: "i" } },
+            { assembly_number: { $regex: search, $options: "i" } }
+        ]
+    };
+
+    if (company_id) {
+        filterData.company_id = company_id;
+    }
+
+    if (plant_id) {
+        filterData.plant_id = plant_id;
+    }
+
+    if (responsibility) {
+        filterData.responsibility = responsibility;
+    }
+
+    if (process_id) {
+        filterData.process_id = process_id;
+    }
+
+    if (part_id) {
+        filterData.part_id = part_id;
+    }
+
+    const result = await AssemblyModal
+        .find(filterData)
+        .sort({ _id: -1 })
+        .skip(Number(skip))
+        .limit(Number(limit))
+        .populate([
+            {
+                path: "company_id",
+                select: "company_name company_address"
+            },
+            {
+                path: "plant_id",
+                select: "plant_name plant_address"
+            },
+            {
+                path: "responsibility",
+                select: "full_name email user_id desigination"
+            },
+            {
+                path: "process_id",
+                select: "process_name process_no"
+            }
+        ])
+        .lean();
+
+    return result;
+
 };
 
 
@@ -302,6 +302,9 @@ export const getAssemblyLineTodayReport = async (admin, user_id, skip, limit) =>
                 localField: "process_id",
                 foreignField: "_id",
                 as: "process_id",
+                let: {
+                    assemblyId: "$_id"   // 👈 ROOT assembly _id
+                },
                 pipeline: [
                     {
                         $project: {
@@ -312,16 +315,35 @@ export const getAssemblyLineTodayReport = async (admin, user_id, skip, limit) =>
                     {
                         $lookup: {
                             from: "checklisthistories",
-                            let: { processId: "$_id" },
+                            let: { processId: "$_id", assemblyId: "$$assemblyId" },
                             pipeline: [
                                 {
                                     $match: {
                                         $expr: {
-                                            $eq: ["$process_id", "$$processId"],
+                                            $and: [
+                                                { $eq: ["$process_id", "$$processId"] },
+                                                { $eq: ["$assembly", "$$assemblyId"] }
+                                            ]
 
                                         },
                                         // assembly:"$$ROOT._id",
                                         createdAt: { $gte: startOfDay, $lte: endOfDay },
+                                    }
+                                },
+                                {
+                                    $lookup: {
+                                        from: "checklists",
+                                        localField: "checkList",
+                                        foreignField: "_id",
+                                        as: "checkList",
+                                    }
+                                },
+                                {
+                                    $project: {
+                                        checkList: 1,
+                                        result: 1,
+                                        is_error: 1,
+                                        description: 1
                                     }
                                 }
                             ],
