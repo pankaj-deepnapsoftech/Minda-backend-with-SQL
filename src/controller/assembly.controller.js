@@ -31,11 +31,11 @@ export const getAssemblyData = AsyncHandler(async (req, res) => {
 });
 
 export const searchAssemblyData = AsyncHandler(async (req, res) => {
-    let { search, limit, page } = req.query;
+    let { part,process,user,plant,company,search, limit, page } = req.query;
     limit = parseInt(limit) || 10;
     page = parseInt(page) || 1;
     const skip = (page - 1) * limit;
-    const data = await searchAllAssemblyService(search?.trim(), skip, limit);
+    const data = await searchAllAssemblyService(search?.trim(),part,process,user,plant,company, skip, limit);
     res.status(StatusCodes.OK).json({
         data
     })

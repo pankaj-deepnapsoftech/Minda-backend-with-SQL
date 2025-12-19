@@ -25,10 +25,73 @@ export const getAllAssemblyService = async (skip, limit) => {
 };
 
 
-export const searchAllAssemblyService = async (search = "", skip, limit) => {
-    const result = await AssemblyModal.find({ $or: [{ assembly_name: { $regex: search, $options: "i" } }, { assembly_number: { $regex: search, $options: "i" } }] }).sort({ _id: -1 }).skip(skip).limit(limit).populate([{ path: "company_id", select: "company_name company_address" }, { path: "plant_id", select: "plant_name plant_address" }, { path: "responsibility", select: "email full_name email user_id desigination" }, { path: "process_id", select: "process_name process_no" }]).lean();
-    return result;
+export const searchAllAssemblyService = async (
+    search = "",
+    part_id,
+    process_id,
+    responsibility,
+    plant_id,
+    company_id,
+    skip = 0,
+    limit = 10
+) => {
+
+      const filterData = {
+          $or: [
+              { assembly_name: { $regex: search, $options: "i" } },
+              { assembly_number: { $regex: search, $options: "i" } }
+          ]
+      };
+  
+      if (company_id) {
+          filterData.company_id = company_id;
+      }
+  
+      if (plant_id) {
+          filterData.plant_id = plant_id;
+      }
+  
+      if (responsibility) {
+          filterData.responsibility = responsibility;
+      }
+  
+      if (process_id) {
+          filterData.process_id = process_id;
+      }
+  
+      if (part_id) {
+          filterData.part_id = part_id;
+      }
+  
+      const result = await AssemblyModal
+          .find(filterData)
+          .sort({ _id: -1 })
+          .skip(Number(skip))
+          .limit(Number(limit))
+          .populate([
+              {
+                  path: "company_id",
+                  select: "company_name company_address"
+              },
+              {
+                  path: "plant_id",
+                  select: "plant_name plant_address"
+              },
+              {
+                  path: "responsibility",
+                  select: "full_name email user_id desigination"
+              },
+              {
+                  path: "process_id",
+                  select: "process_name process_no"
+              }
+          ])
+          .lean();
+  
+      return result;
+  
 };
+
 
 export const findAssemblyByName = async (name, number) => {
     const result = await AssemblyModal.findOne({ assembly_name: name, assembly_number: number });
@@ -255,7 +318,7 @@ export const getAssemblyLineTodayReport = async (admin, user_id, skip, limit) =>
                                     $match: {
                                         $expr: {
                                             $eq: ["$process_id", "$$processId"],
-                                           
+
                                         },
                                         // assembly:"$$ROOT._id",
                                         createdAt: { $gte: startOfDay, $lte: endOfDay },
