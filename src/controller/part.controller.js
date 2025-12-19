@@ -61,7 +61,7 @@ export const GetAllpartsdata = AsyncHandler(async (req,res) => {
     page = parseInt(page) || 1;
     limit = parseInt(limit) || 10;
     const skip = (page -1) * limit;
-    const data = await getPartsServiceData(search.trim(),skip,limit);
+    const data = await getPartsServiceData(search?.trim(),skip,limit);
     res.status(StatusCodes.OK).json({
         data
     })
