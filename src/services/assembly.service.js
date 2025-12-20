@@ -19,7 +19,13 @@ export const deleteAssemblyService = async (id) => {
 };
 
 export const getAllAssemblyService = async (skip, limit) => {
-    const result = await AssemblyModal.find({}).sort({ _id: -1 }).skip(skip).limit(limit).populate([{ path: "company_id", select: "company_name company_address" }, { path: "plant_id", select: "plant_name plant_address" }, { path: "responsibility", select: "email full_name email user_id desigination" }, { path: "process_id", select: "process_name process_no" }]).lean();
+    const result = await AssemblyModal.find({}).sort({ _id: -1 }).skip(skip).limit(limit).populate([
+        { path: "company_id", select: "company_name company_address" },
+         { path: "plant_id", select: "plant_name plant_address" }, 
+         { path: "responsibility", select: "email full_name email user_id desigination" }, 
+         { path: "process_id", select: "process_name process_no" },
+         { path: "part_id", select: "part_number part_name" }
+        ]).lean();
     return result;
 };
 
@@ -82,7 +88,8 @@ export const searchAllAssemblyService = async (
             {
                 path: "process_id",
                 select: "process_name process_no"
-            }
+            },
+            { path: "part_id", select: "part_number part_name" }
         ])
         .lean();
 
