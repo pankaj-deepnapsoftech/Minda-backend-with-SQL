@@ -436,6 +436,15 @@ export const GetAssemblyLineDataReport = async (admin, user_id) => {
                                     }
                                 }
                             },
+                            total_resolved: {
+                                $size: {
+                                    $filter: {
+                                        input: "$today",
+                                        as: "t",
+                                        cond: { $eq: ["$$t.status", "Resolved"] }
+                                    }
+                                }
+                            },
                             total_errors: {
                                 $size: {
                                     $filter: {
@@ -462,6 +471,9 @@ export const GetAssemblyLineDataReport = async (admin, user_id) => {
                 },
                 assembly_errors: {
                     $sum: "$process_id.total_errors"
+                },
+                total_resolved:{
+                    $sum:"$process_id.total_resolved"
                 }
             }
         },
@@ -477,7 +489,8 @@ export const GetAssemblyLineDataReport = async (admin, user_id) => {
                             total_assemblies: { $sum: 1 },
                             total_checked: { $sum: "$assembly_checked" },
                             total_unchecked: { $sum: "$assembly_unchecked" },
-                            total_errors: { $sum: "$assembly_errors" }
+                            total_errors: { $sum: "$assembly_errors" },
+                            total_resolved: { $sum: "$total_resolved" }
                         }
                     }
                 ]
