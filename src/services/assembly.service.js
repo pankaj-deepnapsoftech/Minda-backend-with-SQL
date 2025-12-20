@@ -18,14 +18,14 @@ export const deleteAssemblyService = async (id) => {
     return result;
 };
 
-export const getAllAssemblyService = async (IsAdmin,userId,skip, limit) => {
-    const result = await AssemblyModal.find(IsAdmin ? {} : {responsibility:userId}).sort({ _id: -1 }).skip(skip).limit(limit).populate([
+export const getAllAssemblyService = async (IsAdmin, userId, skip, limit) => {
+    const result = await AssemblyModal.find(IsAdmin ? {} : { responsibility: userId }).sort({ _id: -1 }).skip(skip).limit(limit).populate([
         { path: "company_id", select: "company_name company_address" },
-         { path: "plant_id", select: "plant_name plant_address" }, 
-         { path: "responsibility", select: "email full_name email user_id desigination" }, 
-         { path: "process_id", select: "process_name process_no" },
-         { path: "part_id", select: "part_number part_name" }
-        ]).lean();
+        { path: "plant_id", select: "plant_name plant_address" },
+        { path: "responsibility", select: "email full_name email user_id desigination" },
+        { path: "process_id", select: "process_name process_no" },
+        { path: "part_id", select: "part_number part_name" }
+    ]).lean();
     return result;
 };
 
@@ -70,7 +70,7 @@ export const searchAllAssemblyService = async (
     }
 
     const result = await AssemblyModal
-        .find(IsAdmin ? {...filterData} : {...filterData,responsibility:userId})
+        .find(IsAdmin ? { ...filterData } : { ...filterData, responsibility: userId })
         .sort({ _id: -1 })
         .skip(Number(skip))
         .limit(Number(limit))
@@ -135,7 +135,7 @@ export const getAssemblyLineByResponsibility = async (responsibility) => {
     return result;
 };
 
-export const getAssemblyLineFormByResponsibility = async (user, id, process) => {
+export const getAssemblyLineFormByResponsibility = async (user, id) => {
 
     const result = await AssemblyModal.aggregate([
         {
@@ -201,8 +201,11 @@ export const getAssemblyLineFormByResponsibility = async (user, id, process) => 
                 as: "process_id",
                 pipeline: [
                     {
-                        $match: {
-                            _id: new mongoose.Types.ObjectId(process)
+                        $lookup: {
+                            from: "checklists",
+                            localField: "_id",
+                            foreignField: "process",
+                            as: "checklist_item"
                         }
                     }
                 ]
@@ -212,20 +215,12 @@ export const getAssemblyLineFormByResponsibility = async (user, id, process) => 
 
         {
             $addFields: {
-                process_id: { $arrayElemAt: ["$process_id", 0] },
                 responsibility: { $arrayElemAt: ["$responsibility", 0] },
                 company_id: { $arrayElemAt: ["$company_id", 0] },
                 plant_id: { $arrayElemAt: ["$plant_id", 0] },
             }
         },
-        {
-            $lookup: {
-                from: "checklists",
-                localField: "process_id._id",
-                foreignField: "process",
-                as: "checklist_item"
-            }
-        }
+
     ])
     return result;
 };
@@ -343,8 +338,8 @@ export const GetAssemblyLineDataReport = async (admin, user_id) => {
                 assembly_errors: {
                     $sum: "$process_id.total_errors"
                 },
-                total_resolved:{
-                    $sum:"$process_id.total_resolved"
+                total_resolved: {
+                    $sum: "$process_id.total_resolved"
                 }
             }
         },
