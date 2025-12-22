@@ -371,18 +371,32 @@ export const GetAssemblyLineDataReport = async (admin, user_id) => {
 };
 
 
-export const getAssemblyLineTodayReport = async (admin, user_id, skip, limit) => {
-    const startOfDay = new Date();
+export const getAssemblyLineTodayReport = async (
+  admin,
+  user_id,
+  skip,
+  limit,
+  startdate,
+  endDate
+) => {
+
+    // ✅ If dates not provided, use today's date
+    const today = new Date();
+
+    const startOfDay = startdate ? new Date(startdate) : new Date(today);
     startOfDay.setHours(0, 0, 0, 0);
 
-    const endOfDay = new Date();
+    const endOfDay = endDate ? new Date(endDate) : new Date(today);
     endOfDay.setHours(23, 59, 59, 999);
+
     const result = await AssemblyModal.aggregate([
         {
             $match: admin ? {} : { responsibility: new mongoose.Types.ObjectId(user_id) }
         },
         { $skip: skip },
         { $limit: limit },
+
+        // ---------- Company ----------
         {
             $lookup: {
                 from: "companies",
@@ -400,6 +414,8 @@ export const getAssemblyLineTodayReport = async (admin, user_id, skip, limit) =>
                 ]
             }
         },
+
+        // ---------- Plant ----------
         {
             $lookup: {
                 from: "plants",
@@ -417,6 +433,8 @@ export const getAssemblyLineTodayReport = async (admin, user_id, skip, limit) =>
                 ]
             }
         },
+
+        // ---------- User ----------
         {
             $lookup: {
                 from: "users",
@@ -435,6 +453,7 @@ export const getAssemblyLineTodayReport = async (admin, user_id, skip, limit) =>
                 ]
             }
         },
+
         {
             $addFields: {
                 responsibility: { $arrayElemAt: ["$responsibility", 0] },
@@ -442,15 +461,15 @@ export const getAssemblyLineTodayReport = async (admin, user_id, skip, limit) =>
                 plant_id: { $arrayElemAt: ["$plant_id", 0] },
             }
         },
+
+        // ---------- Process + Today Checklist ----------
         {
             $lookup: {
                 from: "processes",
                 localField: "process_id",
                 foreignField: "_id",
                 as: "process_id",
-                let: {
-                    assemblyId: "$_id"   // 👈 ROOT assembly _id
-                },
+                let: { assemblyId: "$_id" },
                 pipeline: [
                     {
                         $project: {
@@ -461,7 +480,10 @@ export const getAssemblyLineTodayReport = async (admin, user_id, skip, limit) =>
                     {
                         $lookup: {
                             from: "checklisthistories",
-                            let: { processId: "$_id", assemblyId: "$$assemblyId" },
+                            let: {
+                                processId: "$_id",
+                                assemblyId: "$$assemblyId"
+                            },
                             pipeline: [
                                 {
                                     $match: {
@@ -470,10 +492,11 @@ export const getAssemblyLineTodayReport = async (admin, user_id, skip, limit) =>
                                                 { $eq: ["$process_id", "$$processId"] },
                                                 { $eq: ["$assembly", "$$assemblyId"] }
                                             ]
-
                                         },
-                                        // assembly:"$$ROOT._id",
-                                        createdAt: { $gte: startOfDay, $lte: endOfDay },
+                                        createdAt: {
+                                            $gte: startOfDay,
+                                            $lte: endOfDay
+                                        }
                                     }
                                 },
                                 {
@@ -481,7 +504,7 @@ export const getAssemblyLineTodayReport = async (admin, user_id, skip, limit) =>
                                         from: "checklists",
                                         localField: "checkList",
                                         foreignField: "_id",
-                                        as: "checkList",
+                                        as: "checkList"
                                     }
                                 },
                                 {
@@ -493,16 +516,17 @@ export const getAssemblyLineTodayReport = async (admin, user_id, skip, limit) =>
                                     }
                                 }
                             ],
-                            as: "today"
+                            as: "check_items"
                         }
                     }
                 ]
             }
-        },
-
+        }
     ]);
+
     return result[0];
 };
+
 
 
 

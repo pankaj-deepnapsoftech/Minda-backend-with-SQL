@@ -106,13 +106,13 @@ export const assemblyLineCardsData = AsyncHandler(async (req,res) => {
 
 
 export const assemblyLineDataTodayReport = AsyncHandler(async (req,res) => {
-    let {page,limit} = req.query;
+    let {page,limit,startdate,endDate} = req.query;
     const user = req.currentUser;
     page = parseInt(page) || 1;
     limit = parseInt(limit) || 10;
     const skip = (page - 1) * limit;
 
-    const result = await getAssemblyLineTodayReport(user?.is_admin,user._id,skip,limit);
+    const result = await getAssemblyLineTodayReport(user?.is_admin,user._id,skip,limit,startdate,endDate);
     res.status(StatusCodes.OK).json({
         data:result
     })

@@ -18,7 +18,7 @@ routes.route("/get-assembly-data").get(getAllAssemblyData);
 routes.route("/get-assembly-responsibal").get(getAssemblyDataByResponsibal);
 routes.route("/checklist-form").post(assemblyLineFormResponsibal);
 routes.route("/assembly-cards-data").get(assemblyLineCardsData);
-routes.route("/assembly-checked-data").get(assemblyLineDataTodayReport)
+routes.route("/assembly-checked-data").get(assemblyLineDataTodayReport);
 
 
 export default routes;
