@@ -4,6 +4,8 @@ import {Schema,model} from "mongoose";
 const partSchema = new Schema({
     part_name:{type:String,required:true},
     part_number:{type:String,required:true},
+    description:{type:String},
+    material_code:{type:String}
 });
 
 partSchema.index({part_name:1,part_number:1})

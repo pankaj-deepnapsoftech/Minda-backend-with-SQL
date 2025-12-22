@@ -7,6 +7,7 @@ const plantsSchema = new Schema({
     plant_address:{type:String},
     company_id:{type:Schema.Types.ObjectId,ref:"Company",required:true},
     description:{type:String},
+    plant_code:{type:String}
 },{timestamps:true});
 
 plantsSchema.index({plant_name:1,company_id:1});
