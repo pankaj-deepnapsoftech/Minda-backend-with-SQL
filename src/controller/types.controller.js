@@ -54,6 +54,8 @@ export const UpdateTypes = AsyncHandler(async (req, res) => {
     const { id } = req.params;
     const data = req.body;
 
+
+
     const result = await updatetypesService(id, data);
     if (!result) {
         throw new BadRequestError("data not found", "UpdateTypes() method error");
@@ -69,6 +71,33 @@ export const UpdateTypes = AsyncHandler(async (req, res) => {
 
 export const DeleteTypes = AsyncHandler(async (req, res) => {
     const { id } = req.params;
+    const data = req.body;
+
+    if (data.uom) {
+        const result = await updatetypesService(id, { uom: data.uom });
+        return res.status(StatusCodes.OK).json({
+            message: "Type deleted Successfully",
+            data: result
+        });
+    };
+
+    if (data.checking_time) {
+        const result = await updatetypesService(id, { checking_time: data.checking_time });
+        res.status(StatusCodes.OK).json({
+            message: "Type deleted Successfully",
+            data: result
+        });
+
+    };
+
+    if (data.checking_method) {
+        const result = await updatetypesService(id, { uom: data.checking_method });
+        res.status(StatusCodes.OK).json({
+            message: "Type deleted Successfully",
+            data: result
+        });
+    };
+
     const result = await deleteTypesService(id);
     if (!result) {
         throw new BadRequestError("data not found", "DeleteTypes() method error");
@@ -83,10 +112,10 @@ export const DeleteTypes = AsyncHandler(async (req, res) => {
 
 
 
-export const GetTypesData = AsyncHandler(async (req,res) => {
+export const GetTypesData = AsyncHandler(async (req, res) => {
     const result = await getTypesService();
     res.status(StatusCodes.OK).json({
-        data:result
+        data: result
     })
 });
 
