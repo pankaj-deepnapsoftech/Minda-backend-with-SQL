@@ -2,8 +2,8 @@ import { CheckListHistoryModal } from "../models/checkListHistory.modal.js"
 
 
 export const createChecklistHistory = async (data) => {
-    const result = await CheckListHistoryModal.insertMany(data);
-    return result;
+  const result = await CheckListHistoryModal.insertMany(data);
+  return result;
 };
 
 export const findTodayChecklistHistory = async (data) => {
@@ -31,11 +31,43 @@ export const findTodayChecklistHistory = async (data) => {
   );
 };
 
-export const UpdateCheckListHistory = async  (id,data) => {
-    const result = await CheckListHistoryModal.findByIdAndUpdate(id,data,{new:true});
-    return result
+export const UpdateCheckListHistory = async (id, data) => {
+  const result = await CheckListHistoryModal.findByIdAndUpdate(id, data, { new: true });
+  return result
 };
 
+
+export const GetAllErrorsHistory = async (admin, user) => {
+  const today = new Date();
+
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const endOfDay = new Date();
+  endOfDay.setHours(23, 59, 59, 999);
+  const result = await CheckListHistoryModal.find(admin ? {
+    is_error: true, createdAt: {
+      $gte: startOfDay,
+      $lte: endOfDay
+    }
+  } : {
+    user_id: user, is_error: true, createdAt: {
+      $gte: startOfDay,
+      $lte: endOfDay
+    }
+  }).populate([
+    {
+      path: "checkList"
+    },
+    {
+      path: "assembly",
+    },
+    {
+      path: "process_id",
+    },
+  ])
+  return result;
+}
 
 
 

@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { createChecklistHistory, findTodayChecklistHistory,  UpdateCheckListHistory } from "../services/checklistHistory.service.js";
+import { createChecklistHistory, findTodayChecklistHistory,  GetAllErrorsHistory,  UpdateCheckListHistory } from "../services/checklistHistory.service.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 
@@ -59,6 +59,14 @@ export const updateCheckListHistory = AsyncHandler(async (req,res) => {
     });
 });
 
+
+export const getAllErrorData = AsyncHandler(async (req,res) => {
+  const user = req.currentUser;
+  const result = await GetAllErrorsHistory(user.is_admin,user._id);
+  res.status(StatusCodes.OK).json({
+    data:result
+  })
+});
 
 
 

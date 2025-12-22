@@ -111,7 +111,6 @@ export const DeleteTypes = AsyncHandler(async (req, res) => {
 });
 
 
-
 export const GetTypesData = AsyncHandler(async (req, res) => {
     const result = await getTypesService();
     res.status(StatusCodes.OK).json({
