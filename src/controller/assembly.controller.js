@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { createAssemblyService, deleteAssemblyService, findAssemblyByName, getAllAssemblyDataService, getAllAssemblyService, getAssemblyLineByResponsibility, GetAssemblyLineDataReport, getAssemblyLineFormByResponsibility,  searchAllAssemblyService, updateAssemblyService } from "../services/assembly.service.js";
+import { createAssemblyService, deleteAssemblyService, findAssemblyByName, getAllAssemblyDataService, getAllAssemblyService, getAssemblyLineByResponsibility, GetAssemblyLineDataReport, getAssemblyLineFormByResponsibility,  getAssemblyLineTodayReport,  searchAllAssemblyService, updateAssemblyService } from "../services/assembly.service.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 
@@ -102,4 +102,18 @@ export const assemblyLineCardsData = AsyncHandler(async (req,res) => {
      res.status(StatusCodes.OK).json({
         data:result
      });
+});
+
+
+export const assemblyLineDataTodayReport = AsyncHandler(async (req,res) => {
+    let {page,limit} = req.query;
+    const user = req.currentUser;
+    page = parseInt(page) || 1;
+    limit = parseInt(limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const result = await getAssemblyLineTodayReport(user?.is_admin,user._id,skip,limit);
+    res.status(StatusCodes.OK).json({
+        data:result
+    })
 });

@@ -225,8 +225,6 @@ export const getAssemblyLineFormByResponsibility = async (user, id) => {
     return result;
 };
 
-
-
 export const GetAssemblyLineDataReport = async (admin, user_id) => {
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
@@ -372,6 +370,139 @@ export const GetAssemblyLineDataReport = async (admin, user_id) => {
     return result[0].summary;
 };
 
+
+export const getAssemblyLineTodayReport = async (admin, user_id, skip, limit) => {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+    const result = await AssemblyModal.aggregate([
+        {
+            $match: admin ? {} : { responsibility: new mongoose.Types.ObjectId(user_id) }
+        },
+        { $skip: skip },
+        { $limit: limit },
+        {
+            $lookup: {
+                from: "companies",
+                localField: "company_id",
+                foreignField: "_id",
+                as: "company_id",
+                pipeline: [
+                    {
+                        $project: {
+                            company_address: 1,
+                            company_name: 1,
+                            description: 1,
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $lookup: {
+                from: "plants",
+                localField: "plant_id",
+                foreignField: "_id",
+                as: "plant_id",
+                pipeline: [
+                    {
+                        $project: {
+                            plant_name: 1,
+                            plant_address: 1,
+                            description: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "responsibility",
+                foreignField: "_id",
+                as: "responsibility",
+                pipeline: [
+                    {
+                        $project: {
+                            full_name: 1,
+                            email: 1,
+                            user_id: 1,
+                            desigination: 1
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $addFields: {
+                responsibility: { $arrayElemAt: ["$responsibility", 0] },
+                company_id: { $arrayElemAt: ["$company_id", 0] },
+                plant_id: { $arrayElemAt: ["$plant_id", 0] },
+            }
+        },
+        {
+            $lookup: {
+                from: "processes",
+                localField: "process_id",
+                foreignField: "_id",
+                as: "process_id",
+                let: {
+                    assemblyId: "$_id"   // 👈 ROOT assembly _id
+                },
+                pipeline: [
+                    {
+                        $project: {
+                            process_name: 1,
+                            process_no: 1
+                        }
+                    },
+                    {
+                        $lookup: {
+                            from: "checklisthistories",
+                            let: { processId: "$_id", assemblyId: "$$assemblyId" },
+                            pipeline: [
+                                {
+                                    $match: {
+                                        $expr: {
+                                            $and: [
+                                                { $eq: ["$process_id", "$$processId"] },
+                                                { $eq: ["$assembly", "$$assemblyId"] }
+                                            ]
+
+                                        },
+                                        // assembly:"$$ROOT._id",
+                                        createdAt: { $gte: startOfDay, $lte: endOfDay },
+                                    }
+                                },
+                                {
+                                    $lookup: {
+                                        from: "checklists",
+                                        localField: "checkList",
+                                        foreignField: "_id",
+                                        as: "checkList",
+                                    }
+                                },
+                                {
+                                    $project: {
+                                        checkList: 1,
+                                        result: 1,
+                                        is_error: 1,
+                                        description: 1
+                                    }
+                                }
+                            ],
+                            as: "today"
+                        }
+                    }
+                ]
+            }
+        },
+
+    ]);
+    return result[0];
+};
 
 
 
