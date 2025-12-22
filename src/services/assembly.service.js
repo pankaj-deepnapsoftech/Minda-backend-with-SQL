@@ -512,7 +512,8 @@ export const getAssemblyLineTodayReport = async (
                                         checkList: 1,
                                         result: 1,
                                         is_error: 1,
-                                        description: 1
+                                        description: 1,
+                                        status:1
                                     }
                                 }
                             ],
