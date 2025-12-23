@@ -36,9 +36,7 @@ export const UpdateCheckListHistory = async (id, data) => {
   return result
 };
 
-
 export const GetAllErrorsHistory = async (admin, user) => {
-  const today = new Date();
 
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
