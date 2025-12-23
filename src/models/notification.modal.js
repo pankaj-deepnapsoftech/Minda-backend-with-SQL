@@ -9,6 +9,7 @@ const notificationSchema = new Schema({
     status: { type: String, required: true, default: "send", enum: ["send", 'recived', 'view'] },
     assembly: { type: Schema.Types.ObjectId, ref: "Assembly", required: true },
     process_id: { type: Schema.Types.ObjectId, ref: "Process", required: true },
+    checkList: { type: Schema.Types.ObjectId, ref: "Checklist", required: true },
 });
 
 export const NotificationModal = model("Notification", notificationSchema);
