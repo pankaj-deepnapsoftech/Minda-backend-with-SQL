@@ -17,7 +17,6 @@ export const GetAllUsersService = async () => {
     return result;
 };
 
-
 export const SearchUsersService = async (company,plant,search="",skip,limit) => {
     const baseQuery = {  is_admin: false,
         $or:[{email:{$regex:search,$options:'i'}},{user_id:{$regex:search,$options:'i'}}]
@@ -55,9 +54,14 @@ export const FindUserById = async (id) => {
     return result;
 };
 
-
 export const FindUserByEmail = async (email) => {
     const result = await UserModel.findOne({email}).lean();
+    return result;
+};
+
+
+export const GetAdmin = async () => {
+    const result = await UserModel.findOne({is_admin:true});
     return result;
 }
 

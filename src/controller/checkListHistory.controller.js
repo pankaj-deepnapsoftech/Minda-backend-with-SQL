@@ -2,6 +2,8 @@ import { StatusCodes } from "http-status-codes";
 import { createChecklistHistory, findTodayChecklistHistory,  GetAllErrorsHistory,  UpdateCheckListHistory } from "../services/checklistHistory.service.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
+import { CreateNotification } from "../services/notification.service.js";
+import { GetAdmin } from "../services/users.service.js";
 
 
 export const createCheckListHistory = AsyncHandler(async (req, res) => {
@@ -44,6 +46,15 @@ export const createCheckListHistory = AsyncHandler(async (req, res) => {
     skippedCount: data.length - result.length,
     data: result,
   });
+
+  const lastData = result.filter((item) => item?.is_error);
+
+  const admin = await GetAdmin();
+
+  await Promise.all(lastData.map(async(item)=>{
+    await CreateNotification({title:"assembly have an error ",description:item.description,senderId:req.currentUser?._id,status:"send",reciverId:[admin.id]})
+  }))
+
 });
 
 export const updateCheckListHistory = AsyncHandler(async (req,res) => {

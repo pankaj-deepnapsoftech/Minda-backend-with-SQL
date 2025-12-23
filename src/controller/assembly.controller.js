@@ -94,7 +94,6 @@ export const assemblyLineFormResponsibal = AsyncHandler(async (req,res) => {
     });
 });
 
-
 export const assemblyLineCardsData = AsyncHandler(async (req,res) => {
      const user = req.currentUser;
      const result = await GetAssemblyLineDataReport(user?.is_admin,user._id);
@@ -102,7 +101,6 @@ export const assemblyLineCardsData = AsyncHandler(async (req,res) => {
         data:result
      });
 });
-
 
 export const assemblyLineDataTodayReport = AsyncHandler(async (req,res) => {
     let {page,limit,startdate,endDate} = req.query;

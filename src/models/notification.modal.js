@@ -6,7 +6,7 @@ const notificationSchema = new Schema ({
     description:{type:String},
     reciverId:{type:[Schema.Types.ObjectId],ref:"User",required:true},
     senderId:{type:Schema.Types.ObjectId,ref:"User"},
-    Status:{type:String,required:true,default:"send",enum:["send",'recived','view']}
+    status:{type:String,required:true,default:"send",enum:["send",'recived','view']}
 });
 
 export const NotificationModal = model("Notification",notificationSchema);
