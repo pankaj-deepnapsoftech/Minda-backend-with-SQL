@@ -52,7 +52,7 @@ export const createCheckListHistory = AsyncHandler(async (req, res) => {
   const admin = await GetAdmin();
 
   await Promise.all(lastData.map(async(item)=>{
-    await CreateNotification({title:"assembly have an error ",description:item.description,senderId:req.currentUser?._id,status:"send",reciverId:[admin.id]})
+    await CreateNotification({title:"assembly have an error ",description:item.description,senderId:req.currentUser?._id,status:"send",reciverId:admin.id})
   }))
 
 });
