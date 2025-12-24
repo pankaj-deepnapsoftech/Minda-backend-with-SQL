@@ -7,10 +7,10 @@ import { BadRequestError } from "../utils/errorHandler.js";
 export const CreateTypes = AsyncHandler(async (req, res) => {
     const data = req.body;
 
-    if (data.uom) {
+    if (data?.uom) {
         const find = await getUomTypeService();
         if (find) {
-            await updatetypesService(find._id, { uom: data.uom });
+            const result = await updatetypesService(find._id, { uom: data.uom });
             return res.status(StatusCodes.CREATED).json({
                 message: "type created successfully",
                 data: result
@@ -18,10 +18,10 @@ export const CreateTypes = AsyncHandler(async (req, res) => {
         };
     };
 
-    if (data.checking_method) {
+    if (data?.checking_method) {
         const find = await getCheckingMethodTypeService();
         if (find) {
-            await updatetypesService(find._id, { checking_method: data.checking_method });
+            const result = await updatetypesService(find._id, { checking_method: data.checking_method });
             return res.status(StatusCodes.CREATED).json({
                 message: "type created successfully",
                 data: result
@@ -30,10 +30,10 @@ export const CreateTypes = AsyncHandler(async (req, res) => {
     };
 
 
-    if (data.checking_time) {
+    if (data?.checking_time) {
         const find = await getCheckingTimeTypeService();
         if (find) {
-            await updatetypesService(find._id, { checking_time: data.checking_time });
+            const result = await updatetypesService(find._id, { checking_time: data.checking_time });
             return res.status(StatusCodes.CREATED).json({
                 message: "type created successfully",
                 data: result
@@ -73,7 +73,7 @@ export const DeleteTypes = AsyncHandler(async (req, res) => {
     const { id } = req.params;
     const data = req.body;
 
-    if (data.uom) {
+    if (data?.uom) {
         const result = await updatetypesService(id, { uom: data.uom });
         return res.status(StatusCodes.OK).json({
             message: "Type deleted Successfully",
@@ -81,7 +81,7 @@ export const DeleteTypes = AsyncHandler(async (req, res) => {
         });
     };
 
-    if (data.checking_time) {
+    if (data?.checking_time) {
         const result = await updatetypesService(id, { checking_time: data.checking_time });
         return res.status(StatusCodes.OK).json({
             message: "Type deleted Successfully",
@@ -90,7 +90,7 @@ export const DeleteTypes = AsyncHandler(async (req, res) => {
 
     };
 
-    if (data.checking_method) {
+    if (data?.checking_method) {
         const result = await updatetypesService(id, { checking_method: data.checking_method });
         return res.status(StatusCodes.OK).json({
             message: "Type deleted Successfully",
