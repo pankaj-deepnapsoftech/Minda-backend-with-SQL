@@ -2,6 +2,7 @@ import { StatusCodes } from "http-status-codes";
 import { GetNotification, GetUpdateAll, UpdateNotification } from "../services/notification.service.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
 import { NotFoundError } from "../utils/errorHandler.js";
+import { NotificationModal } from "../models/notification.modal.js";
 
 
 export const getNotificationData = AsyncHandler(async (req,res) => {
@@ -9,9 +10,11 @@ export const getNotificationData = AsyncHandler(async (req,res) => {
     page = parseInt(page) || 1;
     limit = parseInt(limit) || 10;
     const skip = (page -1 )*limit;
+    const totalData = await NotificationModal.find({reciverId:req.currentUser?._id}).countDocuments();
     const result = await GetNotification(req.currentUser?._id,skip,limit);
     res.status(StatusCodes.OK).json({
-        data:result
+        data:result,
+        totalPages:Math.ceil(totalData/limit),
     });
 });
 
@@ -42,6 +45,8 @@ export const ReadAllNotification = AsyncHandler(async (req,res) => {
         data:result
     });
 });
+
+
 
 
 
