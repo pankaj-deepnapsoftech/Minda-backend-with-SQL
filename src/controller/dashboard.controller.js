@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { allCardsData,  GetDailyAssemblyStatus, GetMonthlyTrend } from "../services/dashboard.service.js";
+import { allCardsData, GetDailyAssemblyStatus, GetMonthlyPerformance, GetMonthlyTrend } from "../services/dashboard.service.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
 
 
@@ -27,6 +27,21 @@ export const getAssemblyData = AsyncHandler(async (req, res) => {
         data: result
     });
 });
+
+
+
+export const getAllActiveAssembyMonthly = AsyncHandler(async (req,res) => {
+    const user = req.currentUser;
+    const result = await GetMonthlyPerformance(user?.is_admin, user?._id);
+    res.status(StatusCodes.OK).json({
+        data: result
+    });
+});
+
+
+
+
+
 
 
 

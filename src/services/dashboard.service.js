@@ -335,7 +335,108 @@ export const GetDailyAssemblyStatus = async (admin,user,date = new Date()) => {
     return result;
 };
 
-// export const Get
+
+export const GetMonthlyPerformance = async (admin, user) => {
+
+    const result = await AssemblyModal.aggregate([
+
+        // 1️⃣ Assembly filter
+        {
+            $match: admin ? {} : { responsibility: new mongoose.Types.ObjectId(user) }
+        },
+
+        // 2️⃣ Lookup checklist histories
+        {
+            $lookup: {
+                from: "checklisthistories",
+                let: { assemblyId: "$_id" },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: { $eq: ["$assembly", "$$assemblyId"] }
+                        }
+                    },
+                    {
+                        $addFields: {
+                            year: { $year: "$createdAt" },
+                            month: { $month: "$createdAt" }
+                        }
+                    }
+                ],
+                as: "checks"
+            }
+        },
+
+        // 3️⃣ Unwind checks
+        {
+            $unwind: {
+                path: "$checks",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+
+        // 4️⃣ Group per ASSEMBLY per MONTH
+        {
+            $group: {
+                _id: {
+                    assembly: "$_id",
+                    year: "$checks.year",
+                    month: "$checks.month"
+                },
+                has_error: {
+                    $max: {
+                        $cond: ["$checks.is_error", 1, 0]
+                    }
+                }
+            }
+        },
+
+        // 5️⃣ Assembly-level monthly status
+        {
+            $project: {
+                year: "$_id.year",
+                month: "$_id.month",
+                fault: "$has_error",
+                running: {
+                    $cond: [{ $eq: ["$has_error", 0] }, 1, 0]
+                }
+            }
+        },
+
+        // 6️⃣ Roll up to MONTH level
+        {
+            $group: {
+                _id: {
+                    year: "$year",
+                    month: "$month"
+                },
+                fault_count: { $sum: "$fault" },
+                running_count: { $sum: "$running" }
+            }
+        },
+
+        // 7️⃣ Sort + clean output
+        {
+            $sort: {
+                "_id.year": 1,
+                "_id.month": 1
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                year: "$_id.year",
+                month: "$_id.month",
+                fault_count: 1,
+                running_count: 1,
+                level: { $literal: "assembly" }
+            }
+        }
+    ]);
+
+    return result;
+};
+
 
 
 
