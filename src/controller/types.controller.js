@@ -74,7 +74,7 @@ export const DeleteTypes = AsyncHandler(async (req, res) => {
     const data = req.body;
 
     if (data?.uom) {
-        const result = await updatetypesService(id, { uom: data.uom });
+        const result = await updatetypesService(id, { uom: "" });
         return res.status(StatusCodes.OK).json({
             message: "Type deleted Successfully",
             data: result
@@ -82,7 +82,7 @@ export const DeleteTypes = AsyncHandler(async (req, res) => {
     };
 
     if (data?.checking_time) {
-        const result = await updatetypesService(id, { checking_time: data.checking_time });
+        const result = await updatetypesService(id, { checking_time: "" });
         return res.status(StatusCodes.OK).json({
             message: "Type deleted Successfully",
             data: result
@@ -91,7 +91,7 @@ export const DeleteTypes = AsyncHandler(async (req, res) => {
     };
 
     if (data?.checking_method) {
-        const result = await updatetypesService(id, { checking_method: data.checking_method });
+        const result = await updatetypesService(id, { checking_method: "" });
         return res.status(StatusCodes.OK).json({
             message: "Type deleted Successfully",
             data: result
