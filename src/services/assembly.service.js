@@ -226,6 +226,7 @@ export const getAssemblyLineFormByResponsibility = async (user, id) => {
 };
 
 export const GetAssemblyLineDataReport = async (admin, user_id) => {
+
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
@@ -233,23 +234,21 @@ export const GetAssemblyLineDataReport = async (admin, user_id) => {
     endOfDay.setHours(23, 59, 59, 999);
 
     const result = await AssemblyModal.aggregate([
+
+        // 1️⃣ Filter by user
         {
             $match: admin ? {} : { responsibility: new mongoose.Types.ObjectId(user_id) }
         },
 
-        /* ================= LOOKUP PROCESSES ================= */
+        // 2️⃣ Lookup processes + today checklist
         {
             $lookup: {
                 from: "processes",
-                localField: "process_id",
-                foreignField: "_id",
-                as: "process_id",
                 let: { assemblyId: "$_id" },
                 pipeline: [
                     {
-                        $project: {
-                            process_name: 1,
-                            process_no: 1
+                        $match: {
+                            $expr: { $eq: ["$assembly", "$$assemblyId"] }
                         }
                     },
                     {
@@ -267,108 +266,131 @@ export const GetAssemblyLineDataReport = async (admin, user_id) => {
                                         },
                                         createdAt: { $gte: startOfDay, $lte: endOfDay }
                                     }
-                                },
-                                {
-                                    $project: {
-                                        status: 1,
-                                        is_error: 1
-                                    }
                                 }
                             ],
                             as: "today"
                         }
                     },
-
-                    /* ===== PROCESS LEVEL COUNTS ===== */
                     {
                         $addFields: {
-                            total_checked: {
-                                $size: {
-                                    $filter: {
-                                        input: "$today",
-                                        as: "t",
-                                        cond: { $ne: ["$$t.status", "Unchecked"] }
-                                    }
-                                }
+                            is_checked: {
+                                $gt: [
+                                    {
+                                        $size: {
+                                            $filter: {
+                                                input: "$today",
+                                                as: "t",
+                                                cond: { $ne: ["$$t.status", "Unchecked"] }
+                                            }
+                                        }
+                                    },
+                                    0
+                                ]
                             },
-                            total_unchecked: {
-                                $size: {
-                                    $filter: {
-                                        input: "$today",
-                                        as: "t",
-                                        cond: { $eq: ["$$t.status", "Unchecked"] }
-                                    }
-                                }
+                            is_unchecked: {
+                                $gt: [
+                                    {
+                                        $size: {
+                                            $filter: {
+                                                input: "$today",
+                                                as: "t",
+                                                cond: { $eq: ["$$t.status", "Unchecked"] }
+                                            }
+                                        }
+                                    },
+                                    0
+                                ]
                             },
-                            total_resolved: {
-                                $size: {
-                                    $filter: {
-                                        input: "$today",
-                                        as: "t",
-                                        cond: { $eq: ["$$t.status", "Resolved"] }
-                                    }
-                                }
+                            has_error: {
+                                $gt: [
+                                    {
+                                        $size: {
+                                            $filter: {
+                                                input: "$today",
+                                                as: "t",
+                                                cond: { $eq: ["$$t.is_error", true] }
+                                            }
+                                        }
+                                    },
+                                    0
+                                ]
                             },
-                            total_errors: {
-                                $size: {
-                                    $filter: {
-                                        input: "$today",
-                                        as: "t",
-                                        cond: { $eq: ["$$t.is_error", true] }
-                                    }
-                                }
+                            is_resolved: {
+                                $gt: [
+                                    {
+                                        $size: {
+                                            $filter: {
+                                                input: "$today",
+                                                as: "t",
+                                                cond: { $eq: ["$$t.status", "Resolved"] }
+                                            }
+                                        }
+                                    },
+                                    0
+                                ]
                             }
                         }
                     }
-                ]
+                ],
+                as: "processes"
             }
         },
 
-        /* ================= ASSEMBLY LEVEL COUNTS ================= */
+        // 3️⃣ Assembly-level BOOLEAN decision
         {
             $addFields: {
                 assembly_checked: {
-                    $sum: "$process_id.total_checked"
+                    $cond: [
+                        { $not: { $in: [true, "$processes.is_unchecked"] } },
+                        1,
+                        0
+                    ]
                 },
                 assembly_unchecked: {
-                    $sum: "$process_id.total_unchecked"
+                    $cond: [
+                        { $in: [true, "$processes.is_unchecked"] },
+                        1,
+                        0
+                    ]
                 },
-                assembly_errors: {
-                    $sum: "$process_id.total_errors"
+                assembly_error: {
+                    $cond: [
+                        { $in: [true, "$processes.has_error"] },
+                        1,
+                        0
+                    ]
                 },
-                total_resolved: {
-                    $sum: "$process_id.total_resolved"
+                assembly_resolved: {
+                    $cond: [
+                        { $not: { $in: [false, "$processes.is_resolved"] } },
+                        1,
+                        0
+                    ]
                 }
             }
         },
 
-        /* ================= FINAL SUMMARY ================= */
+        // 4️⃣ FINAL SUMMARY (COUNT ASSEMBLIES)
         {
-            $facet: {
-                data: [{ $sort: { createdAt: -1 } }],
-                summary: [
-                    {
-                        $group: {
-                            _id: null,
-                            total_assemblies: { $sum: 1 },
-                            total_checked: { $sum: "$assembly_checked" },
-                            total_unchecked: { $sum: "$assembly_unchecked" },
-                            total_errors: { $sum: "$assembly_errors" },
-                            total_resolved: { $sum: "$total_resolved" }
-                        }
-                    }
-                ]
+            $group: {
+                _id: null,
+                total_assemblies: { $sum: 1 },
+                total_checked: { $sum: "$assembly_checked" },
+                total_unchecked: { $sum: "$assembly_unchecked" },
+                total_errors: { $sum: "$assembly_error" },
+                total_resolved: { $sum: "$assembly_resolved" }
             }
         },
         {
-            $addFields: {
-                summary: { $arrayElemAt: ["$summary", 0] }
+            $project: {
+                _id: 0
             }
         }
     ]);
 
-    return result[0].summary;
+    return result[0];
 };
+
 
 
 export const getAssemblyLineTodayReport = async (
