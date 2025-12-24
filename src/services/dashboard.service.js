@@ -187,7 +187,81 @@ export const GetDailyAssemblyStatus = async (date = new Date()) => {
 
     const result = await AssemblyModal.aggregate([
         {
+            $lookup:{
+                from:"companies",
+                localField:"company_id",
+                foreignField:"_id",
+                as:"company_id",
+                pipeline:[
+                    {
+                        $project:{
+                            company_name:1,
+                            company_address:1
+                        }
+                    }
+                ]
+            }
+        },
 
+        {
+            $lookup:{
+                from:"plants",
+                localField:"plant_id",
+                foreignField:"_id",
+                as:"plant_id",
+                pipeline:[
+                    {
+                        $project:{
+                            plant_name:1,
+                            plant_address:1
+                        }
+                    }
+                ]
+            }
+        },
+
+        {
+            $lookup:{
+                from:"parts",
+                localField:"part_id",
+                foreignField:"_id",
+                as:"part_id",
+                pipeline:[
+                    {
+                        $project:{
+                            part_name:1,
+                            part_number:1
+                        }
+                    }
+                ]
+            }
+        },
+
+        {
+            $lookup:{
+                from:"users",
+                localField:"responsibility",
+                foreignField:"_id",
+                as:"responsibility",
+                pipeline:[
+                    {
+                        $project:{
+                            full_name:1,
+                            email:1,
+                            user_id:1
+                        }
+                    }
+                ]
+            }
+        },
+
+        {
+            $addFields:{
+                company_id:{$arrayElemAt:["$company_id",0]},
+                plant_id:{$arrayElemAt:["$plant_id",0]},
+                part_id:{$arrayElemAt:["$part_id",0]},
+                responsibility:{$arrayElemAt:["$responsibility",0]},
+            }
         },
 
         // 1️⃣ Lookup checklist histories ONLY for the given day
