@@ -24,12 +24,7 @@ export const sequelize = new Sequelize(
             acquire: 30000,
             idle: 10000,
         },
-        logging: (msg) => {
-            // Log SQL queries to help debug syntax errors
-            if (msg.includes("CREATE TABLE") || msg.includes("ALTER TABLE") || msg.includes("Error")) {
-                console.log("SQL:", msg);
-            }
-        },
+        logging:false
     }
 );
 

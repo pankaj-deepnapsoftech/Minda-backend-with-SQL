@@ -9,12 +9,12 @@ export const companyCreateService = async (data) => {
 
 
 export const companyListService = async (skip, limit) => {
-    const result = await CompanyModel.findAll({
-        order: [["id", "DESC"]],
-        offset: skip,
-        limit,
-    });
-    return result;
+        const result = await CompanyModel.findAll({
+            order: [["_id", "DESC"]],
+            offset: skip,
+            limit,
+        });
+        return result;
 };
 
 export const companyDeleteService = async (id) => {
@@ -55,7 +55,7 @@ export const GetAllSearchItems = async (search, skip, limit) => {
         },
         offset: skip,
         limit,
-        order: [["id", "DESC"]],
+        order: [["_id", "DESC"]],
     });
     return result;
 };
@@ -63,7 +63,7 @@ export const GetAllSearchItems = async (search, skip, limit) => {
 export const getAllCompanyesData = async () => {
     const result = await CompanyModel.findAll({
         attributes: ["_id", "company_name"],
-        order: [["id", "DESC"]],
+        order: [["_id", "DESC"]],
     });
     return result
 }
