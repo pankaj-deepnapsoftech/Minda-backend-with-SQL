@@ -1,16 +1,37 @@
-import {Schema,model} from "mongoose";
+import { DataTypes } from "sequelize";
+import { sequelize } from "../sequelize.js";
 
+export const AssemblyModal = sequelize.define(
+    "Assembly",
+    {
+        assembly_name: { type: DataTypes.STRING(255), allowNull: false },
+        assembly_number: { type: DataTypes.STRING(100), allowNull: false },
+        company_id: { type: DataTypes.INTEGER, allowNull: false },
+        plant_id: { type: DataTypes.INTEGER, allowNull: false },
+        responsibility: { type: DataTypes.INTEGER, allowNull: true },
+        part_id: { type: DataTypes.INTEGER, allowNull: true },
+    },
+    {
+        tableName: "assemblies",
+        timestamps: true,
+        indexes: [
+            {
+                fields: [
+                    "company_id",
+                    "plant_id",
+                    "responsibility",
+                    "part_id",
+                    "assembly_name",
+                    "assembly_number",
+                ],
+            },
+        ],
+    }
+);
 
-const assemblySchema = new Schema({
-    assembly_name:{type:String,required:true},
-    assembly_number:{type:String,required:true},
-    company_id:{type:Schema.Types.ObjectId,ref:"Company",required:true},
-    plant_id:{type:Schema.Types.ObjectId,ref:"Plant",requred:true},
-    responsibility:{type:Schema.Types.ObjectId,ref:"User"},
-    process_id:{type:[Schema.Types.ObjectId],ref:"Process"},
-    part_id:{type:Schema.Types.ObjectId,ref:"Part"},
-},{timestamps:true});
-
-assemblySchema.index({company_id:1,plant_id:1,responsibility:1,process_id:1,part_id:1,assembly_name:1,assembly_number:1})
-
-export const AssemblyModal = model("Assembly",assemblySchema);
+AssemblyModal.prototype.toJSON = function () {
+    const values = { ...this.get({ plain: true }) };
+    values._id = values.id;
+    delete values.id;
+    return values;
+};

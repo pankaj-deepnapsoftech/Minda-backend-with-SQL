@@ -1,6 +1,6 @@
 import * as yup from "yup";
 
-const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+const isNumericId = (value) => /^[0-9]+$/.test(String(value));
 
 export const assemblyValidationSchema = yup.object().shape({
   assembly_name: yup
@@ -14,13 +14,13 @@ export const assemblyValidationSchema = yup.object().shape({
     .required("Assembly number is required"),
 
   company_id: yup
-    .string()
-    .matches(objectIdRegex, "Invalid company ID")
+    .mixed()
+    .test("is-id", "Invalid company ID", (value) => value !== null && value !== undefined && value !== "" && isNumericId(value))
     .required("Company is required"),
 
   plant_id: yup
-    .string()
-    .matches(objectIdRegex, "Invalid plant ID")
+    .mixed()
+    .test("is-id", "Invalid plant ID", (value) => value !== null && value !== undefined && value !== "" && isNumericId(value))
     .required("Plant is required"),
 
 

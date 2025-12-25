@@ -1,17 +1,26 @@
-import {Schema,model} from "mongoose";
+import { DataTypes } from "sequelize";
+import { sequelize } from "../sequelize.js";
 
+export const PlantModel = sequelize.define(
+    "Plant",
+    {
+        plant_name: { type: DataTypes.STRING(255), allowNull: false },
+        plant_address: { type: DataTypes.STRING(500), allowNull: true },
+        company_id: { type: DataTypes.INTEGER, allowNull: false },
+        description: { type: DataTypes.TEXT, allowNull: true },
+        plant_code: { type: DataTypes.STRING(100), allowNull: true },
+    },
+    {
+        tableName: "plants",
+        timestamps: true,
+        indexes: [{ fields: ["plant_name", "company_id"] }],
+    }
+);
 
-
-const plantsSchema = new Schema({
-    plant_name:{type:String,required:true},
-    plant_address:{type:String},
-    company_id:{type:Schema.Types.ObjectId,ref:"Company",required:true},
-    description:{type:String},
-    plant_code:{type:String}
-},{timestamps:true});
-
-plantsSchema.index({plant_name:1,company_id:1});
-
-export const PlantModel = model("Plant",plantsSchema);
-
+PlantModel.prototype.toJSON = function () {
+    const values = { ...this.get({ plain: true }) };
+    values._id = values.id;
+    delete values.id;
+    return values;
+};
 

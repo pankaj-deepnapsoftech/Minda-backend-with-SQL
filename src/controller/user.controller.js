@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { fileURLToPath } from "url";
@@ -20,26 +19,17 @@ const __dirname = path.dirname(__filename);
 
 
 export const registerUser = AsyncHandler(async (req, res) => {
-    const session = await mongoose.startSession();
-    session.startTransaction()
-    try {
-        const data = req.body;
-        const exist = await FindUserByEmailOrUserId(data.email);
-        if (exist) {
-            throw new BadRequestError("User already Register with the email or User id", "registerUser() method error")
-        }
-
-        const result = await createUserService(data);
-        res.status(StatusCodes.CREATED).json({
-            message: "User register successfully",
-            user: result
-        });
-    } catch (error) {
-        await session.abortTransaction();
-        throw new BadRequestError(error.message, "registerUser() method error")
-    } finally {
-        session.endSession()
+    const data = req.body;
+    const exist = await FindUserByEmailOrUserId(data.email);
+    if (exist) {
+        throw new BadRequestError("User already Register with the email or User id", "registerUser() method error")
     }
+
+    const result = await createUserService(data);
+    res.status(StatusCodes.CREATED).json({
+        message: "User register successfully",
+        user: result
+    });
 });
 
 export const LoginUser = AsyncHandler(async (req, res) => {
@@ -60,8 +50,8 @@ export const LoginUser = AsyncHandler(async (req, res) => {
         throw new NotFoundError("Invalid credentials", "LoginUser() method error 2")
     }
 
-    const accessToken = jwt.sign({ email: user.email, id: user._id }, config.JWT_SECRET, { expiresIn: "30days" })
-    const refreshToken = jwt.sign({ email: user.email, id: user._id }, config.JWT_SECRET, { expiresIn: "31days" })
+    const accessToken = jwt.sign({ email: user.email, id: user.id }, config.JWT_SECRET, { expiresIn: "30days" })
+    const refreshToken = jwt.sign({ email: user.email, id: user.id }, config.JWT_SECRET, { expiresIn: "31days" })
 
     res.cookie("AT", accessToken, {
         httpOnly: true,        // Cookie not accessible via document.cookie
@@ -79,7 +69,7 @@ export const LoginUser = AsyncHandler(async (req, res) => {
         message: "User login Successfully"
     });
 
-    await UserModel.findByIdAndUpdate(user._id, { refresh_token: refreshToken })
+    await user.update({ refresh_token: refreshToken })
 
 });
 
@@ -127,8 +117,8 @@ export const RefreshToken = AsyncHandler(async (req, res) => {
         throw new NotFoundError("Invalid user Please try again...", "RefreshToken() method error")
     }
 
-    const accessToken = jwt.sign({ email: user.email, id: user._id }, config.JWT_SECRET, { expiresIn: "30days" })
-    const refreshToken = jwt.sign({ email: user.email, id: user._id }, config.JWT_SECRET, { expiresIn: "31days" })
+    const accessToken = jwt.sign({ email: user.email, id: user.id }, config.JWT_SECRET, { expiresIn: "30days" })
+    const refreshToken = jwt.sign({ email: user.email, id: user.id }, config.JWT_SECRET, { expiresIn: "31days" })
 
     res.cookie("AT", accessToken, {
         httpOnly: true,        // Cookie not accessible via document.cookie
@@ -146,7 +136,7 @@ export const RefreshToken = AsyncHandler(async (req, res) => {
         message: "user logedin Successfully"
     });
 
-    await UserModel.findByIdAndUpdate(user._id, { refresh_token: refreshToken })
+    await UserModel.update({ refresh_token: refreshToken }, { where: { id: user.id } })
 });
 
 export const GetAllemployees = AsyncHandler(async (req, res) => {
@@ -186,7 +176,7 @@ export const verifyEmail = AsyncHandler(async (req, res) => {
     }
 
     const resetLink = config.NODE_ENV !== "development" ? config.SERVER_URL : config.LOCAL_SERVER_URL;
-    const token = jwt.sign({ id: user._id }, config.JWT_SECRET, { expiresIn: "20min" })
+    const token = jwt.sign({ id: user.id }, config.JWT_SECRET, { expiresIn: "20min" })
 
 
     res.status(StatusCodes.OK).json({
@@ -233,7 +223,7 @@ export const Resetpassword = AsyncHandler(async (req, res) => {
         throw new NotFoundError("User not exist please try again", "RenderResetPasswordpage() method error");
     };
 
-    await UpdateUsersService(user._id, { password });
+    await UpdateUsersService(user.id, { password });
 
     res.status(StatusCodes.OK).json({
         success: true,

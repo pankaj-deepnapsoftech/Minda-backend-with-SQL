@@ -1,24 +1,30 @@
-import {Schema,model} from "mongoose";
+import { DataTypes } from "sequelize";
+import { sequelize } from "../sequelize.js";
 
+export const CompanyModel = sequelize.define(
+    "Company",
+    {
+        company_name: { type: DataTypes.STRING(255), allowNull: false, unique: true },
+        company_address: { type: DataTypes.STRING(500), allowNull: false },
+        gst_no: { type: DataTypes.STRING(50), allowNull: true, unique: true },
+        description: { type: DataTypes.TEXT, allowNull: true },
+        company_code: { type: DataTypes.STRING(100), allowNull: true },
+    },
+    {
+        tableName: "companies",
+        timestamps: true,
+        indexes: [
+            { fields: ["company_name"] },
+            { fields: ["company_address"] },
+        ],
+    }
+);
 
-const companySchema = new Schema({
-    company_name:{type:String,required:true,unique:true,index:true},
-    company_address:{type:String,required:true},
-    gst_no:{type:String,unique:true, sparse: true},
-    description:{type:String},
-    company_code:{type:String}
-},{timestamps:true});
-
-companySchema.index({company_name:1,company_address:1});
-
-export const CompanyModel = model("Company",companySchema);
-
-
-
-
-
-
-
-
+CompanyModel.prototype.toJSON = function () {
+    const values = { ...this.get({ plain: true }) };
+    values._id = values.id;
+    delete values.id;
+    return values;
+};
 
 

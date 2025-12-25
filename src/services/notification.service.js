@@ -1,4 +1,8 @@
 import { NotificationModal } from "../models/notification.modal.js"
+import { AssemblyModal } from "../models/AssemblyLine.modal.js";
+import { CheckListModal } from "../models/checkList.modal.js";
+import { ProcessModel } from "../models/process.modal.js";
+import { UserModel } from "../models/user.modal.js";
 
 
 export const CreateNotification = async (data) => {
@@ -7,21 +11,30 @@ export const CreateNotification = async (data) => {
 };
 
 export const GetNotification = async (user,skip,limit) => {
-    const result = await NotificationModal.find({reciverId:user}).sort({_id:-1}).skip(skip).limit(limit).populate([
-        {path:"senderId",select:"desigination user_id email full_name"},
-        {path:"assembly",select:"assembly_name assembly_number"},
-        {path:"process_id",select:"process_name process_no"},
-        {path:"checkList",select:"item description check_list_method check_list_time"}
-    ]).lean();
+    const result = await NotificationModal.findAll({
+        where: { reciverId: user },
+        include: [
+            { model: UserModel, as: "senderId", attributes: ["id", "desigination", "user_id", "email", "full_name"] },
+            { model: AssemblyModal, as: "assembly", attributes: ["id", "assembly_name", "assembly_number"] },
+            { model: ProcessModel, as: "process_id", attributes: ["id", "process_name", "process_no"] },
+            { model: CheckListModal, as: "checkList", attributes: ["id", "item", "description", "check_list_method", "check_list_time"] },
+        ],
+        order: [["id", "DESC"]],
+        offset: skip,
+        limit,
+    });
     return result;
 };
 
 export const UpdateNotification = async(id,data) => {
-    const result = await NotificationModal.findByIdAndUpdate(id,data,{new:true});
+    const notification = await NotificationModal.findByPk(id);
+    if (!notification) return null;
+    const result = await notification.update(data);
     return result;
 };
 
 export const GetUpdateAll = async (id,data) => {
-    const result = await NotificationModal.updateMany({reciverId:id},data);
+    const [count] = await NotificationModal.update(data, { where: { reciverId: id } });
+    const result = { updated: count };
     return result;
 };

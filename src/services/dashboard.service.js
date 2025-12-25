@@ -1,10 +1,12 @@
-import mongoose from "mongoose";
-import { AssemblyModal } from "../models/AssemblyLine.modal.js"
+import { col, fn, Op, QueryTypes } from "sequelize";
+import { sequelize } from "../sequelize.js";
+import { AssemblyModal } from "../models/AssemblyLine.modal.js";
+import { CheckListHistoryModal } from "../models/checkListHistory.modal.js";
+import { CompanyModel } from "../models/company.modal.js";
 import { PartModal } from "../models/Part.modal.js";
+import { PlantModel } from "../models/plant.modal.js";
 import { ProcessModel } from "../models/process.modal.js";
 import { UserModel } from "../models/user.modal.js";
-
-
 
 export const allCardsData = async () => {
     const now = new Date();
@@ -25,34 +27,22 @@ export const allCardsData = async () => {
         assembly_last_month,
         employee_last_month,
         process_last_month,
-        parts_last_month
+        parts_last_month,
     ] = await Promise.all([
-        // Total counts
-        AssemblyModal.countDocuments(),
-        UserModel.countDocuments({ is_admin: false }),
-        ProcessModel.countDocuments(),
-        PartModal.countDocuments(),
+        AssemblyModal.count(),
+        UserModel.count({ where: { is_admin: false } }),
+        ProcessModel.count(),
+        PartModal.count(),
 
-        // Current month counts
-        AssemblyModal.countDocuments({ createdAt: { $gte: startOfCurrentMonth } }),
-        UserModel.countDocuments({ is_admin: false, createdAt: { $gte: startOfCurrentMonth } }),
-        ProcessModel.countDocuments({ createdAt: { $gte: startOfCurrentMonth } }),
-        PartModal.countDocuments({ createdAt: { $gte: startOfCurrentMonth } }),
+        AssemblyModal.count({ where: { createdAt: { [Op.gte]: startOfCurrentMonth } } }),
+        UserModel.count({ where: { is_admin: false, createdAt: { [Op.gte]: startOfCurrentMonth } } }),
+        ProcessModel.count({ where: { createdAt: { [Op.gte]: startOfCurrentMonth } } }),
+        PartModal.count({ where: { createdAt: { [Op.gte]: startOfCurrentMonth } } }),
 
-        // Last month counts
-        AssemblyModal.countDocuments({
-            createdAt: { $gte: startOfLastMonth, $lt: startOfCurrentMonth }
-        }),
-        UserModel.countDocuments({
-            is_admin: false,
-            createdAt: { $gte: startOfLastMonth, $lt: startOfCurrentMonth }
-        }),
-        ProcessModel.countDocuments({
-            createdAt: { $gte: startOfLastMonth, $lt: startOfCurrentMonth }
-        }),
-        PartModal.countDocuments({
-            createdAt: { $gte: startOfLastMonth, $lt: startOfCurrentMonth }
-        })
+        AssemblyModal.count({ where: { createdAt: { [Op.gte]: startOfLastMonth, [Op.lt]: startOfCurrentMonth } } }),
+        UserModel.count({ where: { is_admin: false, createdAt: { [Op.gte]: startOfLastMonth, [Op.lt]: startOfCurrentMonth } } }),
+        ProcessModel.count({ where: { createdAt: { [Op.gte]: startOfLastMonth, [Op.lt]: startOfCurrentMonth } } }),
+        PartModal.count({ where: { createdAt: { [Op.gte]: startOfLastMonth, [Op.lt]: startOfCurrentMonth } } }),
     ]);
 
     return {
@@ -60,547 +50,221 @@ export const allCardsData = async () => {
             assembly: assembly_total,
             employee: employee_total,
             process: process_total,
-            parts: parts_total
+            parts: parts_total,
         },
         month_difference: {
             assembly: assembly_current_month - assembly_last_month,
             employee: employee_current_month - employee_last_month,
             process: process_current_month - process_last_month,
-            parts: parts_current_month - parts_last_month
-        }
+            parts: parts_current_month - parts_last_month,
+        },
     };
 };
 
+export const GetMonthlyTrend = async (admin, user) => {
+    const assemblies = await AssemblyModal.findAll({
+        where: admin ? {} : { responsibility: user },
+        attributes: ["id"],
+    });
+    const assemblyIds = assemblies.map((a) => a.id);
+    const totalAssemblies = assemblyIds.length;
 
-export const GetMonthlyTrend = async (admin,user) => {
-    const result = await AssemblyModal.aggregate([
-        {
-            $match: admin ? {} : {responsibility:new mongoose.Types.ObjectId(user)}
-        },
-        // 1️⃣ Lookup checklist histories
-        {
-            $lookup: {
-                from: "checklisthistories",
-                let: { assemblyId: "$_id" },
-                pipeline: [
-                    {
-                        $match: {
-                            $expr: { $eq: ["$assembly", "$$assemblyId"] }
-                        }
-                    },
-                    {
-                        $addFields: {
-                            day: {
-                                $dateToString: {
-                                    format: "%Y-%m-%d",
-                                    date: "$createdAt"
-                                }
-                            },
-                            year: { $year: "$createdAt" },
-                            month: { $month: "$createdAt" }
-                        }
-                    }
-                ],
-                as: "checks"
-            }
-        },
+    if (totalAssemblies === 0) return [];
 
-        // 2️⃣ Group per assembly per day
-        {
-            $unwind: {
-                path: "$checks",
-                preserveNullAndEmptyArrays: true
-            }
-        },
-        {
-            $group: {
-                _id: {
-                    assembly: "$_id",
-                    day: "$checks.day",
-                    year: "$checks.year",
-                    month: "$checks.month"
-                },
-                total_checks: { $sum: { $cond: ["$checks", 1, 0] } },
-                error_found: {
-                    $max: {
-                        $cond: ["$checks.is_error", 1, 0]
-                    }
-                }
-            }
-        },
+    const monthly = await CheckListHistoryModal.findAll({
+        where: { assembly: { [Op.in]: assemblyIds } },
+        attributes: [
+            [fn("YEAR", col("createdAt")), "year"],
+            [fn("MONTH", col("createdAt")), "month"],
+            [fn("COUNT", fn("DISTINCT", col("assembly"))), "checked_count"],
+            [fn("COUNT", fn("DISTINCT", fn("IF", col("is_error"), col("assembly"), null))), "error_count"],
+        ],
+        group: ["year", "month"],
+        order: [
+            [fn("YEAR", col("createdAt")), "ASC"],
+            [fn("MONTH", col("createdAt")), "ASC"],
+        ],
+        raw: true,
+    });
 
-        // 3️⃣ Determine day-level status
-        {
-            $project: {
-                year: "$_id.year",
-                month: "$_id.month",
-                checked: {
-                    $cond: [{ $gt: ["$total_checks", 0] }, 1, 0]
-                },
-                unchecked: {
-                    $cond: [{ $eq: ["$total_checks", 0] }, 1, 0]
-                },
-                error: "$error_found"
-            }
-        },
-
-        // 4️⃣ Roll up to MONTH level
-        {
-            $group: {
-                _id: {
-                    year: "$year",
-                    month: "$month"
-                },
-                checked_count: { $sum: "$checked" },
-                unchecked_count: { $sum: "$unchecked" },
-                error_count: { $sum: "$error" }
-            }
-        },
-
-        // 5️⃣ Sort + clean output
-        {
-            $sort: {
-                "_id.year": 1,
-                "_id.month": 1
-            }
-        },
-        {
-            $project: {
-                _id: 0,
-                year: "$_id.year",
-                month: "$_id.month",
-                checked_count: 1,
-                unchecked_count: 1,
-                error_count: 1,
-                level: { $literal: "assembly" }
-            }
-        }
-    ]);
-
-    return result;
+    return monthly.map((m) => {
+        const checked_count = Number(m.checked_count) || 0;
+        const error_count = Number(m.error_count) || 0;
+        return {
+            year: Number(m.year),
+            month: Number(m.month),
+            checked_count,
+            unchecked_count: Math.max(totalAssemblies - checked_count, 0),
+            error_count,
+            level: "assembly",
+        };
+    });
 };
 
-
-export const GetDailyAssemblyStatus = async (admin,user,date = new Date()) => {
-
+export const GetDailyAssemblyStatus = async (admin, user, date = new Date()) => {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
 
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const result = await AssemblyModal.aggregate([
-        {
-            $match: admin ? {} : {responsibility:new mongoose.Types.ObjectId(user)}
-        },
-        {
-            $lookup:{
-                from:"companies",
-                localField:"company_id",
-                foreignField:"_id",
-                as:"company_id",
-                pipeline:[
-                    {
-                        $project:{
-                            company_name:1,
-                            company_address:1
-                        }
-                    }
-                ]
-            }
-        },
+    const assemblies = await AssemblyModal.findAll({
+        where: admin ? {} : { responsibility: user },
+        include: [
+            { model: CompanyModel, as: "company_id", attributes: ["id", "company_name", "company_address"] },
+            { model: PlantModel, as: "plant_id", attributes: ["id", "plant_name", "plant_address"] },
+            { model: PartModal, as: "part_id", attributes: ["id", "part_name", "part_number"] },
+            { model: UserModel, as: "responsibility", attributes: ["id", "full_name", "email", "user_id"] },
+            { model: ProcessModel, as: "process_id", attributes: ["id"], through: { attributes: [] } },
+        ],
+        order: [["assembly_name", "ASC"]],
+    });
 
-        {
-            $lookup:{
-                from:"plants",
-                localField:"plant_id",
-                foreignField:"_id",
-                as:"plant_id",
-                pipeline:[
-                    {
-                        $project:{
-                            plant_name:1,
-                            plant_address:1
-                        }
-                    }
-                ]
-            }
-        },
+    const assemblyJson = assemblies.map((a) => a.toJSON());
+    const assemblyIds = assemblyJson.map((a) => a._id);
 
-        {
-            $lookup:{
-                from:"parts",
-                localField:"part_id",
-                foreignField:"_id",
-                as:"part_id",
-                pipeline:[
-                    {
-                        $project:{
-                            part_name:1,
-                            part_number:1
-                        }
-                    }
-                ]
-            }
-        },
+    const histories = assemblyIds.length
+        ? await CheckListHistoryModal.findAll({
+            where: {
+                assembly: { [Op.in]: assemblyIds },
+                createdAt: { [Op.between]: [startOfDay, endOfDay] },
+            },
+            attributes: ["assembly", "is_error"],
+        })
+        : [];
 
-        {
-            $lookup:{
-                from:"users",
-                localField:"responsibility",
-                foreignField:"_id",
-                as:"responsibility",
-                pipeline:[
-                    {
-                        $project:{
-                            full_name:1,
-                            email:1,
-                            user_id:1
-                        }
-                    }
-                ]
-            }
-        },
+    const historyByAssembly = new Map();
+    for (const h of histories) {
+        const list = historyByAssembly.get(h.assembly) || [];
+        list.push(h);
+        historyByAssembly.set(h.assembly, list);
+    }
 
-        {
-            $addFields:{
-                company_id:{$arrayElemAt:["$company_id",0]},
-                plant_id:{$arrayElemAt:["$plant_id",0]},
-                part_id:{$arrayElemAt:["$part_id",0]},
-                responsibility:{$arrayElemAt:["$responsibility",0]},
-            }
-        },
-
-        // 1️⃣ Lookup checklist histories ONLY for the given day
-        {
-            $lookup: {
-                from: "checklisthistories",
-                let: { assemblyId: "$_id" },
-                pipeline: [
-                    {
-                        $match: {
-                            $expr: {
-                                $and: [
-                                    { $eq: ["$assembly", "$$assemblyId"] },
-                                    { $gte: ["$createdAt", startOfDay] },
-                                    { $lte: ["$createdAt", endOfDay] }
-                                ]
-                            }
-                        }
-                    }
-                ],
-                as: "checks"
-            }
-        },
-
-        // 2️⃣ Convert checklist presence to BOOLEAN status
-        {
-            $addFields: {
-                checked: {
-                    $gt: [{ $size: "$checks" }, 0]
-                },
-                unchecked: {
-                    $eq: [{ $size: "$checks" }, 0]
-                },
-                error: {
-                    $gt: [
-                        {
-                            $size: {
-                                $filter: {
-                                    input: "$checks",
-                                    as: "c",
-                                    cond: { $eq: ["$$c.is_error", true] }
-                                }
-                            }
-                        },
-                        0
-                    ]
-                }
-            }
-        },
-
-        // 3️⃣ Final response (FULL assembly data)
-        {
-            $project: {
-                checks: 0   // hide raw checklist array
-            }
-        },
-
-        // 4️⃣ Optional sorting
-        {
-            $sort: { assembly_name: 1 }
-        }
-    ]);
-
-    return result;
+    return assemblyJson.map((a) => {
+        const checks = historyByAssembly.get(a._id) || [];
+        const checked = checks.length > 0;
+        const error = checks.some((c) => c.is_error === true);
+        return {
+            ...a,
+            checked,
+            unchecked: !checked,
+            error,
+        };
+    });
 };
-
 
 export const GetMonthlyPerformance = async (admin, user) => {
+    const assemblies = await AssemblyModal.findAll({
+        where: admin ? {} : { responsibility: user },
+        attributes: ["id"],
+    });
+    const assemblyIds = assemblies.map((a) => a.id);
+    if (assemblyIds.length === 0) return [];
 
-    const result = await AssemblyModal.aggregate([
+    const perAssemblyMonth = await sequelize.query(
+        `
+        SELECT
+            YEAR(createdAt) AS year,
+            MONTH(createdAt) AS month,
+            assembly AS assembly,
+            MAX(CASE WHEN is_error = 1 THEN 1 ELSE 0 END) AS has_error
+        FROM checklisthistories
+        WHERE assembly IN (:assemblyIds)
+        GROUP BY YEAR(createdAt), MONTH(createdAt), assembly
+        ORDER BY YEAR(createdAt), MONTH(createdAt)
+        `,
+        { replacements: { assemblyIds }, type: QueryTypes.SELECT }
+    );
 
-        // 1️⃣ Assembly filter
-        {
-            $match: admin ? {} : { responsibility: new mongoose.Types.ObjectId(user) }
-        },
+    const monthMap = new Map();
+    for (const row of perAssemblyMonth) {
+        const key = `${row.year}-${row.month}`;
+        const current = monthMap.get(key) || { year: Number(row.year), month: Number(row.month), running_count: 0, fault_count: 0, level: "assembly" };
+        if (Number(row.has_error) === 1) current.fault_count += 1;
+        else current.running_count += 1;
+        monthMap.set(key, current);
+    }
 
-        // 2️⃣ Lookup checklist histories
-        {
-            $lookup: {
-                from: "checklisthistories",
-                let: { assemblyId: "$_id" },
-                pipeline: [
-                    {
-                        $match: {
-                            $expr: { $eq: ["$assembly", "$$assemblyId"] }
-                        }
-                    },
-                    {
-                        $addFields: {
-                            year: { $year: "$createdAt" },
-                            month: { $month: "$createdAt" }
-                        }
-                    }
-                ],
-                as: "checks"
-            }
-        },
-
-        // 3️⃣ Unwind checks
-        {
-            $unwind: {
-                path: "$checks",
-                preserveNullAndEmptyArrays: true
-            }
-        },
-
-        // 4️⃣ Group per ASSEMBLY per MONTH
-        {
-            $group: {
-                _id: {
-                    assembly: "$_id",
-                    year: "$checks.year",
-                    month: "$checks.month"
-                },
-                has_error: {
-                    $max: {
-                        $cond: ["$checks.is_error", 1, 0]
-                    }
-                }
-            }
-        },
-
-        // 5️⃣ Assembly-level monthly status
-        {
-            $project: {
-                year: "$_id.year",
-                month: "$_id.month",
-                fault: "$has_error",
-                running: {
-                    $cond: [{ $eq: ["$has_error", 0] }, 1, 0]
-                }
-            }
-        },
-
-        // 6️⃣ Roll up to MONTH level
-        {
-            $group: {
-                _id: {
-                    year: "$year",
-                    month: "$month"
-                },
-                fault_count: { $sum: "$fault" },
-                running_count: { $sum: "$running" }
-            }
-        },
-
-        // 7️⃣ Sort + clean output
-        {
-            $sort: {
-                "_id.year": 1,
-                "_id.month": 1
-            }
-        },
-        {
-            $project: {
-                _id: 0,
-                year: "$_id.year",
-                month: "$_id.month",
-                fault_count: 1,
-                running_count: 1,
-                level: { $literal: "assembly" }
-            }
-        }
-    ]);
-
-    return result;
+    return [...monthMap.values()].sort((a, b) => (a.year - b.year) || (a.month - b.month));
 };
 
-
 export const GetDailyErrorsAssembly = async (admin, user, date = new Date()) => {
-
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
 
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const result = await AssemblyModal.aggregate([
+    const assemblies = await AssemblyModal.findAll({
+        where: admin ? {} : { responsibility: user },
+        attributes: ["id"],
+    });
+    const assemblyIds = assemblies.map((a) => a.id);
 
-        /* ================= ASSEMBLY FILTER ================= */
-        {
-            $match: admin ? {} : { responsibility: new mongoose.Types.ObjectId(user) }
-        },
+    const histories = assemblyIds.length
+        ? await CheckListHistoryModal.findAll({
+            where: {
+                assembly: { [Op.in]: assemblyIds },
+                createdAt: { [Op.between]: [startOfDay, endOfDay] },
+            },
+            attributes: ["assembly", "process_id", "is_error", "is_resolved"],
+        })
+        : [];
 
-        /* ================= LOOKUP CHECKLIST (DAY ONLY) ================= */
-        {
-            $lookup: {
-                from: "checklisthistories",
-                let: { assemblyId: "$_id" },
-                pipeline: [
-                    {
-                        $match: {
-                            $expr: {
-                                $and: [
-                                    { $eq: ["$assembly", "$$assemblyId"] },
-                                    { $gte: ["$createdAt", startOfDay] },
-                                    { $lte: ["$createdAt", endOfDay] }
-                                ]
-                            }
-                        }
-                    },
-                    {
-                        $project: {
-                            process_id: 1,
-                            is_error: 1,
-                            is_resolved: 1
-                        }
-                    }
-                ],
-                as: "checks"
-            }
-        },
+    const assemblyMap = new Map();
+    const processErrorCounts = new Map();
 
-        /* ================= ASSEMBLY LEVEL STATUS ================= */
-        {
-            $addFields: {
-                has_error: {
-                    $gt: [
-                        {
-                            $size: {
-                                $filter: {
-                                    input: "$checks",
-                                    as: "c",
-                                    cond: { $eq: ["$$c.is_error", true] }
-                                }
-                            }
-                        },
-                        0
-                    ]
-                },
-                has_unresolved_error: {
-                    $gt: [
-                        {
-                            $size: {
-                                $filter: {
-                                    input: "$checks",
-                                    as: "c",
-                                    cond: {
-                                        $and: [
-                                            { $eq: ["$$c.is_error", true] },
-                                            { $eq: ["$$c.is_resolved", false] }
-                                        ]
-                                    }
-                                }
-                            }
-                        },
-                        0
-                    ]
-                }
-            }
-        },
-
-        /* ================= FINAL CLASSIFICATION ================= */
-        {
-            $addFields: {
-                still_error: { $cond: ["$has_unresolved_error", 1, 0] },
-                resolved: {
-                    $cond: [
-                        {
-                            $and: [
-                                "$has_error",
-                                { $eq: ["$has_unresolved_error", false] }
-                            ]
-                        },
-                        1,
-                        0
-                    ]
-                }
-            }
-        },
-
-        /* ================= FACET ================= */
-        {
-            $facet: {
-
-                /* ===== ASSEMBLY SUMMARY ===== */
-                assembly_summary: [
-                    {
-                        $group: {
-                            _id: null,
-                            error_assemblies: {
-                                $sum: { $cond: ["$has_error", 1, 0] }
-                            },
-                            still_error_assemblies: { $sum: "$still_error" },
-                            resolved_assemblies: { $sum: "$resolved" }
-                        }
-                    },
-                    { $project: { _id: 0 } }
-                ],
-
-                /* ===== TOP 5 ERROR PROCESSES ===== */
-                top_error_processes: [
-                    { $unwind: "$checks" },
-                    { $match: { "checks.is_error": true } },
-                    {
-                        $group: {
-                            _id: "$checks.process_id",
-                            error_count: { $sum: 1 }
-                        }
-                    },
-                    { $sort: { error_count: -1 } },
-                    { $limit: 5 },   // ✅ TOP FIVE
-                    {
-                        $lookup: {
-                            from: "processes",
-                            localField: "_id",
-                            foreignField: "_id",
-                            as: "process"
-                        }
-                    },
-                    {
-                        $project: {
-                            _id: 0,
-                            process_id: "$_id",
-                            process_name: { $arrayElemAt: ["$process.process_name", 0] },
-                            error_count: 1
-                        }
-                    }
-                ]
-            }
-        },
-
-        /* ================= FINAL SHAPE ================= */
-        {
-            $project: {
-                assembly_summary: { $arrayElemAt: ["$assembly_summary", 0] },
-                top_error_processes: 1
-            }
+    for (const h of histories) {
+        const a = assemblyMap.get(h.assembly) || { has_error: false, has_unresolved_error: false };
+        if (h.is_error === true) {
+            a.has_error = true;
+            const count = processErrorCounts.get(h.process_id) || 0;
+            processErrorCounts.set(h.process_id, count + 1);
+            if (h.is_resolved === false) a.has_unresolved_error = true;
         }
-    ]);
+        assemblyMap.set(h.assembly, a);
+    }
 
-    return result[0];
+    let error_assemblies = 0;
+    let still_error_assemblies = 0;
+    let resolved_assemblies = 0;
+
+    for (const a of assemblyIds) {
+        const flags = assemblyMap.get(a);
+        if (!flags?.has_error) continue;
+        error_assemblies += 1;
+        if (flags.has_unresolved_error) still_error_assemblies += 1;
+        else resolved_assemblies += 1;
+    }
+
+    const topProcessIds = [...processErrorCounts.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([pid]) => pid);
+
+    const processes = topProcessIds.length
+        ? await ProcessModel.findAll({
+            where: { id: { [Op.in]: topProcessIds } },
+            attributes: ["id", "process_name"],
+        })
+        : [];
+
+    const nameById = new Map(processes.map((p) => [p.id, p.process_name]));
+
+    const top_error_processes = topProcessIds.map((pid) => ({
+        process_id: pid,
+        process_name: nameById.get(pid) || null,
+        error_count: processErrorCounts.get(pid) || 0,
+    }));
+
+    return {
+        assembly_summary: {
+            error_assemblies,
+            still_error_assemblies,
+            resolved_assemblies,
+        },
+        top_error_processes,
+    };
 };
 
 

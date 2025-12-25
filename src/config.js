@@ -4,7 +4,12 @@ dotenv.config();
 
 
 class Config {
-    MONGODB_URI;
+    DB_HOST;
+    DB_PORT;
+    DB_NAME;
+    DB_USER;
+    DB_PASSWORD;
+    DB_SYNC;
     NODE_ENV;
     LOCAL_CLIENT_URL;
     CLIENT_URL;
@@ -14,7 +19,12 @@ class Config {
     LOCAL_SERVER_URL;
     SERVER_URL;
     constructor() {
-        this.MONGODB_URI = process.env.MONGODB_URI;
+        this.DB_HOST = process.env.DB_HOST;
+        this.DB_PORT = process.env.DB_PORT;
+        this.DB_NAME = process.env.DB_NAME;
+        this.DB_USER = process.env.DB_USER;
+        this.DB_PASSWORD = process.env.DB_PASSWORD;
+        this.DB_SYNC = process.env.DB_SYNC;
         this.NODE_ENV = process.env.NODE_ENV;
         this.LOCAL_CLIENT_URL = process.env.LOCAL_CLIENT_URL;
         this.CLIENT_URL = process.env.CLIENT_URL;

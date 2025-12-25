@@ -9,9 +9,12 @@ export const plantValidationSchema = Yup.object().shape({
     .nullable()
     .trim(),
 
-  company_id: Yup.string()
+  company_id: Yup.mixed()
     .required("Company ID is required")
-    .matches(/^[0-9a-fA-F]{24}$/, "Invalid company ID (must be a valid MongoDB ObjectId)"),
+    .test("is-id", "Invalid company ID", (value) => {
+      if (value === null || value === undefined || value === "") return false;
+      return /^[0-9]+$/.test(String(value));
+    }),
 
   description: Yup.string()
     .nullable()

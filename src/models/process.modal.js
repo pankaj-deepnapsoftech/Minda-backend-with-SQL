@@ -1,15 +1,25 @@
-import {Schema,model} from "mongoose";
+import { DataTypes } from "sequelize";
+import { sequelize } from "../sequelize.js";
 
+export const ProcessModel = sequelize.define(
+    "Process",
+    {
+        process_name: { type: DataTypes.STRING(255), allowNull: false },
+        process_no: { type: DataTypes.STRING(100), allowNull: false },
+    },
+    {
+        tableName: "processes",
+        timestamps: true,
+        indexes: [{ fields: ["process_name", "process_no"] }],
+    }
+);
 
-const processSchema = new Schema({
-    process_name: {type:String,required:true},
-    process_no:{type:String,required:true},
-},{timestamps:true});
-
-processSchema.index({process_name:1,process_no:1});
-
-export const ProcessModel = model("Process",processSchema);
-
+ProcessModel.prototype.toJSON = function () {
+    const values = { ...this.get({ plain: true }) };
+    values._id = values.id;
+    delete values.id;
+    return values;
+};
 
 
 

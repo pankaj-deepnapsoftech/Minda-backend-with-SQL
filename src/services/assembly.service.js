@@ -1,31 +1,60 @@
-import mongoose from "mongoose";
-import { AssemblyModal } from "../models/AssemblyLine.modal.js"
+import { Op, QueryTypes } from "sequelize";
+import { sequelize } from "../sequelize.js";
+import { AssemblyModal } from "../models/AssemblyLine.modal.js";
+import { PartModal } from "../models/Part.modal.js";
+import { CheckListModal } from "../models/checkList.modal.js";
+import { CheckListHistoryModal } from "../models/checkListHistory.modal.js";
+import { CompanyModel } from "../models/company.modal.js";
+import { PlantModel } from "../models/plant.modal.js";
+import { ProcessModel } from "../models/process.modal.js";
+import { UserModel } from "../models/user.modal.js";
 
-
+const baseAssemblyIncludes = [
+    { model: CompanyModel, as: "company_id", attributes: ["id", "company_name", "company_address", "description"] },
+    { model: PlantModel, as: "plant_id", attributes: ["id", "plant_name", "plant_address", "description"] },
+    { model: UserModel, as: "responsibility", attributes: ["id", "full_name", "email", "user_id", "desigination"] },
+    { model: ProcessModel, as: "process_id", attributes: ["id", "process_name", "process_no"], through: { attributes: [] } },
+    { model: PartModal, as: "part_id", attributes: ["id", "part_number", "part_name"] },
+];
 
 export const createAssemblyService = async (data) => {
-    const result = await AssemblyModal.create(data);
-    return result;
+    const { process_id: processIds, ...assemblyData } = data || {};
+    const result = await AssemblyModal.create(assemblyData);
+    if (Array.isArray(processIds)) {
+        const ids = processIds.filter((v) => v !== null && v !== undefined && String(v).trim() !== "");
+        await result.setProcess_id(ids);
+    }
+    return await AssemblyModal.findByPk(result.id, { include: baseAssemblyIncludes });
 };
 
 export const updateAssemblyService = async (id, data) => {
-    const result = await AssemblyModal.findByIdAndUpdate(id, data);
-    return result;
+    const assembly = await AssemblyModal.findByPk(id);
+    if (!assembly) return null;
+    const { process_id: processIds, ...assemblyData } = data || {};
+    await assembly.update(assemblyData);
+    if (Array.isArray(processIds)) {
+        const ids = processIds.filter((v) => v !== null && v !== undefined && String(v).trim() !== "");
+        await assembly.setProcess_id(ids);
+    }
+    return await AssemblyModal.findByPk(assembly.id, { include: baseAssemblyIncludes });
 };
 
 export const deleteAssemblyService = async (id) => {
-    const result = await AssemblyModal.findByIdAndDelete(id);
-    return result;
+    const assembly = await AssemblyModal.findByPk(id);
+    if (!assembly) return null;
+    await assembly.setProcess_id([]);
+    await assembly.destroy();
+    return assembly;
 };
 
 export const getAllAssemblyService = async (IsAdmin, userId, skip, limit) => {
-    const result = await AssemblyModal.find(IsAdmin ? {} : { responsibility: userId }).sort({ _id: -1 }).skip(skip).limit(limit).populate([
-        { path: "company_id", select: "company_name company_address" },
-        { path: "plant_id", select: "plant_name plant_address" },
-        { path: "responsibility", select: "email full_name email user_id desigination" },
-        { path: "process_id", select: "process_name process_no" },
-        { path: "part_id", select: "part_number part_name" }
-    ]).lean();
+    const result = await AssemblyModal.findAll({
+        where: IsAdmin ? {} : { responsibility: userId },
+        order: [["id", "DESC"]],
+        offset: skip,
+        limit,
+        include: baseAssemblyIncludes,
+    });
     return result;
 };
 
@@ -41,362 +70,171 @@ export const searchAllAssemblyService = async (
     skip = 0,
     limit = 10
 ) => {
-
-    const filterData = {
-        $or: [
-            { assembly_name: { $regex: search, $options: "i" } },
-            { assembly_number: { $regex: search, $options: "i" } }
-        ]
+    const where = {
+        [Op.or]: [
+            { assembly_name: { [Op.like]: `%${search || ""}%` } },
+            { assembly_number: { [Op.like]: `%${search || ""}%` } },
+        ],
+        ...(company_id ? { company_id } : {}),
+        ...(plant_id ? { plant_id } : {}),
+        ...(responsibility ? { responsibility } : {}),
+        ...(part_id ? { part_id } : {}),
+        ...(IsAdmin ? {} : { responsibility: userId }),
     };
 
-    if (company_id) {
-        filterData.company_id = company_id;
-    }
-
-    if (plant_id) {
-        filterData.plant_id = plant_id;
-    }
-
-    if (responsibility) {
-        filterData.responsibility = responsibility;
-    }
-
     if (process_id) {
-        filterData.process_id = process_id;
+        const rows = await sequelize.query(
+            "SELECT assembly_id FROM assembly_processes WHERE process_id = :process_id",
+            { replacements: { process_id }, type: QueryTypes.SELECT }
+        );
+        const ids = rows.map((r) => r.assembly_id);
+        if (ids.length === 0) return [];
+        where.id = { [Op.in]: ids };
     }
 
-    if (part_id) {
-        filterData.part_id = part_id;
-    }
-
-    const result = await AssemblyModal
-        .find(IsAdmin ? { ...filterData } : { ...filterData, responsibility: userId })
-        .sort({ _id: -1 })
-        .skip(Number(skip))
-        .limit(Number(limit))
-        .populate([
-            {
-                path: "company_id",
-                select: "company_name company_address"
-            },
-            {
-                path: "plant_id",
-                select: "plant_name plant_address"
-            },
-            {
-                path: "responsibility",
-                select: "full_name email user_id desigination"
-            },
-            {
-                path: "process_id",
-                select: "process_name process_no"
-            },
-            { path: "part_id", select: "part_number part_name" }
-        ])
-        .lean();
+    const result = await AssemblyModal.findAll({
+        where,
+        order: [["id", "DESC"]],
+        offset: Number(skip),
+        limit: Number(limit),
+        include: baseAssemblyIncludes,
+    });
 
     return result;
-
 };
 
 export const findAssemblyByName = async (name, number) => {
-    const result = await AssemblyModal.findOne({ assembly_name: name, assembly_number: number });
+    const result = await AssemblyModal.findOne({
+        where: { assembly_name: name, assembly_number: number },
+    });
     return result;
 };
 
 export const getAllAssemblyDataService = async () => {
-    const result = await AssemblyModal.find({}).sort({ _id: -1 }).select("assembly_number assembly_name").lean();
+    const result = await AssemblyModal.findAll({
+        attributes: ["id", "assembly_number", "assembly_name"],
+        order: [["id", "DESC"]],
+    });
     return result;
 };
 
 export const getAssemblyLineByResponsibility = async (responsibility) => {
-    const result = await AssemblyModal.aggregate([
-        {
-            $match: {
-                responsibility: new mongoose.Types.ObjectId(responsibility)
-            }
-        },
-        {
-            $lookup: {
-                from: "processes",
-                localField: "process_id",
-                foreignField: "_id",
-                as: "process_id"
-            }
-        },
-        {
-            $project: {
-                assembly_name: 1,
-                assembly_number: 1,
-                process_id: 1
-            }
-        }
-    ]);
-    return result;
+    const assemblies = await AssemblyModal.findAll({
+        where: { responsibility },
+        attributes: ["id", "assembly_name", "assembly_number"],
+        include: [
+            { model: ProcessModel, as: "process_id", attributes: ["id", "process_name", "process_no"], through: { attributes: [] } },
+        ],
+        order: [["id", "DESC"]],
+    });
+    return assemblies;
 };
 
 export const getAssemblyLineFormByResponsibility = async (user, id) => {
+    const assembly = await AssemblyModal.findOne({
+        where: { id, responsibility: user },
+        include: [
+            { model: UserModel, as: "responsibility", attributes: ["id", "full_name", "email", "user_id"] },
+            { model: CompanyModel, as: "company_id", attributes: ["id", "company_name", "company_address"] },
+            { model: PlantModel, as: "plant_id", attributes: ["id", "plant_name", "plant_address"] },
+            { model: ProcessModel, as: "process_id", attributes: ["id", "process_name", "process_no"], through: { attributes: [] } },
+        ],
+    });
 
-    const result = await AssemblyModal.aggregate([
-        {
-            $match: {
-                _id: new mongoose.Types.ObjectId(id),
-                responsibility: new mongoose.Types.ObjectId(user)
-            }
-        },
-        {
-            $lookup: {
-                from: "users",
-                localField: "responsibility",
-                foreignField: "_id",
-                as: "responsibility",
-                pipeline: [
-                    {
-                        $project: {
-                            full_name: 1,
-                            email: 1,
-                            user_id: 1
-                        }
-                    }
-                ]
-            }
-        },
-        {
-            $lookup: {
-                from: "companies",
-                foreignField: "_id",
-                localField: "company_id",
-                as: "company_id",
-                pipeline: [
-                    {
-                        $project: {
-                            company_name: 1,
-                            company_address: 1
-                        }
-                    }
-                ]
-            }
-        },
-        {
-            $lookup: {
-                from: "plants",
-                foreignField: "_id",
-                localField: "plant_id",
-                as: "plant_id",
-                pipeline: [
-                    {
-                        $project: {
-                            plant_name: 1,
-                            plant_address: 1
-                        }
-                    }
-                ]
-            }
-        },
-        {
-            $lookup: {
-                from: "processes",
-                localField: "process_id",
-                foreignField: "_id",
-                as: "process_id",
-                pipeline: [
-                    {
-                        $lookup: {
-                            from: "checklists",
-                            localField: "_id",
-                            foreignField: "process",
-                            as: "checklist_item"
-                        }
-                    }
-                ]
-            }
-        },
+    if (!assembly) return [];
 
+    const assemblyJson = assembly.toJSON();
+    const processIds = Array.isArray(assemblyJson.process_id) ? assemblyJson.process_id.map((p) => p._id) : [];
+    const checklists = processIds.length
+        ? await CheckListModal.findAll({
+            where: { process: { [Op.in]: processIds } },
+            order: [["id", "ASC"]],
+        })
+        : [];
 
-        {
-            $addFields: {
-                responsibility: { $arrayElemAt: ["$responsibility", 0] },
-                company_id: { $arrayElemAt: ["$company_id", 0] },
-                plant_id: { $arrayElemAt: ["$plant_id", 0] },
-            }
-        },
+    const checklistByProcess = new Map();
+    for (const cl of checklists) {
+        const json = cl.toJSON();
+        const pid = json.process;
+        const list = checklistByProcess.get(pid) || [];
+        list.push(json);
+        checklistByProcess.set(pid, list);
+    }
 
-    ])
-    return result;
+    assemblyJson.process_id = (assemblyJson.process_id || []).map((p) => {
+        const proc = { ...p };
+        proc.checklist_item = checklistByProcess.get(proc._id) || [];
+        return proc;
+    });
+
+    return [assemblyJson];
 };
 
 export const GetAssemblyLineDataReport = async (admin, user_id) => {
-
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
 
-    const result = await AssemblyModal.aggregate([
+    const assemblies = await AssemblyModal.findAll({
+        where: admin ? {} : { responsibility: user_id },
+        attributes: ["id"],
+        include: [{ model: ProcessModel, as: "process_id", attributes: ["id"], through: { attributes: [] } }],
+    });
 
-        /* ================= FILTER ================= */
-        {
-            $match: admin ? {} : { responsibility: new mongoose.Types.ObjectId(user_id) }
-        },
+    const assemblyIds = assemblies.map((a) => a.id);
+    const histories = assemblyIds.length
+        ? await CheckListHistoryModal.findAll({
+            where: {
+                assembly: { [Op.in]: assemblyIds },
+                createdAt: { [Op.between]: [startOfDay, endOfDay] },
+            },
+            attributes: ["assembly", "process_id", "is_error", "is_resolved"],
+        })
+        : [];
 
-        /* ================= LOOKUP PROCESSES + TODAY CHECKLIST ================= */
-        {
-            $lookup: {
-                from: "processes",
-                let: { assemblyId: "$_id" },
-                pipeline: [
-                    {
-                        $match: {
-                            $expr: { $eq: ["$assembly", "$$assemblyId"] }
-                        }
-                    },
-                    {
-                        $lookup: {
-                            from: "checklisthistories",
-                            let: { processId: "$_id", assemblyId: "$$assemblyId" },
-                            pipeline: [
-                                {
-                                    $match: {
-                                        $expr: {
-                                            $and: [
-                                                { $eq: ["$process_id", "$$processId"] },
-                                                { $eq: ["$assembly", "$$assemblyId"] }
-                                            ]
-                                        },
-                                        createdAt: { $gte: startOfDay, $lte: endOfDay }
-                                    }
-                                },
-                                {
-                                    $project: {
-                                        is_error: 1,
-                                        is_resolved: 1
-                                    }
-                                }
-                            ],
-                            as: "today"
-                        }
-                    },
+    const historyMap = new Map();
+    for (const h of histories) {
+        const key = `${h.assembly}:${h.process_id}`;
+        const list = historyMap.get(key) || [];
+        list.push(h);
+        historyMap.set(key, list);
+    }
 
-                    /* ===== PROCESS LEVEL FLAGS ===== */
-                    {
-                        $addFields: {
+    let total_assemblies = 0;
+    let total_checked = 0;
+    let total_unchecked = 0;
+    let total_errors = 0;
+    let total_resolved = 0;
 
-                            // process has any checklist today
-                            is_checked: { $gt: [{ $size: "$today" }, 0] },
+    for (const assembly of assemblies) {
+        total_assemblies += 1;
+        const processList = Array.isArray(assembly.process_id) ? assembly.process_id : [];
 
-                            // process has NO checklist today
-                            is_unchecked: { $eq: [{ $size: "$today" }, 0] },
+        const processFlags = processList.map((p) => {
+            const key = `${assembly.id}:${p.id}`;
+            const today = historyMap.get(key) || [];
+            const is_checked = today.length > 0;
+            const is_unchecked = today.length === 0;
+            const has_error = today.some((t) => t.is_error === true);
+            const has_unresolved_error = today.some((t) => t.is_error === true && t.is_resolved === false);
+            return { is_checked, is_unchecked, has_error, has_unresolved_error };
+        });
 
-                            // process has any error
-                            has_error: {
-                                $gt: [
-                                    {
-                                        $size: {
-                                            $filter: {
-                                                input: "$today",
-                                                as: "t",
-                                                cond: { $eq: ["$$t.is_error", true] }
-                                            }
-                                        }
-                                    },
-                                    0
-                                ]
-                            },
+        const assembly_unchecked = processFlags.some((p) => p.is_unchecked) || processFlags.length === 0;
+        const assembly_checked = !assembly_unchecked;
+        const assembly_error = processFlags.some((p) => p.has_error);
+        const assembly_resolved = assembly_error && !processFlags.some((p) => p.has_unresolved_error);
 
-                            // process has unresolved error
-                            has_unresolved_error: {
-                                $gt: [
-                                    {
-                                        $size: {
-                                            $filter: {
-                                                input: "$today",
-                                                as: "t",
-                                                cond: {
-                                                    $and: [
-                                                        { $eq: ["$$t.is_error", true] },
-                                                        { $eq: ["$$t.is_resolved", false] }
-                                                    ]
-                                                }
-                                            }
-                                        }
-                                    },
-                                    0
-                                ]
-                            }
-                        }
-                    }
-                ],
-                as: "processes"
-            }
-        },
+        if (assembly_checked) total_checked += 1;
+        if (assembly_unchecked) total_unchecked += 1;
+        if (assembly_error) total_errors += 1;
+        if (assembly_resolved) total_resolved += 1;
+    }
 
-        /* ================= ASSEMBLY LEVEL DECISION ================= */
-        {
-            $addFields: {
-
-                // ✔ all processes checked
-                assembly_checked: {
-                    $cond: [
-                        { $not: { $in: [true, "$processes.is_unchecked"] } },
-                        1,
-                        0
-                    ]
-                },
-
-                // ❌ any process unchecked
-                assembly_unchecked: {
-                    $cond: [
-                        { $in: [true, "$processes.is_unchecked"] },
-                        1,
-                        0
-                    ]
-                },
-
-                // 🔴 any process has error
-                assembly_error: {
-                    $cond: [
-                        { $in: [true, "$processes.has_error"] },
-                        1,
-                        0
-                    ]
-                },
-
-                // 🟢 all errors resolved
-                assembly_resolved: {
-                    $cond: [
-                        {
-                            $and: [
-                                { $in: [true, "$processes.has_error"] },
-                                { $not: { $in: [true, "$processes.has_unresolved_error"] } }
-                            ]
-                        },
-                        1,
-                        0
-                    ]
-                }
-            }
-        },
-
-        /* ================= FINAL SUMMARY ================= */
-        {
-            $group: {
-                _id: null,
-                total_assemblies: { $sum: 1 },
-                total_checked: { $sum: "$assembly_checked" },
-                total_unchecked: { $sum: "$assembly_unchecked" },
-                total_errors: { $sum: "$assembly_error" },
-                total_resolved: { $sum: "$assembly_resolved" }
-            }
-        },
-        {
-            $project: { _id: 0 }
-        }
-    ]);
-
-    return result[0];
+    return { total_assemblies, total_checked, total_unchecked, total_errors, total_resolved };
 };
-
 
 export const getAssemblyLineTodayReport = async (
     admin,
@@ -406,173 +244,84 @@ export const getAssemblyLineTodayReport = async (
     startdate,
     endDate
 ) => {
-
     const today = new Date();
-
     const startOfDay = startdate ? new Date(startdate) : new Date(today);
     startOfDay.setHours(0, 0, 0, 0);
-
     const endOfDay = endDate ? new Date(endDate) : new Date(today);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const result = await AssemblyModal.aggregate([
-        // ---------- Access Control ----------
-        {
-            $match: admin ? {} : { responsibility: new mongoose.Types.ObjectId(user_id) }
-        },
+    const assemblies = await AssemblyModal.findAll({
+        where: admin ? {} : { responsibility: user_id },
+        order: [["id", "DESC"]],
+        offset: skip,
+        limit,
+        include: [
+            { model: CompanyModel, as: "company_id", attributes: ["id", "company_name", "company_address", "description"] },
+            { model: PlantModel, as: "plant_id", attributes: ["id", "plant_name", "plant_address", "description"] },
+            { model: UserModel, as: "responsibility", attributes: ["id", "full_name", "email", "user_id", "desigination"] },
+            { model: ProcessModel, as: "process_id", attributes: ["id", "process_name", "process_no"], through: { attributes: [] } },
+        ],
+    });
 
-        { $skip: skip },
-        { $limit: limit },
+    const assemblyJsonList = assemblies.map((a) => a.toJSON());
+    const assemblyIds = assemblyJsonList.map((a) => a._id);
 
-        // ---------- Company ----------
-        {
-            $lookup: {
-                from: "companies",
-                localField: "company_id",
-                foreignField: "_id",
-                as: "company_id",
-                pipeline: [
-                    {
-                        $project: {
-                            company_name: 1,
-                            company_address: 1,
-                            description: 1
-                        }
-                    }
-                ]
-            }
-        },
+    const processIds = [
+        ...new Set(
+            assemblyJsonList.flatMap((a) => (Array.isArray(a.process_id) ? a.process_id.map((p) => p._id) : []))
+        ),
+    ];
 
-        // ---------- Plant ----------
-        {
-            $lookup: {
-                from: "plants",
-                localField: "plant_id",
-                foreignField: "_id",
-                as: "plant_id",
-                pipeline: [
-                    {
-                        $project: {
-                            plant_name: 1,
-                            plant_address: 1,
-                            description: 1
-                        }
-                    }
-                ]
-            }
-        },
+    const checklists = processIds.length
+        ? await CheckListModal.findAll({
+            where: { process: { [Op.in]: processIds } },
+            order: [["id", "ASC"]],
+        })
+        : [];
 
-        // ---------- User ----------
-        {
-            $lookup: {
-                from: "users",
-                localField: "responsibility",
-                foreignField: "_id",
-                as: "responsibility",
-                pipeline: [
-                    {
-                        $project: {
-                            full_name: 1,
-                            email: 1,
-                            user_id: 1,
-                            desigination: 1
-                        }
-                    }
-                ]
-            }
-        },
+    const histories = assemblyIds.length
+        ? await CheckListHistoryModal.findAll({
+            where: {
+                assembly: { [Op.in]: assemblyIds },
+                createdAt: { [Op.between]: [startOfDay, endOfDay] },
+            },
+            attributes: ["id", "checkList", "assembly", "process_id", "result", "is_error", "description", "status", "createdAt"],
+        })
+        : [];
 
-        {
-            $addFields: {
-                responsibility: { $arrayElemAt: ["$responsibility", 0] },
-                company_id: { $arrayElemAt: ["$company_id", 0] },
-                plant_id: { $arrayElemAt: ["$plant_id", 0] }
-            }
-        },
+    const checklistByProcess = new Map();
+    for (const cl of checklists) {
+        const json = cl.toJSON();
+        const pid = json.process;
+        const list = checklistByProcess.get(pid) || [];
+        list.push(json);
+        checklistByProcess.set(pid, list);
+    }
 
-        // ---------- Process → Checklist → ChecklistHistory ----------
-        {
-            $lookup: {
-                from: "processes",
-                let: {
-                    processIds: "$process_id",
-                    assemblyId: "$_id"   // ✅ root access
-                },
-                pipeline: [
-                    {
-                        $match: {
-                            $expr: {
-                                $in: ["$_id", "$$processIds"]
-                            }
-                        }
-                    },
-                    {
-                        $project: {
-                            process_name: 1,
-                            process_no: 1
-                        }
-                    },
-                    {
-                        $lookup: {
-                            from: "checklists",
-                            let: {
-                                processId: "$_id",
-                                assemblyId: "$$assemblyId" // ✅ re-pass root
-                            },
-                            pipeline: [
-                                {
-                                    $match: {
-                                        $expr: {
-                                            $eq: ["$process", "$$processId"]
-                                        }
-                                    }
-                                },
-                                {
-                                    $lookup: {
-                                        from: "checklisthistories",
-                                        let: {
-                                            processId: "$$processId",
-                                            assemblyId: "$$assemblyId"
-                                        },
-                                        pipeline: [
-                                            {
-                                                $match: {
-                                                    $expr: {
-                                                        $and: [
-                                                            { $eq: ["$process_id", "$$processId"] },
-                                                            { $eq: ["$assembly", "$$assemblyId"] }
-                                                        ]
-                                                    },
-                                                    createdAt: {
-                                                        $gte: startOfDay,
-                                                        $lte: endOfDay
-                                                    }
-                                                }
-                                            },
-                                            {
-                                                $project: {
-                                                    checkList: 1,
-                                                    result: 1,
-                                                    is_error: 1,
-                                                    description: 1,
-                                                    status: 1
-                                                }
-                                            }
-                                        ],
-                                        as: "check_items_history"
-                                    }
-                                }
-                            ],
-                            as: "check_list_items"
-                        }
-                    }
-                ],
-                as: "process_id"
-            }
-        }
-    ]);
+    const historyByAssemblyProcessCheckList = new Map();
+    for (const h of histories) {
+        const json = h.toJSON();
+        const key = `${json.assembly}:${json.process_id}:${json.checkList}`;
+        const list = historyByAssemblyProcessCheckList.get(key) || [];
+        list.push(json);
+        historyByAssemblyProcessCheckList.set(key, list);
+    }
 
-    return result;
+    return assemblyJsonList.map((assembly) => {
+        const processes = Array.isArray(assembly.process_id) ? assembly.process_id : [];
+        assembly.process_id = processes.map((proc) => {
+            const procChecklists = checklistByProcess.get(proc._id) || [];
+            return {
+                ...proc,
+                check_list_items: procChecklists.map((cli) => ({
+                    ...cli,
+                    check_items_history:
+                        historyByAssemblyProcessCheckList.get(`${assembly._id}:${proc._id}:${cli._id}`) || [],
+                })),
+            };
+        });
+        return assembly;
+    });
 };
 
 

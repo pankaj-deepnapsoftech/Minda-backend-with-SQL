@@ -1,10 +1,23 @@
-import {Schema,model} from "mongoose";
+import { DataTypes } from "sequelize";
+import { sequelize } from "../sequelize.js";
 
-const typeSchema = new Schema({
-    uom:{type:String},
-    checking_time:{type:String},
-    checking_method:{type:String},
-});
+export const TypeModal = sequelize.define(
+    "Type",
+    {
+        uom: { type: DataTypes.STRING(100), allowNull: true },
+        checking_time: { type: DataTypes.STRING(100), allowNull: true },
+        checking_method: { type: DataTypes.STRING(255), allowNull: true },
+    },
+    {
+        tableName: "types",
+        timestamps: true,
+    }
+);
 
-export const TypeModal = model("types",typeSchema);
+TypeModal.prototype.toJSON = function () {
+    const values = { ...this.get({ plain: true }) };
+    values._id = values.id;
+    delete values.id;
+    return values;
+};
 

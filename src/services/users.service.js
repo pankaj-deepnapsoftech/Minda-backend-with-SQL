@@ -1,4 +1,8 @@
 import { UserModel } from "../models/user.modal.js";
+import { CompanyModel } from "../models/company.modal.js";
+import { PlantModel } from "../models/plant.modal.js";
+import { RoleModel } from "../models/role.modal.js";
+import { Op } from "sequelize";
 
 
 
@@ -8,60 +12,109 @@ export const createUserService = async (data) => {
 };
 
 export const GetUsersService = async (skip,limit) => {
-    const result = await UserModel.find({  is_admin:  false}).skip(skip).limit(limit).populate([{path:"role"},{path:"employee_company"},{path:"employee_plant"}]).lean();
+    const result = await UserModel.findAll({
+        where: { is_admin: false },
+        include: [
+            { model: RoleModel, as: "role" },
+            { model: CompanyModel, as: "employee_company" },
+            { model: PlantModel, as: "employee_plant" },
+        ],
+        offset: skip,
+        limit,
+        order: [["id", "DESC"]],
+    });
     return result;
 };
 
 export const GetAllUsersService = async () => {
-    const result = await UserModel.find({  is_admin: false }).select("email user_id full_name").lean();
+    const result = await UserModel.findAll({
+        where: { is_admin: false },
+        attributes: ["id", "email", "user_id", "full_name"],
+        order: [["id", "DESC"]],
+    });
     return result;
 };
 
 export const SearchUsersService = async (company,plant,search="",skip,limit) => {
-    const baseQuery = {  is_admin: false,
-        $or:[{email:{$regex:search,$options:'i'}},{user_id:{$regex:search,$options:'i'}}]
+    const q = search || "";
+    const where = {
+        is_admin: false,
+        [Op.or]: [
+            { email: { [Op.like]: `%${q}%` } },
+            { user_id: { [Op.like]: `%${q}%` } },
+        ],
+        ...(company ? { employee_company: company } : {}),
+        ...(plant ? { employee_plant: plant } : {}),
     };
-     if (company && plant) {
-    baseQuery.employee_company = company;
-    baseQuery.employee_plant = plant;
-  }
-  
-  else if (company) {
-    baseQuery.employee_company = company;
-  }
-    const result = await UserModel.find(baseQuery).skip(skip).limit(limit).populate([{path:"role"},{path:"employee_company"},{path:"employee_plant"}]).lean();
+
+    const result = await UserModel.findAll({
+        where,
+        include: [
+            { model: RoleModel, as: "role" },
+            { model: CompanyModel, as: "employee_company" },
+            { model: PlantModel, as: "employee_plant" },
+        ],
+        offset: skip,
+        limit,
+        order: [["id", "DESC"]],
+    });
     return result;
 };
 
 export const UpdateUsersService = async (id,data) => {
-    const result = await UserModel.findByIdAndUpdate(id,data,{new:true});
+    const user = await UserModel.findByPk(id);
+    if (!user) return null;
+    const result = await user.update(data);
     return result;
 };
 
 export const DeleteUsersService = async (id) => {
-    const result = await UserModel.findByIdAndDelete(id);
+    const user = await UserModel.findByPk(id);
+    if (!user) return null;
+    await user.destroy();
+    const result = user;
     return result;
 };
 
 export const FindUserByEmailOrUserId = async (email) => {
-    const result = await UserModel.findOne({$or:[{email},{user_id:email}]}).lean();
+    const result = await UserModel.findOne({
+        where: { [Op.or]: [{ email }, { user_id: email }] },
+    });
     return result;
 };
 
 
 export const FindUserById = async (id) => {
-    const result = await UserModel.findById(id).select("full_name email desigination user_id employee_plant employee_company role is_admin terminate").populate([{path:"employee_plant"},{path:"employee_company"},{path:"role"}]);
+    const result = await UserModel.findByPk(id, {
+        attributes: [
+            "id",
+            "full_name",
+            "email",
+            "desigination",
+            "user_id",
+            "employee_plant",
+            "employee_company",
+            "role",
+            "is_admin",
+            "terminate",
+        ],
+        include: [
+            { model: PlantModel, as: "employee_plant" },
+            { model: CompanyModel, as: "employee_company" },
+            { model: RoleModel, as: "role" },
+        ],
+    });
     return result;
 };
 
 export const FindUserByEmail = async (email) => {
-    const result = await UserModel.findOne({email}).lean();
+    const result = await UserModel.findOne({ where: { email } });
     return result;
 };
 
 
 export const GetAdmin = async () => {
-    const result = await UserModel.findOne({is_admin:true});
+    const result = await UserModel.findOne({ where: { is_admin: true } });
     return result;
 }
 

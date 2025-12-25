@@ -1,4 +1,6 @@
 import { CheckListModal } from "../models/checkList.modal.js"
+import { ProcessModel } from "../models/process.modal.js";
+import { Op } from "sequelize";
 
 
 export const createChecklistService = async (data) => {
@@ -7,26 +9,46 @@ export const createChecklistService = async (data) => {
 };
 
 export const updateChecklistService = async (id,data) => {
-    const result = await CheckListModal.findByIdAndUpdate(id,data,{new:true});
+    const checklist = await CheckListModal.findByPk(id);
+    if (!checklist) return null;
+    const result = await checklist.update(data);
     return result;
 };
 
 export const DeleteCheckListService = async (id) => {
-    const result = await CheckListModal.findByIdAndDelete(id);
+    const checklist = await CheckListModal.findByPk(id);
+    if (!checklist) return null;
+    await checklist.destroy();
+    const result = checklist;
     return result;
 };
 
 export const getCheckListDataService = async (skip,limit) => {
-    const result = await CheckListModal.find({}).sort({_id:-1}).skip(skip).limit(limit).populate({path:"process",select:"process_name process_no"}).lean();
+    const result = await CheckListModal.findAll({
+        include: [{ model: ProcessModel, as: "process", attributes: ["id", "process_name", "process_no"] }],
+        order: [["id", "DESC"]],
+        offset: skip,
+        limit,
+    });
     return result;
 };
 
 export const SearchCheckListDataService = async (search="",process="",skip,limit) => {
-    const result = await CheckListModal.find(process ? {process,item:{$regex:search,$options:"i"}} : {item:{$regex:search,$options:"i"}}).sort({_id:-1}).skip(skip).limit(limit).populate({path:"process",select:"process_name process_no"}).lean();
+    const q = search || "";
+    const result = await CheckListModal.findAll({
+        where: {
+            ...(process ? { process } : {}),
+            item: { [Op.like]: `%${q}%` },
+        },
+        include: [{ model: ProcessModel, as: "process", attributes: ["id", "process_name", "process_no"] }],
+        order: [["id", "DESC"]],
+        offset: skip,
+        limit,
+    });
     return result;
 };
 
 export const FindChecklistByName = async (name) => {
-    const result = await CheckListModal.findOne({item:name}).lean();
+    const result = await CheckListModal.findOne({ where: { item: name } });
     return result;
 }

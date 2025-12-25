@@ -1,22 +1,25 @@
-import {Schema,model} from "mongoose";
+import { DataTypes } from "sequelize";
+import { sequelize } from "../sequelize.js";
 
+export const RoleModel = sequelize.define(
+    "Role",
+    {
+        name: { type: DataTypes.STRING(255), allowNull: false, unique: true },
+        description: { type: DataTypes.TEXT, allowNull: true },
+        permissions: { type: DataTypes.JSON, allowNull: false, defaultValue: [] },
+    },
+    {
+        tableName: "roles",
+        timestamps: true,
+        indexes: [{ fields: ["name"] }],
+    }
+);
 
-
-const roleSchema = new Schema({
-    name:{type:String,required:true},
-    description:{type:String},
-    permissions:{type:[String],default:[]},
-},{timestamps:true});
-
-roleSchema.index({name:1});
-
-export const RoleModel = model("Role",roleSchema);
-
-
-
-
-
-
-
+RoleModel.prototype.toJSON = function () {
+    const values = { ...this.get({ plain: true }) };
+    values._id = values.id;
+    delete values.id;
+    return values;
+};
 
 

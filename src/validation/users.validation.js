@@ -1,11 +1,11 @@
 import * as yup from "yup";
-import mongoose from "mongoose";
 
-const objectId = yup
-  .string()
-  .test("is-objectid", "Invalid ObjectId", value =>
-    !value || mongoose.Types.ObjectId.isValid(value)
-  );
+const numericId = yup
+  .mixed()
+  .test("is-id", "Invalid ID", (value) => {
+    if (value === null || value === undefined || value === "") return true;
+    return /^[0-9]+$/.test(String(value));
+  });
 
 export const userValidationSchema = yup.object({
   full_name: yup
@@ -36,11 +36,11 @@ export const userValidationSchema = yup.object({
     .trim()
     .nullable(),
 
-  employee_plant: objectId.nullable(),
+  employee_plant: numericId.nullable(),
 
-  employee_company: objectId.nullable(),
+  employee_company: numericId.nullable(),
 
-  role: objectId.nullable(),
+  role: numericId.nullable(),
 
   terminate: yup
     .boolean()

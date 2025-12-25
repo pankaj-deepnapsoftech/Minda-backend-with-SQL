@@ -1,4 +1,5 @@
 import { RoleModel } from "../models/role.modal.js"
+import { Op } from "sequelize";
 
 
 
@@ -8,32 +9,50 @@ export const createRoleService = async (data) => {
 };
 
 export const getRolesListService = async (skip,limit) => {
-    const result = await RoleModel.find().skip(skip).limit(limit).lean();
+    const result = await RoleModel.findAll({
+        order: [["id", "DESC"]],
+        offset: skip,
+        limit,
+    });
     return result;
 };
 
 export const updateRoleService = async (id,data) => {
-    const result = await RoleModel.findByIdAndUpdate(id,data,{new:true});
+    const role = await RoleModel.findByPk(id);
+    if (!role) return null;
+    const result = await role.update(data);
     return result;
 };
 
 export const deleteRoleService = async (id) => {
-    const result = await RoleModel.findByIdAndDelete(id);
+    const role = await RoleModel.findByPk(id);
+    if (!role) return null;
+    await role.destroy();
+    const result = role;
     return result;
 };
 
 export const findRoleBuName = async (name) => {
-    const result = await RoleModel.findOne({name}).lean();
+    const result = await RoleModel.findOne({ where: { name } });
     return result;
 };
 
 export const searchRoleByName = async (name,skip,limit) => {
-    const result = await RoleModel.find({name:{$regex:name,$options:'i'}}).sort({_id:-1}).skip(skip).limit(limit).lean();
+    const q = name || "";
+    const result = await RoleModel.findAll({
+        where: { name: { [Op.like]: `%${q}%` } },
+        order: [["id", "DESC"]],
+        offset: skip,
+        limit,
+    });
     return result;
 }
 
 export const getAllRoleService = async () => {
-    const result = await RoleModel.find({}).select("name").lean();
+    const result = await RoleModel.findAll({
+        attributes: ["id", "name"],
+        order: [["id", "DESC"]],
+    });
     return result;
 }
 

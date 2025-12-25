@@ -1,21 +1,21 @@
 import * as yup from "yup";
 
-const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+const isNumericId = (value) => /^[0-9]+$/.test(String(value));
 
 export const checkListHistoryItemSchema = yup.object({
   checkList: yup
-    .string()
-    .matches(objectIdRegex, "Invalid checklist ID")
+    .mixed()
+    .test("is-id", "Invalid checklist ID", (value) => value !== null && value !== undefined && value !== "" && isNumericId(value))
     .required("Checklist is required"),
 
   process_id: yup
-    .string()
-    .matches(objectIdRegex, "Invalid process ID")
+    .mixed()
+    .test("is-id", "Invalid process ID", (value) => value !== null && value !== undefined && value !== "" && isNumericId(value))
     .required("Process is required"),
 
   assembly: yup
-    .string()
-    .matches(objectIdRegex, "Invalid assembly ID")
+    .mixed()
+    .test("is-id", "Invalid assembly ID", (value) => value !== null && value !== undefined && value !== "" && isNumericId(value))
     .required("Assembly is required"),
 
   result: yup

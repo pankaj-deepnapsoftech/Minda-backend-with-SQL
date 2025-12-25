@@ -1,5 +1,3 @@
-import mongoose from "mongoose";
-
 // ------------------------------- local imports -------------------------------
 import { AsyncHandler } from "../utils/asyncHandler.js";
 import { createRoleService, deleteRoleService, findRoleBuName, getAllRoleService, getRolesListService, searchRoleByName, updateRoleService } from "../services/role.service.js";
@@ -10,26 +8,16 @@ import { BadRequestError } from "../utils/errorHandler.js";
 export const createRole = AsyncHandler(async (req, res) => {
     const data = req.body;
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    try {
-        const find = await findRoleBuName(data.name);
-        if (find) {
-            throw new BadRequestError("Role already exists","createRole() method error");
-        }
-        const role = await createRoleService(data);
-        await session.commitTransaction();
-        res.status(201).json({
-            success: true,
-            message: "Role created successfully",
-            data: role,
-        });
-    } catch (error) {
-        await session.abortTransaction();
-        throw error;
-    } finally {
-        session.endSession();
+    const find = await findRoleBuName(data.name);
+    if (find) {
+        throw new BadRequestError("Role already exists","createRole() method error");
     }
+    const role = await createRoleService(data);
+    res.status(201).json({
+        success: true,
+        message: "Role created successfully",
+        data: role,
+    });
 });
 
 export const getRolesList = AsyncHandler(async (req,res) => {

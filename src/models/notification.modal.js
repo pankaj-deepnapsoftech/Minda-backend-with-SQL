@@ -1,18 +1,34 @@
+import { DataTypes } from "sequelize";
+import { sequelize } from "../sequelize.js";
 
-import { Schema, model } from "mongoose";
+export const NotificationModal = sequelize.define(
+    "Notification",
+    {
+        title: { type: DataTypes.STRING(255), allowNull: false },
+        description: { type: DataTypes.TEXT, allowNull: true },
+        reciverId: { type: DataTypes.INTEGER, allowNull: false },
+        senderId: { type: DataTypes.INTEGER, allowNull: true },
+        status: {
+            type: DataTypes.ENUM("send", "recived", "view"),
+            allowNull: false,
+            defaultValue: "send",
+        },
+        assembly: { type: DataTypes.INTEGER, allowNull: false },
+        process_id: { type: DataTypes.INTEGER, allowNull: false },
+        checkList: { type: DataTypes.INTEGER, allowNull: false },
+    },
+    {
+        tableName: "notifications",
+        timestamps: true,
+    }
+);
 
-const notificationSchema = new Schema({
-    title: { type: String, required: true },
-    description: { type: String },
-    reciverId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    senderId: { type: Schema.Types.ObjectId, ref: "User" },
-    status: { type: String, required: true, default: "send", enum: ["send", 'recived', 'view'] },
-    assembly: { type: Schema.Types.ObjectId, ref: "Assembly", required: true },
-    process_id: { type: Schema.Types.ObjectId, ref: "Process", required: true },
-    checkList: { type: Schema.Types.ObjectId, ref: "Checklist", required: true },
-},{timestamps:true});
-
-export const NotificationModal = model("Notification", notificationSchema);
+NotificationModal.prototype.toJSON = function () {
+    const values = { ...this.get({ plain: true }) };
+    values._id = values.id;
+    delete values.id;
+    return values;
+};
 
 
 

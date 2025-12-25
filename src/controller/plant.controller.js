@@ -2,7 +2,6 @@ import { StatusCodes } from "http-status-codes";
 import { AllPlantDataService, plantCreateService, plantDeleteService, plantlistService, plantSearchService, plantUpdateService } from "../services/plant.service.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
 import { NotFoundError } from "../utils/errorHandler.js";
-import mongoose from "mongoose";
 
 
 export const createPlant = AsyncHandler(async (req, res) => {
@@ -55,9 +54,8 @@ export const searchPlant = AsyncHandler(async (req,res) => {
     let {company,search,page,limit} = req.query; 
     page = page ? parseInt(page) : 1;
     limit = limit ? parseInt(limit) : 10;
-    company = company && new mongoose.Types.ObjectId(company);
     const skip = (page - 1) * limit;
-    const result = await plantSearchService(search?.trim(),company?.trim(),skip,limit);
+    const result = await plantSearchService(search?.trim(),company?.trim() || company,skip,limit);
     res.status(200).json({
         message: "plant search fetched successfully",
         data: result,

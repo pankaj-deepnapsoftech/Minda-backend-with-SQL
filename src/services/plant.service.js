@@ -1,4 +1,6 @@
 import { PlantModel } from "../models/plant.modal.js";
+import { CompanyModel } from "../models/company.modal.js";
+import { Op } from "sequelize";
 
 
 export const plantCreateService = async (data) => {
@@ -7,37 +9,65 @@ export const plantCreateService = async (data) => {
 };
 
 export const plantlistService = async (skip,limit) => {
-    const result = await PlantModel.find().skip(skip).limit(limit).populate("company_id").lean();
+    const result = await PlantModel.findAll({
+        include: [{ model: CompanyModel, as: "company_id" }],
+        offset: skip,
+        limit,
+        order: [["id", "DESC"]],
+    });
     return result;
 };
 
-export const plantUpdateService = async (is,data) => {
-    const result = await PlantModel.findByIdAndUpdate(is,data,{new:true});
+export const plantUpdateService = async (id,data) => {
+    const plant = await PlantModel.findByPk(id);
+    if (!plant) return null;
+    const result = await plant.update(data);
     return result;
 };
 
 export const plantDeleteService = async (id) => {
-    const result = await PlantModel.findByIdAndDelete(id);
+    const plant = await PlantModel.findByPk(id);
+    if (!plant) return null;
+    await plant.destroy();
+    const result = plant;
     return result;
 };
 
 export const getPlantByIdService = async (id) => {
-    const result = await PlantModel.findById(id);
+    const result = await PlantModel.findByPk(id, { include: [{ model: CompanyModel, as: "company_id" }] });
     return result;
 };
 
 export const plantSearchService = async (query="",company,skip,limit) => {
-    const result = await PlantModel.find(company ? {company_id:company,$or:[{plant_name:{$regex:query,$options:"i"}},{plant_address:{$regex:query,$options:"i"}}]} : {$or:[{plant_name:{$regex:query,$options:"i"}},{plant_address:{$regex:query,$options:"i"}}]}).skip(skip).limit(limit).populate("company_id").lean();
+    const q = query || "";
+    const where = {
+        ...(company ? { company_id: company } : {}),
+        [Op.or]: [
+            { plant_name: { [Op.like]: `%${q}%` } },
+            { plant_address: { [Op.like]: `%${q}%` } },
+        ],
+    };
+    const result = await PlantModel.findAll({
+        where,
+        include: [{ model: CompanyModel, as: "company_id" }],
+        offset: skip,
+        limit,
+        order: [["id", "DESC"]],
+    });
     return result;
 };
 
 export const AllPlantDataService = async (companyId) => {
-    const result = await PlantModel.find({company_id:companyId}).select("plant_name");
+    const result = await PlantModel.findAll({
+        where: { company_id: companyId },
+        attributes: ["id", "plant_name"],
+        order: [["id", "DESC"]],
+    });
     return result;
 };
 
 export const deleteManyPlantsByCompany = async (company_id) => {
-    const result = await PlantModel.deleteMany({company_id});
+    const result = await PlantModel.destroy({ where: { company_id } });
     return result;
 }
 

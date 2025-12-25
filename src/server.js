@@ -62,7 +62,7 @@ function errorHandler(app) {
 
 function Connections() {
     // Initialize database connections or other services here
-    CheckDbConnection(config.MONGODB_URI);
+    CheckDbConnection();
 }
 
 function StartServer(app) {

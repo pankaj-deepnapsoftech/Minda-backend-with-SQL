@@ -1,68 +1,72 @@
-import mongoose, { Schema, model } from "mongoose";
 import bcrypt from "bcrypt"
+import { DataTypes, Op } from "sequelize";
+import { sequelize } from "../sequelize.js";
 
+export const UserModel = sequelize.define(
+    "User",
+    {
+        full_name: { type: DataTypes.STRING(255), allowNull: true },
+        email: { type: DataTypes.STRING(255), allowNull: false, unique: true },
+        password: { type: DataTypes.STRING(255), allowNull: false },
+        desigination: { type: DataTypes.STRING(255), allowNull: true },
+        user_id: { type: DataTypes.STRING(50), allowNull: true, unique: true },
+        employee_plant: { type: DataTypes.INTEGER, allowNull: true },
+        employee_company: { type: DataTypes.INTEGER, allowNull: true },
+        role: { type: DataTypes.INTEGER, allowNull: true },
+        terminate: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+        refresh_token: { type: DataTypes.TEXT, allowNull: true },
+        is_admin: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    },
+    {
+        tableName: "users",
+        timestamps: true,
+        indexes: [
+            { fields: ["email"] },
+            { fields: ["user_id"] },
+            { fields: ["employee_plant"] },
+            { fields: ["employee_company"] },
+            { fields: ["role"] },
+        ],
+        hooks: {
+            beforeCreate: async (user) => {
+                if (user.role && !user.user_id) {
+                    const lastUser = await UserModel.findOne({
+                        where: { user_id: { [Op.ne]: null } },
+                        order: [["createdAt", "DESC"]],
+                        attributes: ["user_id"],
+                    });
 
-const userSchema = new Schema({
-    full_name: { type: String },
-    email: { type: String, required: true, unique: true,lowercase: true },
-    password: { type: String, required: true },
-    desigination: { type: String },
-    user_id: { type: String, unique: true, index: true, sparse: true },
-    employee_plant: { type: Schema.Types.ObjectId, ref: "Plant" },
-    employee_company: { type: Schema.Types.ObjectId, ref: "Company" },
-    role: { type: Schema.Types.ObjectId, ref: "Role" },
-    terminate: { type: Boolean, required: true, default: false },
-    refresh_token: { type: String },
-    is_admin:{type:Boolean,required:true,default:false}
-}, { timestamps: true });
+                    let nextNumber = 1;
+                    if (lastUser?.user_id) {
+                        const lastNumber = Number.parseInt(lastUser.user_id.split("-")[1], 10);
+                        nextNumber = Number.isFinite(lastNumber) ? lastNumber + 1 : 1;
+                    }
 
-userSchema.index({email:1,user_id:1,employee_plant:1,employee_company:1,role:1});
+                    user.user_id = `EMP-${String(nextNumber).padStart(4, "0")}`;
+                }
 
-userSchema.pre("save", async function () {
-    if (this.isNew && this.role) {
-        const lastUser = await mongoose
-            .model("User")
-            .findOne({ user_id: { $exists: true } })
-            .sort({ createdAt: -1 })
-            .select("user_id");
-
-        let nextNumber = 1;
-
-        if (lastUser?.user_id) {
-            const lastNumber = parseInt(lastUser.user_id.split("-")[1], 10);
-            nextNumber = lastNumber + 1;
-        }
-
-        this.user_id = `EMP-${String(nextNumber).padStart(4, "0")}`;
+                if (user.password) {
+                    user.password = await bcrypt.hash(user.password, 10);
+                }
+                if (user.email) {
+                    user.email = user.email.toLowerCase();
+                }
+            },
+            beforeUpdate: async (user) => {
+                if (user.changed("password")) {
+                    user.password = await bcrypt.hash(user.password, 10);
+                }
+                if (user.changed("email") && user.email) {
+                    user.email = user.email.toLowerCase();
+                }
+            },
+        },
     }
+);
 
-    if (this.isModified("password")) {
-        this.password = await bcrypt.hash(this.password, 10);
-    }
-});
-
-userSchema.pre("findOneAndUpdate", async function () {
-    const update = this.getUpdate();
-
-    if (!update) return;
-
-    const password =
-        update.password || (update.$set && update.$set.password);
-
-    if (!password) return;
-
-    const hashed = await bcrypt.hash(password, 10);
-
-    if (update.password) {
-        update.password = hashed;
-    } else {
-        update.$set.password = hashed;
-    }
-});
-
-
-
-
-
-
-export const UserModel = model("User", userSchema);
+UserModel.prototype.toJSON = function () {
+    const values = { ...this.get({ plain: true }) };
+    values._id = values.id;
+    delete values.id;
+    return values;
+};

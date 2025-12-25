@@ -1,8 +1,12 @@
 import { CheckListHistoryModal } from "../models/checkListHistory.modal.js"
+import { AssemblyModal } from "../models/AssemblyLine.modal.js";
+import { CheckListModal } from "../models/checkList.modal.js";
+import { ProcessModel } from "../models/process.modal.js";
+import { Op } from "sequelize";
 
 
 export const createChecklistHistory = async (data) => {
-  const result = await CheckListHistoryModal.insertMany(data);
+  const result = await CheckListHistoryModal.bulkCreate(data);
   return result;
 };
 
@@ -13,26 +17,24 @@ export const findTodayChecklistHistory = async (data) => {
   const endOfDay = new Date();
   endOfDay.setHours(23, 59, 59, 999);
 
-  return await CheckListHistoryModal.find(
-    {
-      createdAt: { $gte: startOfDay, $lte: endOfDay },
-      $or: data.map(item => ({
+  return await CheckListHistoryModal.findAll({
+    where: {
+      createdAt: { [Op.between]: [startOfDay, endOfDay] },
+      [Op.or]: data.map((item) => ({
         checkList: item.checkList,
         process_id: item.process_id,
         assembly: item.assembly,
       })),
     },
-    {
-      checkList: 1,
-      process_id: 1,
-      assembly: 1,
-      _id: 0,
-    }
-  );
+    attributes: ["checkList", "process_id", "assembly"],
+    order: [["id", "DESC"]],
+  });
 };
 
 export const UpdateCheckListHistory = async (id, data) => {
-  const result = await CheckListHistoryModal.findByIdAndUpdate(id, data, { new: true });
+  const history = await CheckListHistoryModal.findByPk(id);
+  if (!history) return null;
+  const result = await history.update(data);
   return result
 };
 
@@ -45,27 +47,19 @@ export const GetAllErrorsHistory = async (startDate,endDate,admin, user) => {
 
   const endOfDay = endDate ?  new Date(endDate) : new Date(today);
   endOfDay.setHours(23, 59, 59, 999);
-  const result = await CheckListHistoryModal.find(admin ? {
-    is_error: true, createdAt: {
-      $gte: startOfDay,
-      $lte: endOfDay
-    }
-  } : {
-    user_id: user, is_error: true, createdAt: {
-      $gte: startOfDay,
-      $lte: endOfDay
-    }
-  }).populate([
-    {
-      path: "checkList"
-    },
-    {
-      path: "assembly",
-    },
-    {
-      path: "process_id",
-    },
-  ])
+  const where = admin
+    ? { is_error: true, createdAt: { [Op.between]: [startOfDay, endOfDay] } }
+    : { user_id: user, is_error: true, createdAt: { [Op.between]: [startOfDay, endOfDay] } };
+
+  const result = await CheckListHistoryModal.findAll({
+    where,
+    include: [
+      { model: CheckListModal, as: "checkList" },
+      { model: AssemblyModal, as: "assembly" },
+      { model: ProcessModel, as: "process_id" },
+    ],
+    order: [["id", "DESC"]],
+  });
   return result;
 };
 

@@ -1,4 +1,5 @@
 import { ProcessModel } from "../models/process.modal.js"
+import { Op } from "sequelize";
 
 
 export const createProcessService = async (data) => {
@@ -7,32 +8,62 @@ export const createProcessService = async (data) => {
 };
 
 export const updateProcessService = async (id, data) => {
-    const result = await ProcessModel.findByIdAndUpdate(id, data, { new: true });
+    const process = await ProcessModel.findByPk(id);
+    if (!process) return null;
+    const result = await process.update(data);
     return result;
 };
 
 export const deleteProcessService = async (id) => {
-    const result = await ProcessModel.findByIdAndDelete(id);
+    const process = await ProcessModel.findByPk(id);
+    if (!process) return null;
+    await process.destroy();
+    const result = process;
     return result;
 };
 
 export const getProcessServiceList = async (skip, limit) => {
-    const result = await ProcessModel.find({}).sort({ _id: -1 }).skip(skip).limit(limit).lean();
+    const result = await ProcessModel.findAll({
+        order: [["id", "DESC"]],
+        offset: skip,
+        limit,
+    });
     return result;
 };
 
 export const searchProcessServiceList = async (search, skip, limit) => {
-    const result = await ProcessModel.find({ $or: [{ process_name: { $regex: search, $options: 'i' } }, { process_no: { $regex: search, $options: 'i' } }] }).sort({ _id: -1 }).skip(skip).limit(limit).lean();
+    const q = search || "";
+    const result = await ProcessModel.findAll({
+        where: {
+            [Op.or]: [
+                { process_name: { [Op.like]: `%${q}%` } },
+                { process_no: { [Op.like]: `%${q}%` } },
+            ],
+        },
+        order: [["id", "DESC"]],
+        offset: skip,
+        limit,
+    });
     return result;
 };
 
 export const findProcessbyProcesNameOrNumber = async (name, number) => {
-    const result = await ProcessModel.findOne({ $or: [{ process_name: name, process_no: number }, { process_no: number, process_name: name }] }).lean();
+    const result = await ProcessModel.findOne({
+        where: {
+            [Op.or]: [
+                { process_name: name, process_no: number },
+                { process_no: number, process_name: name },
+            ],
+        },
+    });
     return result;
 };
 
 export const allProcessService = async () => {
-    const result = await ProcessModel.find({}).sort({_id:-1}).select("process_name process_no");
+    const result = await ProcessModel.findAll({
+        attributes: ["id", "process_name", "process_no"],
+        order: [["id", "DESC"]],
+    });
     return result;
 
 }
