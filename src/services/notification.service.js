@@ -19,7 +19,7 @@ export const GetNotification = async (user,skip,limit) => {
             { model: ProcessModel, as: "processInfo", attributes: ["_id", "process_name", "process_no"] },
             { model: CheckListModal, as: "checklistItem", attributes: ["_id", "item", "description", "check_list_method", "check_list_time"] },
         ],
-        order: [["id", "DESC"]],
+        order: [["_id", "DESC"]],
         offset: skip,
         limit,
     });

@@ -23,14 +23,14 @@ export const deleteTypesService = async (id) => {
 };
 
 export const getTypesService = async () => {
-    const result = await TypeModal.findAll({ order: [["id", "DESC"]] });
+    const result = await TypeModal.findAll({ order: [["_id", "DESC"]] });
     return result;
 };
 
 export const getUomTypeService = async () => {
     const result = await TypeModal.findOne({
         where: { [Op.or]: [{ uom: null }, { uom: "" }] },
-        order: [["id", "ASC"]],
+        order: [["_id", "ASC"]],
     });
     return result;
 };
@@ -38,7 +38,7 @@ export const getUomTypeService = async () => {
 export const getCheckingTimeTypeService = async () => {
     const result = await TypeModal.findOne({
         where: { [Op.or]: [{ checking_time: null }, { checking_time: "" }] },
-        order: [["id", "ASC"]],
+        order: [["_id", "ASC"]],
     });
     return result;
 };
@@ -46,7 +46,7 @@ export const getCheckingTimeTypeService = async () => {
 export const getCheckingMethodTypeService = async () => {
     const result = await TypeModal.findOne({
         where: { [Op.or]: [{ checking_method: null }, { checking_method: "" }] },
-        order: [["id", "ASC"]],
+        order: [["_id", "ASC"]],
     });
     return result;
 };
