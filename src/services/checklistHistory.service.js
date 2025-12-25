@@ -54,9 +54,9 @@ export const GetAllErrorsHistory = async (startDate,endDate,admin, user) => {
   const result = await CheckListHistoryModal.findAll({
     where,
     include: [
-      { model: CheckListModal, as: "checkList" },
-      { model: AssemblyModal, as: "assembly" },
-      { model: ProcessModel, as: "process_id" },
+      { model: CheckListModal, as: "checklistItem" },
+      { model: AssemblyModal, as: "assemblyLine" },
+      { model: ProcessModel, as: "processInfo" },
     ],
     order: [["id", "DESC"]],
   });

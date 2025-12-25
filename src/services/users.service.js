@@ -15,9 +15,9 @@ export const GetUsersService = async (skip,limit) => {
     const result = await UserModel.findAll({
         where: { is_admin: false },
         include: [
-            { model: RoleModel, as: "role" },
-            { model: CompanyModel, as: "employee_company" },
-            { model: PlantModel, as: "employee_plant" },
+            { model: RoleModel, as: "userRole" },
+            { model: CompanyModel, as: "company" },
+            { model: PlantModel, as: "plant" },
         ],
         offset: skip,
         limit,
@@ -50,9 +50,9 @@ export const SearchUsersService = async (company,plant,search="",skip,limit) => 
     const result = await UserModel.findAll({
         where,
         include: [
-            { model: RoleModel, as: "role" },
-            { model: CompanyModel, as: "employee_company" },
-            { model: PlantModel, as: "employee_plant" },
+            { model: RoleModel, as: "userRole" },
+            { model: CompanyModel, as: "company" },
+            { model: PlantModel, as: "plant" },
         ],
         offset: skip,
         limit,
@@ -99,9 +99,9 @@ export const FindUserById = async (id) => {
             "terminate",
         ],
         include: [
-            { model: PlantModel, as: "employee_plant" },
-            { model: CompanyModel, as: "employee_company" },
-            { model: RoleModel, as: "role" },
+            { model: PlantModel, as: "plant" },
+            { model: CompanyModel, as: "company" },
+            { model: RoleModel, as: "userRole" },
         ],
     });
     return result;

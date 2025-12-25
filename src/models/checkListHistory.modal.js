@@ -21,7 +21,7 @@ export const CheckListHistoryModal = sequelize.define(
     {
         tableName: "checklisthistories",
         timestamps: true,
-        indexes: [{ fields: ["checkList", "assembly", "process_id", "result", "status"] }],
+        indexes: [{ name: "idx_ch_history", fields: ["checkList", "assembly", "process_id", "result", "status"] }],
     }
 );
 

@@ -10,11 +10,11 @@ import { ProcessModel } from "../models/process.modal.js";
 import { UserModel } from "../models/user.modal.js";
 
 const baseAssemblyIncludes = [
-    { model: CompanyModel, as: "company_id", attributes: ["id", "company_name", "company_address", "description"] },
-    { model: PlantModel, as: "plant_id", attributes: ["id", "plant_name", "plant_address", "description"] },
-    { model: UserModel, as: "responsibility", attributes: ["id", "full_name", "email", "user_id", "desigination"] },
+    { model: CompanyModel, as: "company", attributes: ["id", "company_name", "company_address", "description"] },
+    { model: PlantModel, as: "plant", attributes: ["id", "plant_name", "plant_address", "description"] },
+    { model: UserModel, as: "responsibleUser", attributes: ["id", "full_name", "email", "user_id", "desigination"] },
     { model: ProcessModel, as: "process_id", attributes: ["id", "process_name", "process_no"], through: { attributes: [] } },
-    { model: PartModal, as: "part_id", attributes: ["id", "part_number", "part_name"] },
+    { model: PartModal, as: "part", attributes: ["id", "part_number", "part_name"] },
 ];
 
 export const createAssemblyService = async (data) => {
@@ -134,9 +134,9 @@ export const getAssemblyLineFormByResponsibility = async (user, id) => {
     const assembly = await AssemblyModal.findOne({
         where: { id, responsibility: user },
         include: [
-            { model: UserModel, as: "responsibility", attributes: ["id", "full_name", "email", "user_id"] },
-            { model: CompanyModel, as: "company_id", attributes: ["id", "company_name", "company_address"] },
-            { model: PlantModel, as: "plant_id", attributes: ["id", "plant_name", "plant_address"] },
+            { model: UserModel, as: "responsibleUser", attributes: ["id", "full_name", "email", "user_id"] },
+            { model: CompanyModel, as: "company", attributes: ["id", "company_name", "company_address"] },
+            { model: PlantModel, as: "plant", attributes: ["id", "plant_name", "plant_address"] },
             { model: ProcessModel, as: "process_id", attributes: ["id", "process_name", "process_no"], through: { attributes: [] } },
         ],
     });
@@ -256,9 +256,9 @@ export const getAssemblyLineTodayReport = async (
         offset: skip,
         limit,
         include: [
-            { model: CompanyModel, as: "company_id", attributes: ["id", "company_name", "company_address", "description"] },
-            { model: PlantModel, as: "plant_id", attributes: ["id", "plant_name", "plant_address", "description"] },
-            { model: UserModel, as: "responsibility", attributes: ["id", "full_name", "email", "user_id", "desigination"] },
+            { model: CompanyModel, as: "company", attributes: ["id", "company_name", "company_address", "description"] },
+            { model: PlantModel, as: "plant", attributes: ["id", "plant_name", "plant_address", "description"] },
+            { model: UserModel, as: "responsibleUser", attributes: ["id", "full_name", "email", "user_id", "desigination"] },
             { model: ProcessModel, as: "process_id", attributes: ["id", "process_name", "process_no"], through: { attributes: [] } },
         ],
     });

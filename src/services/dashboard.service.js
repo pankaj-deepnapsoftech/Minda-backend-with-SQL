@@ -111,10 +111,10 @@ export const GetDailyAssemblyStatus = async (admin, user, date = new Date()) => 
     const assemblies = await AssemblyModal.findAll({
         where: admin ? {} : { responsibility: user },
         include: [
-            { model: CompanyModel, as: "company_id", attributes: ["id", "company_name", "company_address"] },
-            { model: PlantModel, as: "plant_id", attributes: ["id", "plant_name", "plant_address"] },
-            { model: PartModal, as: "part_id", attributes: ["id", "part_name", "part_number"] },
-            { model: UserModel, as: "responsibility", attributes: ["id", "full_name", "email", "user_id"] },
+            { model: CompanyModel, as: "company", attributes: ["id", "company_name", "company_address"] },
+            { model: PlantModel, as: "plant", attributes: ["id", "plant_name", "plant_address"] },
+            { model: PartModal, as: "part", attributes: ["id", "part_name", "part_number"] },
+            { model: UserModel, as: "responsibleUser", attributes: ["id", "full_name", "email", "user_id"] },
             { model: ProcessModel, as: "process_id", attributes: ["id"], through: { attributes: [] } },
         ],
         order: [["assembly_name", "ASC"]],

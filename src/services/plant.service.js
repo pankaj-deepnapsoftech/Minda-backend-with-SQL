@@ -10,7 +10,7 @@ export const plantCreateService = async (data) => {
 
 export const plantlistService = async (skip,limit) => {
     const result = await PlantModel.findAll({
-        include: [{ model: CompanyModel, as: "company_id" }],
+        include: [{ model: CompanyModel, as: "company" }],
         offset: skip,
         limit,
         order: [["id", "DESC"]],
@@ -34,7 +34,7 @@ export const plantDeleteService = async (id) => {
 };
 
 export const getPlantByIdService = async (id) => {
-    const result = await PlantModel.findByPk(id, { include: [{ model: CompanyModel, as: "company_id" }] });
+    const result = await PlantModel.findByPk(id, { include: [{ model: CompanyModel, as: "company" }] });
     return result;
 };
 
@@ -49,7 +49,7 @@ export const plantSearchService = async (query="",company,skip,limit) => {
     };
     const result = await PlantModel.findAll({
         where,
-        include: [{ model: CompanyModel, as: "company_id" }],
+        include: [{ model: CompanyModel, as: "company" }],
         offset: skip,
         limit,
         order: [["id", "DESC"]],

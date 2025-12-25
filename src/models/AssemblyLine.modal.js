@@ -16,6 +16,7 @@ export const AssemblyModal = sequelize.define(
         timestamps: true,
         indexes: [
             {
+                name: "idx_assemblies_main",
                 fields: [
                     "company_id",
                     "plant_id",
