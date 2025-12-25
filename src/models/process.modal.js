@@ -4,6 +4,11 @@ import { sequelize } from "../sequelize.js";
 export const ProcessModel = sequelize.define(
     "Process",
     {
+        id: {
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
+            primaryKey: true,
+        },
         process_name: { type: DataTypes.STRING(255), allowNull: false },
         process_no: { type: DataTypes.STRING(100), allowNull: false },
     },

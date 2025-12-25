@@ -4,9 +4,14 @@ import { sequelize } from "../sequelize.js";
 export const PlantModel = sequelize.define(
     "Plant",
     {
+        id: {
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
+            primaryKey: true,
+        },
         plant_name: { type: DataTypes.STRING(255), allowNull: false },
         plant_address: { type: DataTypes.STRING(500), allowNull: true },
-        company_id: { type: DataTypes.INTEGER, allowNull: false },
+        company_id: { type: DataTypes.UUID, allowNull: false },
         description: { type: DataTypes.TEXT, allowNull: true },
         plant_code: { type: DataTypes.STRING(100), allowNull: true },
     },

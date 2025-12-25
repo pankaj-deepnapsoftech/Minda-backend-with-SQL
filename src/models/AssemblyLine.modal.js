@@ -4,12 +4,17 @@ import { sequelize } from "../sequelize.js";
 export const AssemblyModal = sequelize.define(
     "Assembly",
     {
+        id: {
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
+            primaryKey: true,
+        },
         assembly_name: { type: DataTypes.STRING(255), allowNull: false },
         assembly_number: { type: DataTypes.STRING(100), allowNull: false },
-        company_id: { type: DataTypes.INTEGER, allowNull: false },
-        plant_id: { type: DataTypes.INTEGER, allowNull: false },
-        responsibility: { type: DataTypes.INTEGER, allowNull: true },
-        part_id: { type: DataTypes.INTEGER, allowNull: true },
+        company_id: { type: DataTypes.UUID, allowNull: false },
+        plant_id: { type: DataTypes.UUID, allowNull: false },
+        responsibility: { type: DataTypes.UUID, allowNull: true },
+        part_id: { type: DataTypes.UUID, allowNull: true },
     },
     {
         tableName: "assemblies",

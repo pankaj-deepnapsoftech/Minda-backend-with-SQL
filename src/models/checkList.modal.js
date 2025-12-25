@@ -4,6 +4,11 @@ import { sequelize } from "../sequelize.js";
 export const CheckListModal = sequelize.define(
     "Checklist",
     {
+        id: {
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
+            primaryKey: true,
+        },
         item: { type: DataTypes.STRING(255), allowNull: false },
         description: { type: DataTypes.TEXT, allowNull: true },
         check_list_method: { type: DataTypes.STRING(255), allowNull: false },
@@ -12,7 +17,7 @@ export const CheckListModal = sequelize.define(
         min: { type: DataTypes.FLOAT, allowNull: true },
         max: { type: DataTypes.FLOAT, allowNull: true },
         uom: { type: DataTypes.STRING(50), allowNull: true },
-        process: { type: DataTypes.INTEGER, allowNull: false },
+        process: { type: DataTypes.UUID, allowNull: false },
     },
     {
         tableName: "checklists",

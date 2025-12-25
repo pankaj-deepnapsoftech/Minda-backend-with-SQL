@@ -58,6 +58,11 @@ export const checkListValidationSchema = yup.object().shape({
     }),
 
   process: yup
-    .string()
+    .mixed()
+    .test("is-uuid", "Invalid process ID", (value) => {
+      if (value === null || value === undefined || value === "") return false;
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      return uuidRegex.test(String(value));
+    })
     .required("Process is required"),
 });

@@ -4,10 +4,15 @@ import { sequelize } from "../sequelize.js";
 export const CheckListHistoryModal = sequelize.define(
     "CheckListHistory",
     {
-        checkList: { type: DataTypes.INTEGER, allowNull: false },
-        assembly: { type: DataTypes.INTEGER, allowNull: false },
-        process_id: { type: DataTypes.INTEGER, allowNull: false },
-        user_id: { type: DataTypes.INTEGER, allowNull: false },
+        id: {
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
+            primaryKey: true,
+        },
+        checkList: { type: DataTypes.UUID, allowNull: false },
+        assembly: { type: DataTypes.UUID, allowNull: false },
+        process_id: { type: DataTypes.UUID, allowNull: false },
+        user_id: { type: DataTypes.UUID, allowNull: false },
         result: { type: DataTypes.STRING(100), allowNull: false },
         is_error: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
         is_resolved: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },

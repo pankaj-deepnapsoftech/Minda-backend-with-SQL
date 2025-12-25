@@ -5,14 +5,19 @@ import { sequelize } from "../sequelize.js";
 export const UserModel = sequelize.define(
     "User",
     {
+        id: {
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
+            primaryKey: true,
+        },
         full_name: { type: DataTypes.STRING(255), allowNull: true },
         email: { type: DataTypes.STRING(255), allowNull: false, unique: true },
         password: { type: DataTypes.STRING(255), allowNull: false },
         desigination: { type: DataTypes.STRING(255), allowNull: true },
         user_id: { type: DataTypes.STRING(50), allowNull: true, unique: true },
-        employee_plant: { type: DataTypes.INTEGER, allowNull: true },
-        employee_company: { type: DataTypes.INTEGER, allowNull: true },
-        role: { type: DataTypes.INTEGER, allowNull: true },
+        employee_plant: { type: DataTypes.UUID, allowNull: true },
+        employee_company: { type: DataTypes.UUID, allowNull: true },
+        role: { type: DataTypes.UUID, allowNull: true },
         terminate: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
         refresh_token: { type: DataTypes.TEXT, allowNull: true },
         is_admin: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },

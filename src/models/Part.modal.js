@@ -4,6 +4,11 @@ import { sequelize } from "../sequelize.js";
 export const PartModal = sequelize.define(
     "Part",
     {
+        id: {
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
+            primaryKey: true,
+        },
         part_name: { type: DataTypes.STRING(255), allowNull: false },
         part_number: { type: DataTypes.STRING(100), allowNull: false },
         description: { type: DataTypes.TEXT, allowNull: true },

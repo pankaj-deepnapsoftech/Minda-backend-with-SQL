@@ -11,9 +11,10 @@ export const plantValidationSchema = Yup.object().shape({
 
   company_id: Yup.mixed()
     .required("Company ID is required")
-    .test("is-id", "Invalid company ID", (value) => {
+    .test("is-uuid", "Invalid company ID", (value) => {
       if (value === null || value === undefined || value === "") return false;
-      return /^[0-9]+$/.test(String(value));
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      return uuidRegex.test(String(value));
     }),
 
   description: Yup.string()

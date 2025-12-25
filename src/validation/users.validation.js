@@ -1,10 +1,11 @@
 import * as yup from "yup";
 
-const numericId = yup
+const uuidId = yup
   .mixed()
-  .test("is-id", "Invalid ID", (value) => {
+  .test("is-uuid", "Invalid ID", (value) => {
     if (value === null || value === undefined || value === "") return true;
-    return /^[0-9]+$/.test(String(value));
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(String(value));
   });
 
 export const userValidationSchema = yup.object({
@@ -36,11 +37,11 @@ export const userValidationSchema = yup.object({
     .trim()
     .nullable(),
 
-  employee_plant: numericId.nullable(),
+  employee_plant: uuidId.nullable(),
 
-  employee_company: numericId.nullable(),
+  employee_company: uuidId.nullable(),
 
-  role: numericId.nullable(),
+  role: uuidId.nullable(),
 
   terminate: yup
     .boolean()

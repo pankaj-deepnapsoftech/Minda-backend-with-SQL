@@ -4,18 +4,23 @@ import { sequelize } from "../sequelize.js";
 export const NotificationModal = sequelize.define(
     "Notification",
     {
+        id: {
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
+            primaryKey: true,
+        },
         title: { type: DataTypes.STRING(255), allowNull: false },
         description: { type: DataTypes.TEXT, allowNull: true },
-        reciverId: { type: DataTypes.INTEGER, allowNull: false },
-        senderId: { type: DataTypes.INTEGER, allowNull: true },
+        reciverId: { type: DataTypes.UUID, allowNull: false },
+        senderId: { type: DataTypes.UUID, allowNull: true },
         status: {
             type: DataTypes.ENUM("send", "recived", "view"),
             allowNull: false,
             defaultValue: "send",
         },
-        assembly: { type: DataTypes.INTEGER, allowNull: false },
-        process_id: { type: DataTypes.INTEGER, allowNull: false },
-        checkList: { type: DataTypes.INTEGER, allowNull: false },
+        assembly: { type: DataTypes.UUID, allowNull: false },
+        process_id: { type: DataTypes.UUID, allowNull: false },
+        checkList: { type: DataTypes.UUID, allowNull: false },
     },
     {
         tableName: "notifications",
