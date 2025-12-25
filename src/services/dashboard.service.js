@@ -1,4 +1,4 @@
-import { col, fn, Op, QueryTypes } from "sequelize";
+import { col, fn, literal, Op, QueryTypes } from "sequelize";
 import { sequelize } from "../sequelize.js";
 import { AssemblyModal } from "../models/AssemblyLine.modal.js";
 import { CheckListHistoryModal } from "../models/checkListHistory.modal.js";
@@ -77,7 +77,7 @@ export const GetMonthlyTrend = async (admin, user) => {
             [fn("YEAR", col("createdAt")), "year"],
             [fn("MONTH", col("createdAt")), "month"],
             [fn("COUNT", fn("DISTINCT", col("assembly"))), "checked_count"],
-            [fn("COUNT", fn("DISTINCT", fn("IF", col("is_error"), col("assembly"), null))), "error_count"],
+            [literal("COUNT(DISTINCT CASE WHEN is_error = 1 THEN assembly ELSE NULL END)"), "error_count"],
         ],
         group: ["year", "month"],
         order: [
@@ -173,7 +173,10 @@ export const GetMonthlyPerformance = async (admin, user) => {
         GROUP BY YEAR(createdAt), MONTH(createdAt), assembly
         ORDER BY YEAR(createdAt), MONTH(createdAt)
         `,
-        { replacements: { assemblyIds }, type: QueryTypes.SELECT }
+        { 
+            replacements: { assemblyIds }, 
+            type: QueryTypes.SELECT 
+        }
     );
 
     const monthMap = new Map();

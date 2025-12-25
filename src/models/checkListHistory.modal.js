@@ -1,4 +1,4 @@
-import { DataTypes } from "sequelize";
+import { DataTypes, Sequelize } from "sequelize";
 import { sequelize } from "../sequelize.js";
 
 export const CheckListHistoryModal = sequelize.define(
@@ -6,7 +6,7 @@ export const CheckListHistoryModal = sequelize.define(
     {
         id: {
             type: DataTypes.UUID,
-            defaultValue: DataTypes.UUIDV4,
+            defaultValue: Sequelize.literal("NEWID()"),
             primaryKey: true,
         },
         checkList: { type: DataTypes.UUID, allowNull: false },
@@ -18,9 +18,12 @@ export const CheckListHistoryModal = sequelize.define(
         is_resolved: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
         description: { type: DataTypes.TEXT, allowNull: true },
         status: {
-            type: DataTypes.ENUM("Checked", "Unchecked"),
+            type: DataTypes.STRING(20),
             allowNull: false,
             defaultValue: "Unchecked",
+            validate: {
+                isIn: [["Checked", "Unchecked"]],
+            },
         },
     },
     {

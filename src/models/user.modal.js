@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt"
-import { DataTypes, Op } from "sequelize";
+import { DataTypes, Op, Sequelize } from "sequelize";
 import { sequelize } from "../sequelize.js";
 
 export const UserModel = sequelize.define(
@@ -7,7 +7,7 @@ export const UserModel = sequelize.define(
     {
         id: {
             type: DataTypes.UUID,
-            defaultValue: DataTypes.UUIDV4,
+            defaultValue: Sequelize.literal("NEWID()"),
             primaryKey: true,
         },
         full_name: { type: DataTypes.STRING(255), allowNull: true },

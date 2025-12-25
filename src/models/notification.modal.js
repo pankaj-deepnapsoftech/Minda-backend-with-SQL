@@ -1,4 +1,4 @@
-import { DataTypes } from "sequelize";
+import { DataTypes, Sequelize } from "sequelize";
 import { sequelize } from "../sequelize.js";
 
 export const NotificationModal = sequelize.define(
@@ -6,7 +6,7 @@ export const NotificationModal = sequelize.define(
     {
         id: {
             type: DataTypes.UUID,
-            defaultValue: DataTypes.UUIDV4,
+            defaultValue: Sequelize.literal("NEWID()"),
             primaryKey: true,
         },
         title: { type: DataTypes.STRING(255), allowNull: false },
@@ -14,9 +14,12 @@ export const NotificationModal = sequelize.define(
         reciverId: { type: DataTypes.UUID, allowNull: false },
         senderId: { type: DataTypes.UUID, allowNull: true },
         status: {
-            type: DataTypes.ENUM("send", "recived", "view"),
+            type: DataTypes.STRING(20),
             allowNull: false,
             defaultValue: "send",
+            validate: {
+                isIn: [["send", "recived", "view"]],
+            },
         },
         assembly: { type: DataTypes.UUID, allowNull: false },
         process_id: { type: DataTypes.UUID, allowNull: false },

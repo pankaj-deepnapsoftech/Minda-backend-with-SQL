@@ -1,4 +1,4 @@
-import { DataTypes } from "sequelize";
+import { DataTypes, Sequelize } from "sequelize";
 import { sequelize } from "../sequelize.js";
 
 export const AssemblyModal = sequelize.define(
@@ -6,7 +6,7 @@ export const AssemblyModal = sequelize.define(
     {
         id: {
             type: DataTypes.UUID,
-            defaultValue: DataTypes.UUIDV4,
+            defaultValue: Sequelize.literal("NEWID()"),
             primaryKey: true,
         },
         assembly_name: { type: DataTypes.STRING(255), allowNull: false },
