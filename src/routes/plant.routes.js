@@ -10,7 +10,7 @@ const routes = Router();
 
 routes.route("/create-plant").post(Validater(plantValidationSchema),createPlant);
 routes.route("/list-plant").get(listPlant);
-routes.route("/update-plant/:id").put(Validater(plantValidationSchema),updatePlant);
+routes.route("/update-plant/:id").put(updatePlant);
 routes.route("/delete-plant/:id").delete(deletePlant);
 routes.route("/search-plant").get(searchPlant);
 routes.route("/all-plants-data/:id").get(AllPlantData)
