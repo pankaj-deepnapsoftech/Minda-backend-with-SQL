@@ -50,8 +50,8 @@ export const LoginUser = AsyncHandler(async (req, res) => {
         throw new NotFoundError("Invalid credentials", "LoginUser() method error 2")
     }
 
-    const accessToken = jwt.sign({ email: user.email, id: user.id }, config.JWT_SECRET, { expiresIn: "30days" })
-    const refreshToken = jwt.sign({ email: user.email, id: user.id }, config.JWT_SECRET, { expiresIn: "31days" })
+    const accessToken = jwt.sign({ email: user.email, id: user._id }, config.JWT_SECRET, { expiresIn: "30days" })
+    const refreshToken = jwt.sign({ email: user.email, id: user._id }, config.JWT_SECRET, { expiresIn: "31days" })
 
     res.cookie("AT", accessToken, {
         httpOnly: true,        // Cookie not accessible via document.cookie
@@ -117,8 +117,8 @@ export const RefreshToken = AsyncHandler(async (req, res) => {
         throw new NotFoundError("Invalid user Please try again...", "RefreshToken() method error")
     }
 
-    const accessToken = jwt.sign({ email: user.email, id: user.id }, config.JWT_SECRET, { expiresIn: "30days" })
-    const refreshToken = jwt.sign({ email: user.email, id: user.id }, config.JWT_SECRET, { expiresIn: "31days" })
+    const accessToken = jwt.sign({ email: user.email, id: user._id }, config.JWT_SECRET, { expiresIn: "30days" })
+    const refreshToken = jwt.sign({ email: user.email, id: user._id }, config.JWT_SECRET, { expiresIn: "31days" })
 
     res.cookie("AT", accessToken, {
         httpOnly: true,        // Cookie not accessible via document.cookie
@@ -136,7 +136,7 @@ export const RefreshToken = AsyncHandler(async (req, res) => {
         message: "user logedin Successfully"
     });
 
-    await UserModel.update({ refresh_token: refreshToken }, { where: { id: user.id } })
+    await UserModel.update({ refresh_token: refreshToken }, { where: { _id: user._id } })
 });
 
 export const GetAllemployees = AsyncHandler(async (req, res) => {
@@ -176,7 +176,7 @@ export const verifyEmail = AsyncHandler(async (req, res) => {
     }
 
     const resetLink = config.NODE_ENV !== "development" ? config.SERVER_URL : config.LOCAL_SERVER_URL;
-    const token = jwt.sign({ id: user.id }, config.JWT_SECRET, { expiresIn: "20min" })
+    const token = jwt.sign({ id: user._id }, config.JWT_SECRET, { expiresIn: "20min" })
 
 
     res.status(StatusCodes.OK).json({
@@ -223,7 +223,7 @@ export const Resetpassword = AsyncHandler(async (req, res) => {
         throw new NotFoundError("User not exist please try again", "RenderResetPasswordpage() method error");
     };
 
-    await UpdateUsersService(user.id, { password });
+    await UpdateUsersService(user._id, { password });
 
     res.status(StatusCodes.OK).json({
         success: true,

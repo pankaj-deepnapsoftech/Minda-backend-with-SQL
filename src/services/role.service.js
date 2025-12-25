@@ -50,7 +50,7 @@ export const searchRoleByName = async (name,skip,limit) => {
 
 export const getAllRoleService = async () => {
     const result = await RoleModel.findAll({
-        attributes: ["id", "name"],
+        attributes: ["_id", "name"],
         order: [["id", "DESC"]],
     });
     return result;

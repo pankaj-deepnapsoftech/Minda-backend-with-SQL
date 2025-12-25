@@ -5,7 +5,7 @@ import { sequelize } from "../sequelize.js";
 export const UserModel = sequelize.define(
     "User",
     {
-        id: {
+        _id: {
             type: DataTypes.UUID,
             defaultValue: Sequelize.literal("NEWID()"),
             primaryKey: true,
@@ -70,8 +70,5 @@ export const UserModel = sequelize.define(
 );
 
 UserModel.prototype.toJSON = function () {
-    const values = { ...this.get({ plain: true }) };
-    values._id = values.id;
-    delete values.id;
-    return values;
+    return this.get({ plain: true });
 };

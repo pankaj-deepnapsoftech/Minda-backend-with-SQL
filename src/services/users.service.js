@@ -21,7 +21,7 @@ export const GetUsersService = async (skip,limit) => {
         ],
         offset: skip,
         limit,
-        order: [["id", "DESC"]],
+        order: [["_id", "DESC"]],
     });
     return result;
 };
@@ -29,8 +29,8 @@ export const GetUsersService = async (skip,limit) => {
 export const GetAllUsersService = async () => {
     const result = await UserModel.findAll({
         where: { is_admin: false },
-        attributes: ["id", "email", "user_id", "full_name"],
-        order: [["id", "DESC"]],
+        attributes: ["_id", "email", "user_id", "full_name"],
+        order: [["_id", "DESC"]],
     });
     return result;
 };
@@ -56,7 +56,7 @@ export const SearchUsersService = async (company,plant,search="",skip,limit) => 
         ],
         offset: skip,
         limit,
-        order: [["id", "DESC"]],
+        order: [["_id", "DESC"]],
     });
     return result;
 };
@@ -87,7 +87,7 @@ export const FindUserByEmailOrUserId = async (email) => {
 export const FindUserById = async (id) => {
     const result = await UserModel.findByPk(id, {
         attributes: [
-            "id",
+            "_id",
             "full_name",
             "email",
             "desigination",

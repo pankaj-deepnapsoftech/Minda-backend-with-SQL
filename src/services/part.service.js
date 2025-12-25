@@ -25,7 +25,7 @@ export const DeletePartService = async (id) => {
 
 export const GetAllPartsService = async() => {
     const result = await PartModal.findAll({
-        attributes: ["id", "part_number", "part_name"],
+        attributes: ["_id", "part_number", "part_name"],
         order: [["id", "DESC"]],
     });
     return result;
@@ -49,7 +49,7 @@ export const getPartsServiceData = async (search="",skip,limit) => {
             {
                 model: AssemblyModal,
                 as: "assemblies",
-                attributes: ["id", "assembly_name", "assembly_number"],
+                attributes: ["_id", "assembly_name", "assembly_number"],
                 required: false,
             },
         ],

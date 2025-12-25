@@ -62,7 +62,7 @@ export const GetAllSearchItems = async (search, skip, limit) => {
 
 export const getAllCompanyesData = async () => {
     const result = await CompanyModel.findAll({
-        attributes: ["id", "company_name"],
+        attributes: ["_id", "company_name"],
         order: [["id", "DESC"]],
     });
     return result

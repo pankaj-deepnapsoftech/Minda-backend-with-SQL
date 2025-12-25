@@ -4,7 +4,7 @@ import { sequelize } from "../sequelize.js";
 export const CompanyModel = sequelize.define(
     "Company",
     {
-        id: {
+        _id: {
             type: DataTypes.UUID,
             defaultValue: Sequelize.literal("NEWID()"),
             primaryKey: true,
@@ -26,10 +26,7 @@ export const CompanyModel = sequelize.define(
 );
 
 CompanyModel.prototype.toJSON = function () {
-    const values = { ...this.get({ plain: true }) };
-    values._id = values.id;
-    delete values.id;
-    return values;
+    return this.get({ plain: true });
 };
 
 

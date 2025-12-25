@@ -4,7 +4,7 @@ import { sequelize } from "../sequelize.js";
 export const AssemblyModal = sequelize.define(
     "Assembly",
     {
-        id: {
+        _id: {
             type: DataTypes.UUID,
             defaultValue: Sequelize.literal("NEWID()"),
             primaryKey: true,
@@ -36,8 +36,5 @@ export const AssemblyModal = sequelize.define(
 );
 
 AssemblyModal.prototype.toJSON = function () {
-    const values = { ...this.get({ plain: true }) };
-    values._id = values.id;
-    delete values.id;
-    return values;
+    return this.get({ plain: true });
 };

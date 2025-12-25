@@ -61,7 +61,7 @@ export const findProcessbyProcesNameOrNumber = async (name, number) => {
 
 export const allProcessService = async () => {
     const result = await ProcessModel.findAll({
-        attributes: ["id", "process_name", "process_no"],
+        attributes: ["_id", "process_name", "process_no"],
         order: [["id", "DESC"]],
     });
     return result;

@@ -14,10 +14,10 @@ export const GetNotification = async (user,skip,limit) => {
     const result = await NotificationModal.findAll({
         where: { reciverId: user },
         include: [
-            { model: UserModel, as: "sender", attributes: ["id", "desigination", "user_id", "email", "full_name"] },
-            { model: AssemblyModal, as: "assemblyLine", attributes: ["id", "assembly_name", "assembly_number"] },
-            { model: ProcessModel, as: "processInfo", attributes: ["id", "process_name", "process_no"] },
-            { model: CheckListModal, as: "checklistItem", attributes: ["id", "item", "description", "check_list_method", "check_list_time"] },
+            { model: UserModel, as: "sender", attributes: ["_id", "desigination", "user_id", "email", "full_name"] },
+            { model: AssemblyModal, as: "assemblyLine", attributes: ["_id", "assembly_name", "assembly_number"] },
+            { model: ProcessModel, as: "processInfo", attributes: ["_id", "process_name", "process_no"] },
+            { model: CheckListModal, as: "checklistItem", attributes: ["_id", "item", "description", "check_list_method", "check_list_time"] },
         ],
         order: [["id", "DESC"]],
         offset: skip,

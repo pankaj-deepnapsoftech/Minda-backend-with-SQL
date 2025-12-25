@@ -64,9 +64,9 @@ export const allCardsData = async () => {
 export const GetMonthlyTrend = async (admin, user) => {
     const assemblies = await AssemblyModal.findAll({
         where: admin ? {} : { responsibility: user },
-        attributes: ["id"],
+        attributes: ["_id"],
     });
-    const assemblyIds = assemblies.map((a) => a.id);
+    const assemblyIds = assemblies.map((a) => a._id);
     const totalAssemblies = assemblyIds.length;
 
     if (totalAssemblies === 0) return [];
@@ -111,11 +111,11 @@ export const GetDailyAssemblyStatus = async (admin, user, date = new Date()) => 
     const assemblies = await AssemblyModal.findAll({
         where: admin ? {} : { responsibility: user },
         include: [
-            { model: CompanyModel, as: "company", attributes: ["id", "company_name", "company_address"] },
-            { model: PlantModel, as: "plant", attributes: ["id", "plant_name", "plant_address"] },
-            { model: PartModal, as: "part", attributes: ["id", "part_name", "part_number"] },
-            { model: UserModel, as: "responsibleUser", attributes: ["id", "full_name", "email", "user_id"] },
-            { model: ProcessModel, as: "process_id", attributes: ["id"], through: { attributes: [] } },
+            { model: CompanyModel, as: "company", attributes: ["_id", "company_name", "company_address"] },
+            { model: PlantModel, as: "plant", attributes: ["_id", "plant_name", "plant_address"] },
+            { model: PartModal, as: "part", attributes: ["_id", "part_name", "part_number"] },
+            { model: UserModel, as: "responsibleUser", attributes: ["_id", "full_name", "email", "user_id"] },
+            { model: ProcessModel, as: "process_id", attributes: ["_id"], through: { attributes: [] } },
         ],
         order: [["assembly_name", "ASC"]],
     });
@@ -156,9 +156,9 @@ export const GetDailyAssemblyStatus = async (admin, user, date = new Date()) => 
 export const GetMonthlyPerformance = async (admin, user) => {
     const assemblies = await AssemblyModal.findAll({
         where: admin ? {} : { responsibility: user },
-        attributes: ["id"],
+        attributes: ["_id"],
     });
-    const assemblyIds = assemblies.map((a) => a.id);
+    const assemblyIds = assemblies.map((a) => a._id);
     if (assemblyIds.length === 0) return [];
 
     const perAssemblyMonth = await sequelize.query(
@@ -200,9 +200,9 @@ export const GetDailyErrorsAssembly = async (admin, user, date = new Date()) => 
 
     const assemblies = await AssemblyModal.findAll({
         where: admin ? {} : { responsibility: user },
-        attributes: ["id"],
+        attributes: ["_id"],
     });
-    const assemblyIds = assemblies.map((a) => a.id);
+    const assemblyIds = assemblies.map((a) => a._id);
 
     const histories = assemblyIds.length
         ? await CheckListHistoryModal.findAll({
@@ -247,12 +247,12 @@ export const GetDailyErrorsAssembly = async (admin, user, date = new Date()) => 
 
     const processes = topProcessIds.length
         ? await ProcessModel.findAll({
-            where: { id: { [Op.in]: topProcessIds } },
-            attributes: ["id", "process_name"],
+            where: { _id: { [Op.in]: topProcessIds } },
+            attributes: ["_id", "process_name"],
         })
         : [];
 
-    const nameById = new Map(processes.map((p) => [p.id, p.process_name]));
+    const nameById = new Map(processes.map((p) => [p._id, p.process_name]));
 
     const top_error_processes = topProcessIds.map((pid) => ({
         process_id: pid,

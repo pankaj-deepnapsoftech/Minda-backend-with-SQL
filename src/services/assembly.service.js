@@ -10,11 +10,11 @@ import { ProcessModel } from "../models/process.modal.js";
 import { UserModel } from "../models/user.modal.js";
 
 const baseAssemblyIncludes = [
-    { model: CompanyModel, as: "company", attributes: ["id", "company_name", "company_address", "description"] },
-    { model: PlantModel, as: "plant", attributes: ["id", "plant_name", "plant_address", "description"] },
-    { model: UserModel, as: "responsibleUser", attributes: ["id", "full_name", "email", "user_id", "desigination"] },
-    { model: ProcessModel, as: "process_id", attributes: ["id", "process_name", "process_no"], through: { attributes: [] } },
-    { model: PartModal, as: "part", attributes: ["id", "part_number", "part_name"] },
+    { model: CompanyModel, as: "company", attributes: ["_id", "company_name", "company_address", "description"] },
+    { model: PlantModel, as: "plant", attributes: ["_id", "plant_name", "plant_address", "description"] },
+    { model: UserModel, as: "responsibleUser", attributes: ["_id", "full_name", "email", "user_id", "desigination"] },
+    { model: ProcessModel, as: "process_id", attributes: ["_id", "process_name", "process_no"], through: { attributes: [] } },
+    { model: PartModal, as: "part", attributes: ["_id", "part_number", "part_name"] },
 ];
 
 export const createAssemblyService = async (data) => {
@@ -24,7 +24,7 @@ export const createAssemblyService = async (data) => {
         const ids = processIds.filter((v) => v !== null && v !== undefined && String(v).trim() !== "");
         await result.setProcess_id(ids);
     }
-    return await AssemblyModal.findByPk(result.id, { include: baseAssemblyIncludes });
+    return await AssemblyModal.findByPk(result._id, { include: baseAssemblyIncludes });
 };
 
 export const updateAssemblyService = async (id, data) => {
@@ -36,7 +36,7 @@ export const updateAssemblyService = async (id, data) => {
         const ids = processIds.filter((v) => v !== null && v !== undefined && String(v).trim() !== "");
         await assembly.setProcess_id(ids);
     }
-    return await AssemblyModal.findByPk(assembly.id, { include: baseAssemblyIncludes });
+    return await AssemblyModal.findByPk(assembly._id, { include: baseAssemblyIncludes });
 };
 
 export const deleteAssemblyService = async (id) => {
@@ -50,7 +50,7 @@ export const deleteAssemblyService = async (id) => {
 export const getAllAssemblyService = async (IsAdmin, userId, skip, limit) => {
     const result = await AssemblyModal.findAll({
         where: IsAdmin ? {} : { responsibility: userId },
-        order: [["id", "DESC"]],
+        order: [["_id", "DESC"]],
         offset: skip,
         limit,
         include: baseAssemblyIncludes,
@@ -89,12 +89,12 @@ export const searchAllAssemblyService = async (
         );
         const ids = rows.map((r) => r.assembly_id);
         if (ids.length === 0) return [];
-        where.id = { [Op.in]: ids };
+        where._id = { [Op.in]: ids };
     }
 
     const result = await AssemblyModal.findAll({
         where,
-        order: [["id", "DESC"]],
+        order: [["_id", "DESC"]],
         offset: Number(skip),
         limit: Number(limit),
         include: baseAssemblyIncludes,
@@ -112,8 +112,8 @@ export const findAssemblyByName = async (name, number) => {
 
 export const getAllAssemblyDataService = async () => {
     const result = await AssemblyModal.findAll({
-        attributes: ["id", "assembly_number", "assembly_name"],
-        order: [["id", "DESC"]],
+        attributes: ["_id", "assembly_number", "assembly_name"],
+        order: [["_id", "DESC"]],
     });
     return result;
 };
@@ -121,23 +121,23 @@ export const getAllAssemblyDataService = async () => {
 export const getAssemblyLineByResponsibility = async (responsibility) => {
     const assemblies = await AssemblyModal.findAll({
         where: { responsibility },
-        attributes: ["id", "assembly_name", "assembly_number"],
+        attributes: ["_id", "assembly_name", "assembly_number"],
         include: [
             { model: ProcessModel, as: "process_id", attributes: ["id", "process_name", "process_no"], through: { attributes: [] } },
         ],
-        order: [["id", "DESC"]],
+        order: [["_id", "DESC"]],
     });
     return assemblies;
 };
 
 export const getAssemblyLineFormByResponsibility = async (user, id) => {
     const assembly = await AssemblyModal.findOne({
-        where: { id, responsibility: user },
+        where: { _id: id, responsibility: user },
         include: [
-            { model: UserModel, as: "responsibleUser", attributes: ["id", "full_name", "email", "user_id"] },
-            { model: CompanyModel, as: "company", attributes: ["id", "company_name", "company_address"] },
-            { model: PlantModel, as: "plant", attributes: ["id", "plant_name", "plant_address"] },
-            { model: ProcessModel, as: "process_id", attributes: ["id", "process_name", "process_no"], through: { attributes: [] } },
+            { model: UserModel, as: "responsibleUser", attributes: ["_id", "full_name", "email", "user_id"] },
+            { model: CompanyModel, as: "company", attributes: ["_id", "company_name", "company_address"] },
+            { model: PlantModel, as: "plant", attributes: ["_id", "plant_name", "plant_address"] },
+            { model: ProcessModel, as: "process_id", attributes: ["_id", "process_name", "process_no"], through: { attributes: [] } },
         ],
     });
 
@@ -148,7 +148,7 @@ export const getAssemblyLineFormByResponsibility = async (user, id) => {
     const checklists = processIds.length
         ? await CheckListModal.findAll({
             where: { process: { [Op.in]: processIds } },
-            order: [["id", "ASC"]],
+            order: [["_id", "ASC"]],
         })
         : [];
 
@@ -179,11 +179,11 @@ export const GetAssemblyLineDataReport = async (admin, user_id) => {
 
     const assemblies = await AssemblyModal.findAll({
         where: admin ? {} : { responsibility: user_id },
-        attributes: ["id"],
+        attributes: ["_id"],
         include: [{ model: ProcessModel, as: "process_id", attributes: ["id"], through: { attributes: [] } }],
     });
 
-    const assemblyIds = assemblies.map((a) => a.id);
+    const assemblyIds = assemblies.map((a) => a._id);
     const histories = assemblyIds.length
         ? await CheckListHistoryModal.findAll({
             where: {
@@ -213,7 +213,7 @@ export const GetAssemblyLineDataReport = async (admin, user_id) => {
         const processList = Array.isArray(assembly.process_id) ? assembly.process_id : [];
 
         const processFlags = processList.map((p) => {
-            const key = `${assembly.id}:${p.id}`;
+            const key = `${assembly._id}:${p._id}`;
             const today = historyMap.get(key) || [];
             const is_checked = today.length > 0;
             const is_unchecked = today.length === 0;
@@ -252,14 +252,14 @@ export const getAssemblyLineTodayReport = async (
 
     const assemblies = await AssemblyModal.findAll({
         where: admin ? {} : { responsibility: user_id },
-        order: [["id", "DESC"]],
+        order: [["_id", "DESC"]],
         offset: skip,
         limit,
         include: [
-            { model: CompanyModel, as: "company", attributes: ["id", "company_name", "company_address", "description"] },
-            { model: PlantModel, as: "plant", attributes: ["id", "plant_name", "plant_address", "description"] },
-            { model: UserModel, as: "responsibleUser", attributes: ["id", "full_name", "email", "user_id", "desigination"] },
-            { model: ProcessModel, as: "process_id", attributes: ["id", "process_name", "process_no"], through: { attributes: [] } },
+            { model: CompanyModel, as: "company", attributes: ["_id", "company_name", "company_address", "description"] },
+            { model: PlantModel, as: "plant", attributes: ["_id", "plant_name", "plant_address", "description"] },
+            { model: UserModel, as: "responsibleUser", attributes: ["_id", "full_name", "email", "user_id", "desigination"] },
+            { model: ProcessModel, as: "process_id", attributes: ["_id", "process_name", "process_no"], through: { attributes: [] } },
         ],
     });
 
@@ -275,7 +275,7 @@ export const getAssemblyLineTodayReport = async (
     const checklists = processIds.length
         ? await CheckListModal.findAll({
             where: { process: { [Op.in]: processIds } },
-            order: [["id", "ASC"]],
+            order: [["_id", "ASC"]],
         })
         : [];
 
@@ -285,7 +285,7 @@ export const getAssemblyLineTodayReport = async (
                 assembly: { [Op.in]: assemblyIds },
                 createdAt: { [Op.between]: [startOfDay, endOfDay] },
             },
-            attributes: ["id", "checkList", "assembly", "process_id", "result", "is_error", "description", "status", "createdAt"],
+            attributes: ["_id", "checkList", "assembly", "process_id", "result", "is_error", "description", "status", "createdAt"],
         })
         : [];
 
