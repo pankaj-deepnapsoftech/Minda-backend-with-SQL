@@ -180,7 +180,7 @@ export const GetAssemblyLineDataReport = async (admin, user_id) => {
     const assemblies = await AssemblyModal.findAll({
         where: admin ? {} : { responsibility: user_id },
         attributes: ["_id"],
-        include: [{ model: ProcessModel, as: "process_id", attributes: ["id"], through: { attributes: [] } }],
+        include: [{ model: ProcessModel, as: "process_id", attributes: ["_id"], through: { attributes: [] } }],
     });
 
     const assemblyIds = assemblies.map((a) => a._id);
