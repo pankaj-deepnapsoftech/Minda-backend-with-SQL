@@ -29,6 +29,7 @@ export const Start = (app) => {
 }
 
 function middlewares(app) {
+    app.set('trust proxy',true)
     app.use(express.static(path.join(__dirname, 'pages')));
     app.use(json({ limit: "20mb" }));
     app.use(urlencoded({ extended: true, limit: "20mb" }));

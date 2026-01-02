@@ -123,7 +123,7 @@ export const getAssemblyLineByResponsibility = async (responsibility) => {
         where: { responsibility },
         attributes: ["_id", "assembly_name", "assembly_number"],
         include: [
-            { model: ProcessModel, as: "process_id", attributes: ["id", "process_name", "process_no"], through: { attributes: [] } },
+            { model: ProcessModel, as: "process_id", attributes: ["_id", "process_name", "process_no"], through: { attributes: [] } },
         ],
         order: [["_id", "DESC"]],
     });
