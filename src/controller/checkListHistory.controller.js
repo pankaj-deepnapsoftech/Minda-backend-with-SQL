@@ -39,6 +39,8 @@ export const createCheckListHistory = AsyncHandler(async (req, res) => {
   // 6️⃣ Insert only new records
   const result = await createChecklistHistory(filteredData.map((item)=>({...item,user_id})));
 
+
+
   // 7️⃣ Response
   res.status(StatusCodes.CREATED).json({
     message: "Checklist history saved successfully",
@@ -47,12 +49,17 @@ export const createCheckListHistory = AsyncHandler(async (req, res) => {
     data: result,
   });
 
+
   const lastData = result.filter((item) => item?.is_error);
+
+
+  // console.log(lastData);
 
   const admin = await GetAdmin();
 
-  await Promise.all(lastData.map(async(item)=>{
-    await CreateNotification({title:"assembly have an error ",description:item.description,senderId:req.currentUser?._id,status:"send",reciverId:admin.id,assembly:item.assembly,process_id:item.process_id,checkList:item.checkList});
+
+ await Promise.all(lastData.map(async(item)=>{
+    await CreateNotification({title:"assembly have an error ",description:item.description,senderId:req.currentUser?._id,status:"send",reciverId:admin._id,assembly:item.assembly,process_id:item.process_id,checkList:item.checkList});
   }));
 
 });
