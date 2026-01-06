@@ -4,7 +4,8 @@ import { AsyncHandler } from "../utils/asyncHandler.js";
 
 
 export const GetAllCardsData = AsyncHandler(async (req, res) => {
-    const result = await allCardsData();
+    const {company,plant,date} = req.query;
+    const result = await allCardsData(company,plant,date);
     res.status(StatusCodes.OK).json({
         data: result
     });

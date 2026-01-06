@@ -8,10 +8,26 @@ import { PlantModel } from "../models/plant.modal.js";
 import { ProcessModel } from "../models/process.modal.js";
 import { UserModel } from "../models/user.modal.js";
 
-export const allCardsData = async () => {
-    const now = new Date();
+
+export const allCardsData = async (company, plant, date) => {
+
+    const now = date ? new Date(date) : new Date();
+
     const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+    // 🔹 Assembly base filter
+    const assemblyWhere = {
+        ...(company && { company_id: company }),
+        ...(plant && { plant_id: plant }),
+    };
+
+    // 🔹 User filter
+    const userWhere = {
+        is_admin: false,
+        ...(company && { employee_company: company }),
+        ...(plant && { employee_plant: plant }),
+    };
 
     const [
         assembly_total,
@@ -29,20 +45,128 @@ export const allCardsData = async () => {
         process_last_month,
         parts_last_month,
     ] = await Promise.all([
-        AssemblyModal.count(),
-        UserModel.count({ where: { is_admin: false } }),
-        ProcessModel.count(),
-        PartModal.count(),
 
-        AssemblyModal.count({ where: { createdAt: { [Op.gte]: startOfCurrentMonth } } }),
-        UserModel.count({ where: { is_admin: false, createdAt: { [Op.gte]: startOfCurrentMonth } } }),
-        ProcessModel.count({ where: { createdAt: { [Op.gte]: startOfCurrentMonth } } }),
-        PartModal.count({ where: { createdAt: { [Op.gte]: startOfCurrentMonth } } }),
+        // 🔹 TOTAL
+        AssemblyModal.count({ where: assemblyWhere }),
+        UserModel.count({ where: userWhere }),
 
-        AssemblyModal.count({ where: { createdAt: { [Op.gte]: startOfLastMonth, [Op.lt]: startOfCurrentMonth } } }),
-        UserModel.count({ where: { is_admin: false, createdAt: { [Op.gte]: startOfLastMonth, [Op.lt]: startOfCurrentMonth } } }),
-        ProcessModel.count({ where: { createdAt: { [Op.gte]: startOfLastMonth, [Op.lt]: startOfCurrentMonth } } }),
-        PartModal.count({ where: { createdAt: { [Op.gte]: startOfLastMonth, [Op.lt]: startOfCurrentMonth } } }),
+        ProcessModel.count({
+            distinct: true,
+            col: "_id",
+            include: [{
+                model: AssemblyModal,
+                as: "assemblies",
+                where: assemblyWhere,
+                required: true,
+            }],
+        }),
+
+        PartModal.count({
+            distinct: true,
+            col: "_id",
+            include: [{
+                model: AssemblyModal,
+                as: "assemblies",
+                where: assemblyWhere,
+                required: true,
+            }],
+        }),
+
+        // 🔹 CURRENT MONTH
+        AssemblyModal.count({
+            where: {
+                ...assemblyWhere,
+                createdAt: { [Op.gte]: startOfCurrentMonth },
+            },
+        }),
+        UserModel.count({
+            where: {
+                ...userWhere,
+                createdAt: { [Op.gte]: startOfCurrentMonth },
+            },
+        }),
+
+        ProcessModel.count({
+            distinct: true,
+            col: "_id",
+            include: [{
+                model: AssemblyModal,
+                as: "assemblies",
+                where: {
+                    ...assemblyWhere,
+                    createdAt: { [Op.gte]: startOfCurrentMonth },
+                },
+                required: true,
+            }],
+        }),
+
+        PartModal.count({
+            distinct: true,
+            col: "_id",
+            include: [{
+                model: AssemblyModal,
+                as: "assemblies",
+                where: {
+                    ...assemblyWhere,
+                    createdAt: { [Op.gte]: startOfCurrentMonth },
+                },
+                required: true,
+            }],
+        }),
+
+        // 🔹 LAST MONTH
+        AssemblyModal.count({
+            where: {
+                ...assemblyWhere,
+                createdAt: {
+                    [Op.gte]: startOfLastMonth,
+                    [Op.lt]: startOfCurrentMonth,
+                },
+            },
+        }),
+        UserModel.count({
+            where: {
+                ...userWhere,
+                createdAt: {
+                    [Op.gte]: startOfLastMonth,
+                    [Op.lt]: startOfCurrentMonth,
+                },
+            },
+        }),
+
+        ProcessModel.count({
+            distinct: true,
+            col: "_id",
+            include: [{
+                model: AssemblyModal,
+                as: "assemblies",
+                where: {
+                    ...assemblyWhere,
+                    createdAt: {
+                        [Op.gte]: startOfLastMonth,
+                        [Op.lt]: startOfCurrentMonth,
+                    },
+                },
+                required: true,
+            }],
+        }),
+
+        PartModal.count({
+            distinct: true,
+            col: "_id",
+            include: [{
+                model: AssemblyModal,
+                as: "assemblies",
+                where: {
+                    ...assemblyWhere,
+                    createdAt: {
+                        [Op.gte]: startOfLastMonth,
+                        [Op.lt]: startOfCurrentMonth,
+                    },
+                },
+                required: true,
+            }],
+        }),
     ]);
 
     return {
@@ -60,6 +184,7 @@ export const allCardsData = async () => {
         },
     };
 };
+
 
 export const GetMonthlyTrend = async (admin, user) => {
     const assemblies = await AssemblyModal.findAll({
