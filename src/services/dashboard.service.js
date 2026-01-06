@@ -1,4 +1,4 @@
-import { col, fn, literal, Op, QueryTypes } from "sequelize";
+import {  Op, QueryTypes } from "sequelize";
 import { sequelize } from "../sequelize.js";
 import { AssemblyModal } from "../models/AssemblyLine.modal.js";
 import { CheckListHistoryModal } from "../models/checkListHistory.modal.js";
@@ -196,7 +196,6 @@ export const allCardsData = async (company = "", plant = "", startDate, endDate)
 
 
 export const GetMonthlyTrend = async (admin, user) => {
-  try {
       const assemblies = await AssemblyModal.findAll({
           where: admin ? {} : { responsibility: user },
           attributes: ["_id"],
@@ -261,10 +260,7 @@ export const GetMonthlyTrend = async (admin, user) => {
           error_count: m.error_count,
           level: "assembly",
       }));
-  } catch (error) {
-    console.log(error);
-    return [];
-  }
+  
 };
 
 export const GetDailyAssemblyStatus = async (admin, user, date = new Date()) => {
