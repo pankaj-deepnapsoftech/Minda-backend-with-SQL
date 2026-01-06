@@ -196,43 +196,75 @@ export const allCardsData = async (company = "", plant = "", startDate, endDate)
 
 
 export const GetMonthlyTrend = async (admin, user) => {
-    const assemblies = await AssemblyModal.findAll({
-        where: admin ? {} : { responsibility: user },
-        attributes: ["_id"],
-    });
-    const assemblyIds = assemblies.map((a) => a._id);
-    const totalAssemblies = assemblyIds.length;
-
-    if (totalAssemblies === 0) return [];
-
-    const monthly = await CheckListHistoryModal.findAll({
-        where: { assembly: { [Op.in]: assemblyIds } },
-        attributes: [
-            [fn("YEAR", col("createdAt")), "year"],
-            [fn("MONTH", col("createdAt")), "month"],
-            [fn("COUNT", fn("DISTINCT", col("assembly"))), "checked_count"],
-            [literal("COUNT(DISTINCT CASE WHEN is_error = 1 THEN assembly ELSE NULL END)"), "error_count"],
-        ],
-        group: ["year", "month"],
-        order: [
-            [fn("YEAR", col("createdAt")), "ASC"],
-            [fn("MONTH", col("createdAt")), "ASC"],
-        ],
-        raw: true,
-    });
-
-    return monthly.map((m) => {
-        const checked_count = Number(m.checked_count) || 0;
-        const error_count = Number(m.error_count) || 0;
-        return {
-            year: Number(m.year),
-            month: Number(m.month),
-            checked_count,
-            unchecked_count: Math.max(totalAssemblies - checked_count, 0),
-            error_count,
-            level: "assembly",
-        };
-    });
+  try {
+      const assemblies = await AssemblyModal.findAll({
+          where: admin ? {} : { responsibility: user },
+          attributes: ["_id"],
+      });
+      const assemblyIds = assemblies.map((a) => a._id);
+      const totalAssemblies = assemblyIds.length;
+  
+      if (totalAssemblies === 0) return [];
+  
+      // Fetch all history records and process in JavaScript (safer for SQL Server)
+      const histories = await CheckListHistoryModal.findAll({
+          where: { assembly: { [Op.in]: assemblyIds } },
+          attributes: ["assembly", "is_error", "createdAt"],
+      });
+  
+      // Group by year and month
+      const monthlyMap = new Map();
+      
+      for (const h of histories) {
+          const createdAt = new Date(h.createdAt);
+          const year = createdAt.getFullYear();
+          const month = createdAt.getMonth() + 1; // getMonth() returns 0-11, we need 1-12
+          const key = `${year}-${month}`;
+          
+          if (!monthlyMap.has(key)) {
+              monthlyMap.set(key, {
+                  year,
+                  month,
+                  checkedAssemblies: new Set(),
+                  errorAssemblies: new Set(),
+              });
+          }
+          
+          const entry = monthlyMap.get(key);
+          const assemblyId = h.assembly?.toString() || h.assembly;
+          entry.checkedAssemblies.add(assemblyId);
+          if (h.is_error === true || h.is_error === 1) {
+              entry.errorAssemblies.add(assemblyId);
+          }
+      }
+  
+      // Convert to array format
+      const monthly = Array.from(monthlyMap.values()).map((entry) => ({
+          year: entry.year,
+          month: entry.month,
+          checked_count: entry.checkedAssemblies.size,
+          unchecked_count: Math.max(totalAssemblies - entry.checkedAssemblies.size, 0),
+          error_count: entry.errorAssemblies.size,
+      }));
+  
+      // Sort by year and month
+      monthly.sort((a, b) => {
+          if (a.year !== b.year) return a.year - b.year;
+          return a.month - b.month;
+      });
+  
+      return monthly.map((m) => ({
+          year: m.year,
+          month: m.month,
+          checked_count: m.checked_count,
+          unchecked_count: m.unchecked_count,
+          error_count: m.error_count,
+          level: "assembly",
+      }));
+  } catch (error) {
+    console.log(error);
+    return [];
+  }
 };
 
 export const GetDailyAssemblyStatus = async (admin, user, date = new Date()) => {
