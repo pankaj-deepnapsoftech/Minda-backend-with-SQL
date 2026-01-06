@@ -9,25 +9,27 @@ import { ProcessModel } from "../models/process.modal.js";
 import { UserModel } from "../models/user.modal.js";
 
 
-export const allCardsData = async (company="", plant="", startDate, endDate) => {
+export const allCardsData = async (company = "", plant = "", startDate, endDate) => {
 
     const now = new Date();
 
+    // Normalise current period range to full days
     const currentStart = startDate
         ? new Date(startDate)
         : new Date(now.getFullYear(), now.getMonth(), 1);
+    currentStart.setHours(0, 0, 0, 0);
 
     const currentEnd = endDate
         ? new Date(endDate)
         : new Date();
+    currentEnd.setHours(23, 59, 59, 999);
 
-    const lastStart = new Date(
-        currentStart.getFullYear(),
-        currentStart.getMonth() - 1,
-        currentStart.getDate()
-    );
+    // Previous period: same start day, previous month, up to just before currentStart
+    const lastStart = new Date(currentStart);
+    lastStart.setMonth(lastStart.getMonth() - 1);
 
-    const lastEnd = currentStart;
+    const lastEnd = new Date(currentStart);
+    lastEnd.setMilliseconds(lastEnd.getMilliseconds() - 1);
 
     // 🔹 Assembly base filter
     const assemblyWhere = {
@@ -170,19 +172,24 @@ export const allCardsData = async (company="", plant="", startDate, endDate) => 
         }),
     ]);
 
+    const diff = {
+        assembly: assembly_current - assembly_last,
+        employee: employee_current - employee_last,
+        process: process_current - process_last,
+        parts: parts_current - parts_last,
+    };
+
     return {
+        // Totals now represent counts within the selected/current date range
         totals: {
-            assembly: assembly_total,
-            employee: employee_total,
-            process: process_total,
-            parts: parts_total,
+            assembly: assembly_current,
+            employee: employee_current,
+            process: process_current,
+            parts: parts_current,
         },
-        period_difference: {
-            assembly: assembly_current - assembly_last,
-            employee: employee_current - employee_last,
-            process: process_current - process_last,
-            parts: parts_current - parts_last,
-        },
+        // Keep both names so existing frontend continues to work
+        month_difference: diff,
+        period_difference: diff,
     };
 };
 
