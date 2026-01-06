@@ -45,10 +45,10 @@ export const allCardsData = async (company = "", plant = "", startDate, endDate)
     };
 
     const [
-        assembly_total,
-        employee_total,
-        process_total,
-        parts_total,
+        // assembly_total,
+        // employee_total,
+        // process_total,
+        // parts_total,
 
         assembly_current,
         employee_current,
