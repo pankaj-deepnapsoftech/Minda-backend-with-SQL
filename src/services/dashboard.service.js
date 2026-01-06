@@ -9,7 +9,7 @@ import { ProcessModel } from "../models/process.modal.js";
 import { UserModel } from "../models/user.modal.js";
 
 
-export const allCardsData = async (company, plant, startDate, endDate) => {
+export const allCardsData = async (company="", plant="", startDate, endDate) => {
 
     const now = new Date();
 
