@@ -9,12 +9,25 @@ import { ProcessModel } from "../models/process.modal.js";
 import { UserModel } from "../models/user.modal.js";
 
 
-export const allCardsData = async (company, plant, date) => {
+export const allCardsData = async (company, plant, startDate, endDate) => {
 
-    const now = date ? new Date(date) : new Date();
+    const now = new Date();
 
-    const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const currentStart = startDate
+        ? new Date(startDate)
+        : new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const currentEnd = endDate
+        ? new Date(endDate)
+        : new Date();
+
+    const lastStart = new Date(
+        currentStart.getFullYear(),
+        currentStart.getMonth() - 1,
+        currentStart.getDate()
+    );
+
+    const lastEnd = currentStart;
 
     // 🔹 Assembly base filter
     const assemblyWhere = {
@@ -35,15 +48,15 @@ export const allCardsData = async (company, plant, date) => {
         process_total,
         parts_total,
 
-        assembly_current_month,
-        employee_current_month,
-        process_current_month,
-        parts_current_month,
+        assembly_current,
+        employee_current,
+        process_current,
+        parts_current,
 
-        assembly_last_month,
-        employee_last_month,
-        process_last_month,
-        parts_last_month,
+        assembly_last,
+        employee_last,
+        process_last,
+        parts_last,
     ] = await Promise.all([
 
         // 🔹 TOTAL
@@ -72,17 +85,17 @@ export const allCardsData = async (company, plant, date) => {
             }],
         }),
 
-        // 🔹 CURRENT MONTH
+        // 🔹 CURRENT PERIOD
         AssemblyModal.count({
             where: {
                 ...assemblyWhere,
-                createdAt: { [Op.gte]: startOfCurrentMonth },
+                createdAt: { [Op.between]: [currentStart, currentEnd] },
             },
         }),
         UserModel.count({
             where: {
                 ...userWhere,
-                createdAt: { [Op.gte]: startOfCurrentMonth },
+                createdAt: { [Op.between]: [currentStart, currentEnd] },
             },
         }),
 
@@ -94,7 +107,7 @@ export const allCardsData = async (company, plant, date) => {
                 as: "assemblies",
                 where: {
                     ...assemblyWhere,
-                    createdAt: { [Op.gte]: startOfCurrentMonth },
+                    createdAt: { [Op.between]: [currentStart, currentEnd] },
                 },
                 required: true,
             }],
@@ -108,29 +121,23 @@ export const allCardsData = async (company, plant, date) => {
                 as: "assemblies",
                 where: {
                     ...assemblyWhere,
-                    createdAt: { [Op.gte]: startOfCurrentMonth },
+                    createdAt: { [Op.between]: [currentStart, currentEnd] },
                 },
                 required: true,
             }],
         }),
 
-        // 🔹 LAST MONTH
+        // 🔹 PREVIOUS PERIOD
         AssemblyModal.count({
             where: {
                 ...assemblyWhere,
-                createdAt: {
-                    [Op.gte]: startOfLastMonth,
-                    [Op.lt]: startOfCurrentMonth,
-                },
+                createdAt: { [Op.between]: [lastStart, lastEnd] },
             },
         }),
         UserModel.count({
             where: {
                 ...userWhere,
-                createdAt: {
-                    [Op.gte]: startOfLastMonth,
-                    [Op.lt]: startOfCurrentMonth,
-                },
+                createdAt: { [Op.between]: [lastStart, lastEnd] },
             },
         }),
 
@@ -142,10 +149,7 @@ export const allCardsData = async (company, plant, date) => {
                 as: "assemblies",
                 where: {
                     ...assemblyWhere,
-                    createdAt: {
-                        [Op.gte]: startOfLastMonth,
-                        [Op.lt]: startOfCurrentMonth,
-                    },
+                    createdAt: { [Op.between]: [lastStart, lastEnd] },
                 },
                 required: true,
             }],
@@ -159,10 +163,7 @@ export const allCardsData = async (company, plant, date) => {
                 as: "assemblies",
                 where: {
                     ...assemblyWhere,
-                    createdAt: {
-                        [Op.gte]: startOfLastMonth,
-                        [Op.lt]: startOfCurrentMonth,
-                    },
+                    createdAt: { [Op.between]: [lastStart, lastEnd] },
                 },
                 required: true,
             }],
@@ -176,14 +177,15 @@ export const allCardsData = async (company, plant, date) => {
             process: process_total,
             parts: parts_total,
         },
-        month_difference: {
-            assembly: assembly_current_month - assembly_last_month,
-            employee: employee_current_month - employee_last_month,
-            process: process_current_month - process_last_month,
-            parts: parts_current_month - parts_last_month,
+        period_difference: {
+            assembly: assembly_current - assembly_last,
+            employee: employee_current - employee_last,
+            process: process_current - process_last,
+            parts: parts_current - parts_last,
         },
     };
 };
+
 
 
 export const GetMonthlyTrend = async (admin, user) => {
