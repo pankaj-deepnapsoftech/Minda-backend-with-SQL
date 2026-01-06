@@ -287,7 +287,7 @@ export const GetDailyAssemblyStatus = async (admin, user, date = new Date()) => 
     });
 };
 
-export const GetMonthlyPerformance = async (admin, user) => {
+export const GetMonthlyPerformance = async (admin, user, startDate, endDate) => {
     const assemblies = await AssemblyModal.findAll({
         where: admin ? {} : { responsibility: user },
         attributes: ["_id"],
@@ -295,23 +295,48 @@ export const GetMonthlyPerformance = async (admin, user) => {
     const assemblyIds = assemblies.map((a) => a._id);
     if (assemblyIds.length === 0) return [];
 
-    const perAssemblyMonth = await sequelize.query(
-        `
+    // Optional date range filter
+    let rangeStart = null;
+    let rangeEnd = null;
+    if (startDate) {
+        rangeStart = new Date(startDate);
+        rangeStart.setHours(0, 0, 0, 0);
+    }
+    if (endDate) {
+        rangeEnd = new Date(endDate);
+        rangeEnd.setHours(23, 59, 59, 999);
+    }
+
+    let whereClause = `WHERE assembly IN (:assemblyIds)`;
+    if (rangeStart) {
+        whereClause += ` AND createdAt >= :startDate`;
+    }
+    if (rangeEnd) {
+        whereClause += ` AND createdAt <= :endDate`;
+    }
+
+    const sql = `
         SELECT
             YEAR(createdAt) AS year,
             MONTH(createdAt) AS month,
             assembly AS assembly,
             MAX(CASE WHEN is_error = 1 THEN 1 ELSE 0 END) AS has_error
         FROM checklisthistories
-        WHERE assembly IN (:assemblyIds)
+        ${whereClause}
         GROUP BY YEAR(createdAt), MONTH(createdAt), assembly
         ORDER BY YEAR(createdAt), MONTH(createdAt)
-        `,
-        { 
-            replacements: { assemblyIds }, 
-            type: QueryTypes.SELECT 
-        }
-    );
+    `;
+
+    const replacements = {
+        assemblyIds,
+    };
+    if (rangeStart) replacements.startDate = rangeStart;
+    if (rangeEnd) replacements.endDate = rangeEnd;
+
+    const perAssemblyMonth = await sequelize.query(sql, {
+        replacements,
+        type: QueryTypes.SELECT,
+    });
 
     const monthMap = new Map();
     for (const row of perAssemblyMonth) {
@@ -325,11 +350,13 @@ export const GetMonthlyPerformance = async (admin, user) => {
     return [...monthMap.values()].sort((a, b) => (a.year - b.year) || (a.month - b.month));
 };
 
-export const GetDailyErrorsAssembly = async (admin, user, date = new Date()) => {
-    const startOfDay = new Date(date);
+export const GetDailyErrorsAssembly = async (admin, user, startDate, endDate) => {
+    const now = new Date();
+
+    const startOfDay = startDate ? new Date(startDate) : new Date(now);
     startOfDay.setHours(0, 0, 0, 0);
 
-    const endOfDay = new Date(date);
+    const endOfDay = endDate ? new Date(endDate) : new Date(now);
     endOfDay.setHours(23, 59, 59, 999);
 
     const assemblies = await AssemblyModal.findAll({

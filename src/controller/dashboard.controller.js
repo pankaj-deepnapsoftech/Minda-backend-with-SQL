@@ -33,7 +33,8 @@ export const getAssemblyData = AsyncHandler(async (req, res) => {
 
 export const getAllActiveAssembyMonthly = AsyncHandler(async (req,res) => {
     const user = req.currentUser;
-    const result = await GetMonthlyPerformance(user?.is_admin, user?._id);
+    const { start_date, end_date } = req.query;
+    const result = await GetMonthlyPerformance(user?.is_admin, user?._id, start_date, end_date);
     res.status(StatusCodes.OK).json({
         data: result
     });
@@ -42,7 +43,8 @@ export const getAllActiveAssembyMonthly = AsyncHandler(async (req,res) => {
 
 export const getAllAssemblyErrorHistory = AsyncHandler(async (req,res) => {
     const user = req.currentUser;
-    const result = await GetDailyErrorsAssembly(user?.is_admin, user?._id);
+    const { start_date, end_date } = req.query;
+    const result = await GetDailyErrorsAssembly(user?.is_admin, user?._id, start_date, end_date);
     res.status(StatusCodes.OK).json({
         data: result
     });

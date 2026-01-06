@@ -170,11 +170,13 @@ export const getAssemblyLineFormByResponsibility = async (user, id) => {
     return [assemblyJson];
 };
 
-export const GetAssemblyLineDataReport = async (admin, user_id) => {
-    const startOfDay = new Date();
+export const GetAssemblyLineDataReport = async (admin, user_id, startDate, endDate) => {
+    const now = new Date();
+
+    const startOfDay = startDate ? new Date(startDate) : new Date(now);
     startOfDay.setHours(0, 0, 0, 0);
 
-    const endOfDay = new Date();
+    const endOfDay = endDate ? new Date(endDate) : new Date(now);
     endOfDay.setHours(23, 59, 59, 999);
 
     const assemblies = await AssemblyModal.findAll({

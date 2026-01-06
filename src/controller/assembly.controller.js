@@ -96,9 +96,10 @@ export const assemblyLineFormResponsibal = AsyncHandler(async (req,res) => {
 
 export const assemblyLineCardsData = AsyncHandler(async (req,res) => {
      const user = req.currentUser;
-     const result = await GetAssemblyLineDataReport(user?.is_admin,user._id);
+     const { start_date, end_date } = req.query;
+     const result = await GetAssemblyLineDataReport(user?.is_admin, user._id, start_date, end_date);
      res.status(StatusCodes.OK).json({
-        data:result
+        data: result
      });
 });
 
