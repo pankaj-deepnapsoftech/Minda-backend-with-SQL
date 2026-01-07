@@ -170,73 +170,139 @@ export const getAssemblyLineFormByResponsibility = async (user, id) => {
     return [assemblyJson];
 };
 
-export const GetAssemblyLineDataReport = async (admin, user_id, startDate, endDate) => {
-    const now = new Date();
 
-    const startOfDay = startDate ? new Date(startDate) : new Date(now);
-    startOfDay.setHours(0, 0, 0, 0);
+export const GetAssemblyLineDataReport = async (
+  admin,
+  user_id,
+  startDate,
+  endDate
+) => {
+  const now = new Date();
 
-    const endOfDay = endDate ? new Date(endDate) : new Date(now);
-    endOfDay.setHours(23, 59, 59, 999);
+  const startOfDay = startDate ? new Date(startDate) : new Date(now);
+  startOfDay.setHours(0, 0, 0, 0);
 
-    const assemblies = await AssemblyModal.findAll({
-        where: admin ? {} : { responsibility: user_id },
+  const endOfDay = endDate ? new Date(endDate) : new Date(now);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  // Total days in range (IMPORTANT)
+  const totalDays =
+    Math.ceil((endOfDay - startOfDay) / (1000 * 60 * 60 * 24)) + 1;
+
+  // 1️⃣ Fetch assemblies with processes
+  const assemblies = await AssemblyModal.findAll({
+    where: admin ? {} : { responsibility: user_id },
+    attributes: ["_id"],
+    include: [
+      {
+        model: ProcessModel,
+        as: "process_id",
         attributes: ["_id"],
-        include: [{ model: ProcessModel, as: "process_id", attributes: ["_id"], through: { attributes: [] } }],
+        through: { attributes: [] },
+      },
+    ],
+  });
+
+  const assemblyIds = assemblies.map(a => a._id);
+
+  // 2️⃣ Fetch checklist history in date range
+  const histories = assemblyIds.length
+    ? await CheckListHistoryModal.findAll({
+        where: {
+          assembly: { [Op.in]: assemblyIds },
+          createdAt: { [Op.between]: [startOfDay, endOfDay] },
+        },
+        attributes: [
+          "assembly",
+          "process_id",
+          "createdAt",
+          "is_error",
+          "is_resolved",
+        ],
+      })
+    : [];
+
+  // 3️⃣ Group history by assembly + process
+  const historyMap = new Map();
+
+  for (const h of histories) {
+    const key = `${h.assembly}:${h.process_id}`;
+    const list = historyMap.get(key) || [];
+    list.push(h);
+    historyMap.set(key, list);
+  }
+
+  // Counters
+  let total_assemblies = 0;
+  let total_checked = 0;
+  let total_unchecked = 0;
+  let total_errors = 0;
+  let total_resolved = 0;
+
+  // 4️⃣ Main calculation loop
+  for (const assembly of assemblies) {
+    total_assemblies++;
+
+    const processList = Array.isArray(assembly.process_id)
+      ? assembly.process_id
+      : [];
+
+    const processFlags = processList.map(process => {
+      const key = `${assembly._id}:${process._id}`;
+      const records = historyMap.get(key) || [];
+
+      // Count unique days checked
+      const checkedDays = new Set(
+        records.map(r => new Date(r.createdAt).toDateString())
+      );
+
+      const is_checked = checkedDays.size === totalDays;
+      const is_unchecked = checkedDays.size === 0;
+
+      const has_error = records.some(r => r.is_error === true);
+      const has_unresolved_error = records.some(
+        r => r.is_error === true && r.is_resolved === false
+      );
+
+      return {
+        is_checked,
+        is_unchecked,
+        has_error,
+        has_unresolved_error,
+      };
     });
 
-    const assemblyIds = assemblies.map((a) => a._id);
-    const histories = assemblyIds.length
-        ? await CheckListHistoryModal.findAll({
-            where: {
-                assembly: { [Op.in]: assemblyIds },
-                createdAt: { [Op.between]: [startOfDay, endOfDay] },
-            },
-            attributes: ["assembly", "process_id", "is_error", "is_resolved"],
-        })
-        : [];
+    // 5️⃣ Assembly-level logic (FIXED)
+    const assembly_checked =
+      processFlags.length > 0 &&
+      processFlags.every(p => p.is_checked);
 
-    const historyMap = new Map();
-    for (const h of histories) {
-        const key = `${h.assembly}:${h.process_id}`;
-        const list = historyMap.get(key) || [];
-        list.push(h);
-        historyMap.set(key, list);
-    }
+    const assembly_unchecked =
+      processFlags.length === 0 ||
+      processFlags.every(p => p.is_unchecked);
 
-    let total_assemblies = 0;
-    let total_checked = 0;
-    let total_unchecked = 0;
-    let total_errors = 0;
-    let total_resolved = 0;
+    const assembly_error = processFlags.some(p => p.has_error);
 
-    for (const assembly of assemblies) {
-        total_assemblies += 1;
-        const processList = Array.isArray(assembly.process_id) ? assembly.process_id : [];
+    const assembly_resolved =
+      assembly_error &&
+      !processFlags.some(p => p.has_unresolved_error);
 
-        const processFlags = processList.map((p) => {
-            const key = `${assembly._id}:${p._id}`;
-            const today = historyMap.get(key) || [];
-            const is_checked = today.length > 0;
-            const is_unchecked = today.length === 0;
-            const has_error = today.some((t) => t.is_error === true);
-            const has_unresolved_error = today.some((t) => t.is_error === true && t.is_resolved === false);
-            return { is_checked, is_unchecked, has_error, has_unresolved_error };
-        });
+    if (assembly_checked) total_checked++;
+    if (assembly_unchecked) total_unchecked++;
+    if (assembly_error) total_errors++;
+    if (assembly_resolved) total_resolved++;
+  }
 
-        const assembly_unchecked = processFlags.some((p) => p.is_unchecked) || processFlags.length === 0;
-        const assembly_checked = !assembly_unchecked;
-        const assembly_error = processFlags.some((p) => p.has_error);
-        const assembly_resolved = assembly_error && !processFlags.some((p) => p.has_unresolved_error);
-
-        if (assembly_checked) total_checked += 1;
-        if (assembly_unchecked) total_unchecked += 1;
-        if (assembly_error) total_errors += 1;
-        if (assembly_resolved) total_resolved += 1;
-    }
-
-    return { total_assemblies, total_checked, total_unchecked, total_errors, total_resolved };
+  // 6️⃣ Final response
+  return {
+    total_assemblies,
+    total_checked,
+    total_unchecked,
+    total_errors,
+    total_resolved,
+  };
 };
+
 
 export const getAssemblyLineTodayReport = async (
     admin,
