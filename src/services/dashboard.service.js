@@ -60,13 +60,6 @@ export const allCardsData = async (
         ...(plant && { employee_plant: plant }),
     };
 
-    // 🔹 Debug (remove after verification)
-    console.log({
-        currentStart: currentStart.toISOString(),
-        currentEnd: currentEnd.toISOString(),
-        lastStart: lastStart.toISOString(),
-        lastEnd: lastEnd.toISOString(),
-    });
 
     const [
         assembly_current,
