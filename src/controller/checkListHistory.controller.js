@@ -4,6 +4,8 @@ import { AsyncHandler } from "../utils/asyncHandler.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 import { CreateNotification } from "../services/notification.service.js";
 import { GetAdmin } from "../services/users.service.js";
+import { io } from "../server.js";
+import { logger } from "../utils/logger.js";
 
 
 export const createCheckListHistory = AsyncHandler(async (req, res) => {
@@ -59,7 +61,31 @@ export const createCheckListHistory = AsyncHandler(async (req, res) => {
 
 
  await Promise.all(lastData.map(async(item)=>{
-    await CreateNotification({title:"assembly have an error ",description:item.description,senderId:req.currentUser?._id,status:"send",reciverId:admin._id,assembly:item.assembly,process_id:item.process_id,checkList:item.checkList});
+    const notification = await CreateNotification({title:"assembly have an error ",description:item.description,senderId:req.currentUser?._id,status:"send",reciverId:admin._id,assembly:item.assembly,process_id:item.process_id,checkList:item.checkList});
+    
+    // Emit socket event to admin when notification is created
+    if (io && admin?._id) {
+      const eventName = `notification:${admin._id}`;
+      const eventData = {
+        type: "new_notification",
+        notification: notification.toJSON ? notification.toJSON() : notification,
+      };
+      
+      // Get connected sockets count
+      const sockets = await io.fetchSockets();
+      logger.info(`📤 Emitting socket event: ${eventName} to admin: ${admin._id}`);
+      logger.info(`📊 Total connected sockets: ${sockets.length}`);
+      
+      if (sockets.length === 0) {
+        logger.warn("⚠️ WARNING: No sockets connected! Event will not be delivered.");
+      }
+      
+      // Emit to all connected clients (they filter by event name)
+      io.emit(eventName, eventData);
+      logger.info("✅ Event emitted successfully");
+    } else {
+      logger.warn(`⚠️ Cannot emit socket event - io: ${!!io}, admin._id: ${admin?._id}`);
+    }
   }));
 
 });

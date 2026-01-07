@@ -6,6 +6,7 @@ import compression from "compression";
 import cookieParser from "cookie-parser";
 import { fileURLToPath } from "url";
 import path from "path";
+import { Server } from "socket.io";
 
 // ----------------- local imports ---------------------
 import { CheckDbConnection } from "./dbConnection.js";
@@ -18,6 +19,9 @@ import mainRoutes from "./routes.js";
 const SERVER_PORT = 4040;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Export io instance for use in controllers
+export let io;
 
 
 export const Start = (app) => {
@@ -68,6 +72,40 @@ function Connections() {
 
 function StartServer(app) {
     const server = http.createServer(app);
+    
+    // Initialize Socket.IO
+    io = new Server(server, {
+        cors: {
+            origin: config.NODE_ENV === "development" ? config.LOCAL_CLIENT_URL : config.CLIENT_URL,
+            methods: ["GET", "POST"],
+            credentials: true,
+        },
+    });
+
+    // Socket.IO connection handling
+    io.on("connection", (socket) => {
+        logger.info(`✅ Socket connected: ${socket.id}`);
+        logger.info(`📊 Total connected sockets: ${io.sockets.sockets.size}`);
+
+        // Test event to verify connection
+        socket.emit("test", { message: "Socket connected successfully" });
+
+        socket.on("disconnect", (reason) => {
+            logger.info(`❌ Socket disconnected: ${socket.id}, Reason: ${reason}`);
+            logger.info(`📊 Total connected sockets: ${io.sockets.sockets.size}`);
+        });
+
+        // Handle connection errors
+        socket.on("error", (error) => {
+            logger.error(`Socket error for ${socket.id}:`, error);
+        });
+    });
+
+    // Log when socket.io has connection errors
+    io.engine.on("connection_error", (err) => {
+        logger.error("Socket.IO connection error:", err);
+    });
+
     server.listen(SERVER_PORT, () => {
         // eslint-disable-next-line no-undef
         logger.info(`Server will start with process id : ${process.pid} started on port ${SERVER_PORT}`);
