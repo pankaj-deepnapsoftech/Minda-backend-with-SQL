@@ -1,4 +1,4 @@
-import { col, fn, literal, Op, QueryTypes } from "sequelize";
+import { Op, QueryTypes } from "sequelize";
 import { sequelize } from "../sequelize.js";
 import { AssemblyModal } from "../models/AssemblyLine.modal.js";
 import { CheckListHistoryModal } from "../models/checkListHistory.modal.js";
@@ -9,27 +9,43 @@ import { ProcessModel } from "../models/process.modal.js";
 import { UserModel } from "../models/user.modal.js";
 
 
-export const allCardsData = async (company = "", plant = "", startDate, endDate) => {
+export const allCardsData = async (
+    company = "",
+    plant = "",
+    startDate,
+    endDate
+) => {
+
+    // 🔹 Helpers to normalize full-day ranges
+    const normalizeStart = (date) => {
+        const d = new Date(date);
+        d.setHours(0, 0, 0, 0);
+        return d;
+    };
+
+    const normalizeEnd = (date) => {
+        const d = new Date(date);
+        d.setHours(23, 59, 59, 999);
+        return d;
+    };
 
     const now = new Date();
 
-    // Normalise current period range to full days
+    // 🔹 CURRENT PERIOD
     const currentStart = startDate
-        ? new Date(startDate)
-        : new Date(now.getFullYear(), now.getMonth(), 1);
-    currentStart.setHours(0, 0, 0, 0);
+        ? normalizeStart(startDate)
+        : new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
 
     const currentEnd = endDate
-        ? new Date(endDate)
-        : new Date();
-    currentEnd.setHours(23, 59, 59, 999);
+        ? normalizeEnd(endDate)
+        : normalizeEnd(now);
 
-    // Previous period: same start day, previous month, up to just before currentStart
+    // 🔹 PREVIOUS PERIOD (same duration, previous month)
     const lastStart = new Date(currentStart);
     lastStart.setMonth(lastStart.getMonth() - 1);
 
-    const lastEnd = new Date(currentStart);
-    lastEnd.setMilliseconds(lastEnd.getMilliseconds() - 1);
+    const lastEnd = new Date(currentEnd);
+    lastEnd.setMonth(lastEnd.getMonth() - 1);
 
     // 🔹 Assembly base filter
     const assemblyWhere = {
@@ -37,19 +53,22 @@ export const allCardsData = async (company = "", plant = "", startDate, endDate)
         ...(plant && { plant_id: plant }),
     };
 
-    // 🔹 User filter
+    // 🔹 User base filter
     const userWhere = {
         is_admin: false,
         ...(company && { employee_company: company }),
         ...(plant && { employee_plant: plant }),
     };
 
-    const [
-        // assembly_total,
-        // employee_total,
-        // process_total,
-        // parts_total,
+    // 🔹 Debug (remove after verification)
+    console.log({
+        currentStart: currentStart.toISOString(),
+        currentEnd: currentEnd.toISOString(),
+        lastStart: lastStart.toISOString(),
+        lastEnd: lastEnd.toISOString(),
+    });
 
+    const [
         assembly_current,
         employee_current,
         process_current,
@@ -61,43 +80,24 @@ export const allCardsData = async (company = "", plant = "", startDate, endDate)
         parts_last,
     ] = await Promise.all([
 
-        // 🔹 TOTAL
-        AssemblyModal.count({ where: assemblyWhere }),
-        UserModel.count({ where: userWhere }),
-
-        ProcessModel.count({
-            distinct: true,
-            col: "_id",
-            include: [{
-                model: AssemblyModal,
-                as: "assemblies",
-                where: assemblyWhere,
-                required: true,
-            }],
-        }),
-
-        PartModal.count({
-            distinct: true,
-            col: "_id",
-            include: [{
-                model: AssemblyModal,
-                as: "assemblies",
-                where: assemblyWhere,
-                required: true,
-            }],
-        }),
-
         // 🔹 CURRENT PERIOD
         AssemblyModal.count({
             where: {
                 ...assemblyWhere,
-                createdAt: { [Op.between]: [currentStart, currentEnd] },
+                createdAt: {
+                    [Op.gte]: currentStart,
+                    [Op.lte]: currentEnd,
+                },
             },
         }),
+
         UserModel.count({
             where: {
                 ...userWhere,
-                createdAt: { [Op.between]: [currentStart, currentEnd] },
+                createdAt: {
+                    [Op.gte]: currentStart,
+                    [Op.lte]: currentEnd,
+                },
             },
         }),
 
@@ -107,11 +107,14 @@ export const allCardsData = async (company = "", plant = "", startDate, endDate)
             include: [{
                 model: AssemblyModal,
                 as: "assemblies",
+                required: true,
                 where: {
                     ...assemblyWhere,
-                    createdAt: { [Op.between]: [currentStart, currentEnd] },
+                    createdAt: {
+                        [Op.gte]: currentStart,
+                        [Op.lte]: currentEnd,
+                    },
                 },
-                required: true,
             }],
         }),
 
@@ -121,11 +124,14 @@ export const allCardsData = async (company = "", plant = "", startDate, endDate)
             include: [{
                 model: AssemblyModal,
                 as: "assemblies",
+                required: true,
                 where: {
                     ...assemblyWhere,
-                    createdAt: { [Op.between]: [currentStart, currentEnd] },
+                    createdAt: {
+                        [Op.gte]: currentStart,
+                        [Op.lte]: currentEnd,
+                    },
                 },
-                required: true,
             }],
         }),
 
@@ -133,13 +139,20 @@ export const allCardsData = async (company = "", plant = "", startDate, endDate)
         AssemblyModal.count({
             where: {
                 ...assemblyWhere,
-                createdAt: { [Op.between]: [lastStart, lastEnd] },
+                createdAt: {
+                    [Op.gte]: lastStart,
+                    [Op.lte]: lastEnd,
+                },
             },
         }),
+
         UserModel.count({
             where: {
                 ...userWhere,
-                createdAt: { [Op.between]: [lastStart, lastEnd] },
+                createdAt: {
+                    [Op.gte]: lastStart,
+                    [Op.lte]: lastEnd,
+                },
             },
         }),
 
@@ -149,11 +162,14 @@ export const allCardsData = async (company = "", plant = "", startDate, endDate)
             include: [{
                 model: AssemblyModal,
                 as: "assemblies",
+                required: true,
                 where: {
                     ...assemblyWhere,
-                    createdAt: { [Op.between]: [lastStart, lastEnd] },
+                    createdAt: {
+                        [Op.gte]: lastStart,
+                        [Op.lte]: lastEnd,
+                    },
                 },
-                required: true,
             }],
         }),
 
@@ -163,11 +179,14 @@ export const allCardsData = async (company = "", plant = "", startDate, endDate)
             include: [{
                 model: AssemblyModal,
                 as: "assemblies",
+                required: true,
                 where: {
                     ...assemblyWhere,
-                    createdAt: { [Op.between]: [lastStart, lastEnd] },
+                    createdAt: {
+                        [Op.gte]: lastStart,
+                        [Op.lte]: lastEnd,
+                    },
                 },
-                required: true,
             }],
         }),
     ]);
@@ -180,18 +199,17 @@ export const allCardsData = async (company = "", plant = "", startDate, endDate)
     };
 
     return {
-        // Totals now represent counts within the selected/current date range
         totals: {
             assembly: assembly_current,
             employee: employee_current,
             process: process_current,
             parts: parts_current,
         },
-        // Keep both names so existing frontend continues to work
         month_difference: diff,
         period_difference: diff,
     };
 };
+
 
 
 
