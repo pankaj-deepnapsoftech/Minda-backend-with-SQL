@@ -38,3 +38,17 @@ export const GetUpdateAll = async (id,data) => {
     const result = { updated: count };
     return result;
 };
+
+
+export const singleNotification = async (id) => {
+    const result = await NotificationModal.findOne({
+        where: { _id: id },
+        include: [
+            { model: UserModel, as: "sender", attributes: ["_id", "desigination", "user_id", "email", "full_name"] },
+            { model: AssemblyModal, as: "assemblyLine", attributes: ["_id", "assembly_name", "assembly_number"] },
+            { model: ProcessModel, as: "processInfo", attributes: ["_id", "process_name", "process_no"] },
+            { model: CheckListModal, as: "checklistItem", attributes: ["_id", "item", "description", "check_list_method", "check_list_time"] },
+        ]
+    });
+    return result;
+} 

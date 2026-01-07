@@ -21,7 +21,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Export io instance for use in controllers
-export let io;
+ let io;
 
 
 export const Start = (app) => {
@@ -112,3 +112,5 @@ function StartServer(app) {
     })
 }
 
+
+export {io}
