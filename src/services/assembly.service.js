@@ -247,7 +247,7 @@ export const GetAssemblyLineDataReport = async (
 
             let dayChecked = false;
             let dayError = false;
-            let dayUnresolved = false;
+            let dayResolved = false;
 
             for (const process of assembly.process_id || []) {
                 const dateKey = day.toDateString();
@@ -259,9 +259,10 @@ export const GetAssemblyLineDataReport = async (
 
                     if (record.is_error) {
                         dayError = true;
-                        if (!record.is_resolved) {
-                            dayUnresolved = true;
-                        }
+                    }
+
+                    if (record.is_resolved) {
+                        dayResolved = true; // 🔹 only true means resolved
                     }
                 }
             }
@@ -270,7 +271,7 @@ export const GetAssemblyLineDataReport = async (
             else total_unchecked++;
 
             if (dayError) total_errors++;
-            if (dayError && !dayUnresolved) total_resolved++;
+            if (dayResolved) total_resolved++; // 🔹 updated logic
         }
     }
 
@@ -283,6 +284,7 @@ export const GetAssemblyLineDataReport = async (
         total_resolved,
     };
 };
+
 
 
 
