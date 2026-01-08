@@ -16,7 +16,11 @@ export const allCardsData = async (
     endDate
 ) => {
 
-    // 🔹 Helpers to normalize full-day ranges
+    const hasDateFilter = Boolean(startDate && endDate);
+
+    // =========================
+    // 🔹 DATE HELPERS
+    // =========================
     const normalizeStart = (date) => {
         const d = new Date(date);
         d.setHours(0, 0, 0, 0);
@@ -29,68 +33,148 @@ export const allCardsData = async (
         return d;
     };
 
-    const now = new Date();
-
-    // 🔹 CURRENT PERIOD
-    const currentStart = startDate
-        ? normalizeStart(startDate)
-        : new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-
-    const currentEnd = endDate
-        ? normalizeEnd(endDate)
-        : normalizeEnd(now);
-
-    // 🔹 PREVIOUS PERIOD (same duration, previous month)
-    const lastStart = new Date(currentStart);
-    lastStart.setMonth(lastStart.getMonth() - 1);
-
-    const lastEnd = new Date(currentEnd);
-    lastEnd.setMonth(lastEnd.getMonth() - 1);
-
-    // 🔹 Assembly base filter
+    // =========================
+    // 🔹 BASE FILTERS
+    // =========================
     const assemblyWhere = {
         ...(company && { company_id: company }),
         ...(plant && { plant_id: plant }),
     };
 
-    // 🔹 User base filter
     const userWhere = {
         is_admin: false,
         ...(company && { employee_company: company }),
         ...(plant && { employee_plant: plant }),
     };
 
+    // =========================
+    // 🔹 DATE FILTER (ONLY IF PROVIDED)
+    // =========================
+    const currentDateFilter = hasDateFilter
+        ? {
+            createdAt: {
+                [Op.gte]: normalizeStart(startDate),
+                [Op.lte]: normalizeEnd(endDate),
+            },
+        }
+        : {};
 
+    // =========================
+    // 🔹 CURRENT TOTALS
+    // =========================
     const [
         assembly_current,
         employee_current,
         process_current,
         parts_current,
+    ] = await Promise.all([
 
+        AssemblyModal.count({
+            where: {
+                ...assemblyWhere,
+                ...currentDateFilter,
+            },
+        }),
+
+        UserModel.count({
+            where: {
+                ...userWhere,
+                ...currentDateFilter,
+            },
+        }),
+
+        ProcessModel.count({
+            distinct: true,
+            col: "_id",
+            include: [{
+                model: AssemblyModal,
+                as: "assemblies",
+                required: true,
+                where: {
+                    ...assemblyWhere,
+                    ...currentDateFilter,
+                },
+            }],
+        }),
+
+        PartModal.count({
+            distinct: true,
+            col: "_id",
+            include: [{
+                model: AssemblyModal,
+                as: "assemblies",
+                required: true,
+                where: {
+                    ...assemblyWhere,
+                    ...currentDateFilter,
+                },
+            }],
+        }),
+    ]);
+
+    // =========================
+    // 🔹 NO DATE → RETURN FULL DATA ONLY
+    // =========================
+    if (!hasDateFilter) {
+        return {
+            totals: {
+                assembly: assembly_current,
+                employee: employee_current,
+                process: process_current,
+                parts: parts_current,
+            },
+            month_difference: {
+                assembly: 0,
+                employee: 0,
+                process: 0,
+                parts: 0,
+            },
+            period_difference: {
+                assembly: 0,
+                employee: 0,
+                process: 0,
+                parts: 0,
+            },
+        };
+    }
+
+    // =========================
+    // 🔹 PREVIOUS PERIOD (ONLY IF DATE EXISTS)
+    // =========================
+    const currentStart = normalizeStart(startDate);
+    const currentEnd = normalizeEnd(endDate);
+
+    const lastStart = new Date(currentStart);
+    lastStart.setMonth(lastStart.getMonth() - 1);
+
+    const lastEnd = new Date(currentEnd);
+    lastEnd.setMonth(lastEnd.getMonth() - 1);
+
+    const lastDateFilter = {
+        createdAt: {
+            [Op.gte]: lastStart,
+            [Op.lte]: lastEnd,
+        },
+    };
+
+    const [
         assembly_last,
         employee_last,
         process_last,
         parts_last,
     ] = await Promise.all([
 
-        // 🔹 CURRENT PERIOD
         AssemblyModal.count({
             where: {
                 ...assemblyWhere,
-                createdAt: {
-                    [Op.gte]: currentStart,
-                    [Op.lte]: currentEnd,
-                },
+                ...lastDateFilter,
             },
         }),
 
         UserModel.count({
             where: {
                 ...userWhere,
-                createdAt: {
-                    [Op.gte]: currentStart,
-                    [Op.lte]: currentEnd,
-                },
+                ...lastDateFilter,
             },
         }),
 
@@ -103,10 +187,7 @@ export const allCardsData = async (
                 required: true,
                 where: {
                     ...assemblyWhere,
-                    createdAt: {
-                        [Op.gte]: currentStart,
-                        [Op.lte]: currentEnd,
-                    },
+                    ...lastDateFilter,
                 },
             }],
         }),
@@ -120,70 +201,15 @@ export const allCardsData = async (
                 required: true,
                 where: {
                     ...assemblyWhere,
-                    createdAt: {
-                        [Op.gte]: currentStart,
-                        [Op.lte]: currentEnd,
-                    },
-                },
-            }],
-        }),
-
-        // 🔹 PREVIOUS PERIOD
-        AssemblyModal.count({
-            where: {
-                ...assemblyWhere,
-                createdAt: {
-                    [Op.gte]: lastStart,
-                    [Op.lte]: lastEnd,
-                },
-            },
-        }),
-
-        UserModel.count({
-            where: {
-                ...userWhere,
-                createdAt: {
-                    [Op.gte]: lastStart,
-                    [Op.lte]: lastEnd,
-                },
-            },
-        }),
-
-        ProcessModel.count({
-            distinct: true,
-            col: "_id",
-            include: [{
-                model: AssemblyModal,
-                as: "assemblies",
-                required: true,
-                where: {
-                    ...assemblyWhere,
-                    createdAt: {
-                        [Op.gte]: lastStart,
-                        [Op.lte]: lastEnd,
-                    },
-                },
-            }],
-        }),
-
-        PartModal.count({
-            distinct: true,
-            col: "_id",
-            include: [{
-                model: AssemblyModal,
-                as: "assemblies",
-                required: true,
-                where: {
-                    ...assemblyWhere,
-                    createdAt: {
-                        [Op.gte]: lastStart,
-                        [Op.lte]: lastEnd,
-                    },
+                    ...lastDateFilter,
                 },
             }],
         }),
     ]);
 
+    // =========================
+    // 🔹 DIFFERENCE
+    // =========================
     const diff = {
         assembly: assembly_current - assembly_last,
         employee: employee_current - employee_last,
@@ -205,74 +231,116 @@ export const allCardsData = async (
 
 
 
-
 export const GetMonthlyTrend = async (admin, user) => {
-      const assemblies = await AssemblyModal.findAll({
-          where: admin ? {} : { responsibility: user },
-          attributes: ["_id"],
-      });
-      const assemblyIds = assemblies.map((a) => a._id);
-      const totalAssemblies = assemblyIds.length;
-  
-      if (totalAssemblies === 0) return [];
-  
-      // Fetch all history records and process in JavaScript (safer for SQL Server)
-      const histories = await CheckListHistoryModal.findAll({
-          where: { assembly: { [Op.in]: assemblyIds } },
-          attributes: ["assembly", "is_error", "createdAt"],
-      });
-  
-      // Group by year and month
-      const monthlyMap = new Map();
-      
-      for (const h of histories) {
-          const createdAt = new Date(h.createdAt);
-          const year = createdAt.getFullYear();
-          const month = createdAt.getMonth() + 1; // getMonth() returns 0-11, we need 1-12
-          const key = `${year}-${month}`;
-          
-          if (!monthlyMap.has(key)) {
-              monthlyMap.set(key, {
-                  year,
-                  month,
-                  checkedAssemblies: new Set(),
-                  errorAssemblies: new Set(),
-              });
-          }
-          
-          const entry = monthlyMap.get(key);
-          const assemblyId = h.assembly?.toString() || h.assembly;
-          entry.checkedAssemblies.add(assemblyId);
-          if (h.is_error === true || h.is_error === 1) {
-              entry.errorAssemblies.add(assemblyId);
-          }
-      }
-  
-      // Convert to array format
-      const monthly = Array.from(monthlyMap.values()).map((entry) => ({
-          year: entry.year,
-          month: entry.month,
-          checked_count: entry.checkedAssemblies.size,
-          unchecked_count: Math.max(totalAssemblies - entry.checkedAssemblies.size, 0),
-          error_count: entry.errorAssemblies.size,
-      }));
-  
-      // Sort by year and month
-      monthly.sort((a, b) => {
-          if (a.year !== b.year) return a.year - b.year;
-          return a.month - b.month;
-      });
-  
-      return monthly.map((m) => ({
-          year: m.year,
-          month: m.month,
-          checked_count: m.checked_count,
-          unchecked_count: m.unchecked_count,
-          error_count: m.error_count,
-          level: "assembly",
-      }));
-  
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+
+    // 1️⃣ Fetch all assemblies
+    const assemblies = await AssemblyModal.findAll({
+        where: admin ? {} : { responsibility: user },
+        attributes: ["_id", "createdAt"],
+    });
+
+    if (assemblies.length === 0) return [];
+
+    const assemblyIds = assemblies.map(a => a._id);
+
+    // 2️⃣ Fetch histories till today
+    const histories = await CheckListHistoryModal.findAll({
+        where: {
+            assembly: { [Op.in]: assemblyIds },
+            createdAt: { [Op.lte]: today }, // future blocked
+        },
+        attributes: ["assembly", "createdAt", "is_error", "is_resolved"],
+    });
+
+    // 3️⃣ Prepare monthly map
+    const monthlyMap = new Map();
+
+    // 4️⃣ Iterate assemblies
+    for (const assembly of assemblies) {
+        const assemblyCreated = new Date(assembly.createdAt);
+        const startDate = new Date(assemblyCreated);
+        startDate.setHours(0, 0, 0, 0);
+
+        const endDate = today;
+
+        // Loop day-wise
+        for (
+            let d = new Date(startDate);
+            d <= endDate;
+            d.setDate(d.getDate() + 1)
+        ) {
+            const year = d.getFullYear();
+            const month = d.getMonth() + 1;
+            const dayKey = `${year}-${month}-${d.getDate()}`; // day-level key
+
+            if (!monthlyMap.has(dayKey)) {
+                monthlyMap.set(dayKey, {
+                    year,
+                    month,
+                    day: d.getDate(),
+                    checkedAssemblies: new Set(),
+                    errorAssemblies: new Set(),
+                    resolvedAssemblies: new Set(),
+                });
+            }
+        }
+    }
+
+    // 5️⃣ Process histories
+    for (const h of histories) {
+        const createdAt = new Date(h.createdAt);
+        const year = createdAt.getFullYear();
+        const month = createdAt.getMonth() + 1;
+        const day = createdAt.getDate();
+        const key = `${year}-${month}-${day}`;
+
+        if (!monthlyMap.has(key)) continue; // safety
+
+        const entry = monthlyMap.get(key);
+        const assemblyId = h.assembly?.toString() || h.assembly;
+
+        entry.checkedAssemblies.add(assemblyId);
+
+        if (h.is_error) entry.errorAssemblies.add(assemblyId);
+        if (h.is_resolved) entry.resolvedAssemblies.add(assemblyId);
+    }
+
+    // 6️⃣ Aggregate month-wise
+    const monthAgg = new Map();
+
+    for (const [dayKey, entry] of monthlyMap.entries()) {
+        const monthKey = `${entry.year}-${entry.month}`;
+        if (!monthAgg.has(monthKey)) {
+            monthAgg.set(monthKey, {
+                year: entry.year,
+                month: entry.month,
+                checked_count: 0,
+                unchecked_count: 0,
+                error_count: 0,
+                resolved_count: 0,
+            });
+        }
+
+        const agg = monthAgg.get(monthKey);
+
+        agg.checked_count += entry.checkedAssemblies.size;
+        agg.unchecked_count +=
+            assemblyIds.length - entry.checkedAssemblies.size;
+        agg.error_count += entry.errorAssemblies.size;
+        agg.resolved_count += entry.resolvedAssemblies.size;
+    }
+
+    // 7️⃣ Convert to array & sort
+    const monthly = Array.from(monthAgg.values());
+    monthly.sort((a, b) => a.year - b.year || a.month - b.month);
+
+    return monthly;
 };
+
+
+
 
 export const GetDailyAssemblyStatus = async (admin, user, date = new Date()) => {
     const startOfDay = new Date(date);
