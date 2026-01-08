@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-
+    
 // --------------------------- local imports ----------------------------
 import { AsyncHandler } from "../utils/asyncHandler.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";

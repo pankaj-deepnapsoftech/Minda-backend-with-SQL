@@ -16,7 +16,7 @@ import { BadRequestError, Customerror } from "./utils/errorHandler.js";
 import mainRoutes from "./routes.js";
 
 
-const SERVER_PORT = 4040;
+const SERVER_PORT = 9021;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -106,7 +106,7 @@ function StartServer(app) {
         logger.error("Socket.IO connection error:", err);
     });
 
-    server.listen(SERVER_PORT, () => {
+    server.listen(SERVER_PORT,'0.0.0.0', () => {
         // eslint-disable-next-line no-undef
         logger.info(`Server will start with process id : ${process.pid} started on port ${SERVER_PORT}`);
     })
