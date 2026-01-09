@@ -18,7 +18,11 @@ export const Authorization = AsyncHandler(async (req,res,next) => {
 
     const user = await FindUserById(payload.id);
 
-    if(user.terminate){
+    if(!user){
+        throw new NotFoundError("User not exist in database","Authorization() method error")
+    }
+
+    if(user?.terminate){
         throw new NotFoundError("User Terminated by Admin Please Contact to organization","Authorization() method error")
     }
 

@@ -3,7 +3,6 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-
 // ------------------------ local imports ---------------------------------
 import { createChecklistService, DeleteCheckListService, FindCheckListById, FindChecklistByName, getCheckListDataService, SearchCheckListDataService, updateChecklistService } from "../services/Checklist.service.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
@@ -19,15 +18,15 @@ export const CreateChecklistData = AsyncHandler(async (req, res) => {
     const data = req.body;
     const file = req.file;
 
-    const file_path = file ? `${config.NODE_ENV !== "development" ? config.SERVER_URL: config.LOCAL_SERVER_URL}/files/${file.filename}` : null;
-   
+    const file_path = file ? `${config.NODE_ENV !== "development" ? config.SERVER_URL : config.LOCAL_SERVER_URL}/files/${file.filename}` : null;
+
     const exist = await FindChecklistByName(data?.item);
 
     if (exist) {
         throw new BadRequestError("Item already exist", "CreateChecklistData() method error");
     }
 
-    const result = await createChecklistService({...data,file_path});
+    const result = await createChecklistService({ ...data, file_path });
     res.status(StatusCodes.CREATED).json({
         message: "Item Created Successfully",
         data: result
@@ -39,17 +38,19 @@ export const UpdateCheckListData = AsyncHandler(async (req, res) => {
     const data = req.body;
 
     const file = req.file;
-    const file_path = file ? `${config.NODE_ENV !== "development" ? config.SERVER_URL: config.LOCAL_SERVER_URL}/files/${file.filename}` : null;
+    const file_path = file ? `${config.NODE_ENV !== "development" ? config.SERVER_URL : config.LOCAL_SERVER_URL}/files/${file.filename}` : null;
 
     const exist = await FindCheckListById(id);
 
-    if(!exist){
+    if (!exist) {
         throw new NotFoundError("Item not found", "UpdateCheckListData() method error")
     }
 
-    fs.unlinkSync(path.join(__dirname, `../../public/temp/${exist.file_path?.split("/files/")[1]}`));
+    if (file) {
+        fs.unlinkSync(path.join(__dirname, `../../public/temp/${exist.file_path?.split("/files/")[1]}`));
+    }
 
-    const result = await updateChecklistService(id, {data,file_path});
+    const result = await updateChecklistService(id, file_path ? { data, file_path } : data);
     if (!result) {
         throw new NotFoundError("Item not found", "UpdateCheckListData() method error")
     }
@@ -67,7 +68,7 @@ export const DeleteCheckList = AsyncHandler(async (req, res) => {
         throw new NotFoundError("Item not found", "UpdateCheckListData() method error")
     }
 
-     fs.unlinkSync(path.join(__dirname, `../../public/temp/${result.file_path?.split("/files/")[1]}`));
+    fs.unlinkSync(path.join(__dirname, `../../public/temp/${result.file_path?.split("/files/")[1]}`));
     res.status(StatusCodes.OK).json({
         message: "Check Item Updated Successfully",
         result

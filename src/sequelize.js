@@ -9,6 +9,7 @@ export const sequelize = new Sequelize(
         host: config.DB_HOST,
         port: config.DB_PORT ? Number(config.DB_PORT) : 1433,
         dialect: "mssql",
+        timezone: "+05:30",
         dialectOptions: {
             options: {
                 encrypt: true,
