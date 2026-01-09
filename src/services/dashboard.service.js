@@ -310,7 +310,7 @@ export const GetMonthlyTrend = async (admin, user) => {
     // 6️⃣ Aggregate month-wise
     const monthAgg = new Map();
 
-    for (const [dayKey, entry] of monthlyMap.entries()) {
+    for (const [_, entry] of monthlyMap.entries()) {
         const monthKey = `${entry.year}-${entry.month}`;
         if (!monthAgg.has(monthKey)) {
             monthAgg.set(monthKey, {

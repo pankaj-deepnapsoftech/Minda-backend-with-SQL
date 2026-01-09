@@ -18,6 +18,7 @@ export const CheckListModal = sequelize.define(
         max: { type: DataTypes.FLOAT, allowNull: true },
         uom: { type: DataTypes.STRING(50), allowNull: true },
         process: { type: DataTypes.UUID, allowNull: false },
+        file_path: { type: DataTypes.STRING(500), allowNull: true },
     },
     {
         tableName: "checklists",

@@ -1,7 +1,7 @@
 
 import http from "http";
 import cors from "cors";
-import express , { json, urlencoded } from "express";
+import express, { json, urlencoded } from "express";
 import compression from "compression";
 import cookieParser from "cookie-parser";
 import { fileURLToPath } from "url";
@@ -21,7 +21,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Export io instance for use in controllers
- let io;
+let io;
 
 
 export const Start = (app) => {
@@ -33,10 +33,11 @@ export const Start = (app) => {
 }
 
 function middlewares(app) {
-    app.set('trust proxy',true)
-    app.use(express.static(path.join(__dirname, 'pages')));
     app.use(json({ limit: "20mb" }));
     app.use(urlencoded({ extended: true, limit: "20mb" }));
+    app.set('trust proxy', true)
+    app.use(express.static(path.join(__dirname, 'pages')));
+    app.use("/files", express.static(path.join(__dirname, "../public/temp")));
     app.use(cors({
         origin: config.NODE_ENV === "development" ? config.LOCAL_CLIENT_URL : config.CLIENT_URL,
         methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
@@ -72,7 +73,7 @@ function Connections() {
 
 function StartServer(app) {
     const server = http.createServer(app);
-    
+
     // Initialize Socket.IO
     io = new Server(server, {
         cors: {
@@ -106,11 +107,11 @@ function StartServer(app) {
         logger.error("Socket.IO connection error:", err);
     });
 
-    server.listen(SERVER_PORT,'0.0.0.0', () => {
+    server.listen(SERVER_PORT, '0.0.0.0', () => {
         // eslint-disable-next-line no-undef
         logger.info(`Server will start with process id : ${process.pid} started on port ${SERVER_PORT}`);
     })
 }
 
 
-export {io}
+export { io }
