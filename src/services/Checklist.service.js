@@ -51,4 +51,10 @@ export const SearchCheckListDataService = async (search="",process="",skip,limit
 export const FindChecklistByName = async (name) => {
     const result = await CheckListModal.findOne({ where: { item: name } });
     return result;
+};
+
+
+export const FindCheckListById  = async (id) => {
+    const result = await CheckListModal.findByPk(id);
+    return result;
 }

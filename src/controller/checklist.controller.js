@@ -1,10 +1,18 @@
 import { StatusCodes } from "http-status-codes";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
 
 // ------------------------ local imports ---------------------------------
-import { createChecklistService, DeleteCheckListService, FindChecklistByName, getCheckListDataService, SearchCheckListDataService, updateChecklistService } from "../services/Checklist.service.js";
+import { createChecklistService, DeleteCheckListService, FindCheckListById, FindChecklistByName, getCheckListDataService, SearchCheckListDataService, updateChecklistService } from "../services/Checklist.service.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 import { config } from "../config.js";
+
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 
 export const CreateChecklistData = AsyncHandler(async (req, res) => {
@@ -30,7 +38,18 @@ export const UpdateCheckListData = AsyncHandler(async (req, res) => {
     const { id } = req.params;
     const data = req.body;
 
-    const result = await updateChecklistService(id, data);
+    const file = req.file;
+    const file_path = file ? `${config.NODE_ENV !== "development" ? config.SERVER_URL: config.LOCAL_SERVER_URL}/files/${file.filename}` : null;
+
+    const exist = await FindCheckListById(id);
+
+    if(!exist){
+        throw new NotFoundError("Item not found", "UpdateCheckListData() method error")
+    }
+
+    fs.unlinkSync(path.join(__dirname, `../../public/files/${exist.file_path?.split("/files/")[1]}`));
+
+    const result = await updateChecklistService(id, {data,file_path});
     if (!result) {
         throw new NotFoundError("Item not found", "UpdateCheckListData() method error")
     }
