@@ -47,7 +47,7 @@ export const UpdateCheckListData = AsyncHandler(async (req, res) => {
         throw new NotFoundError("Item not found", "UpdateCheckListData() method error")
     }
 
-    fs.unlinkSync(path.join(__dirname, `../../public/files/${exist.file_path?.split("/files/")[1]}`));
+    fs.unlinkSync(path.join(__dirname, `../../public/temp/${exist.file_path?.split("/files/")[1]}`));
 
     const result = await updateChecklistService(id, {data,file_path});
     if (!result) {
@@ -67,6 +67,7 @@ export const DeleteCheckList = AsyncHandler(async (req, res) => {
         throw new NotFoundError("Item not found", "UpdateCheckListData() method error")
     }
 
+     fs.unlinkSync(path.join(__dirname, `../../public/temp/${result.file_path?.split("/files/")[1]}`));
     res.status(StatusCodes.OK).json({
         message: "Check Item Updated Successfully",
         result
