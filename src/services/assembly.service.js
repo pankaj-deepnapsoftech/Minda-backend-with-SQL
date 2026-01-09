@@ -218,31 +218,51 @@ export const getAssemblyLineFormByResponsibility = async (user, id) => {
 };
 
 
+
 export const GetAssemblyLineDataReport = async (
     admin,
     user_id,
     startDate,
-    endDate
+    endDate,
+    company,
+    plant
 ) => {
     const now = new Date();
 
+    // 🔹 UTC safe range
     const startOfDay = startDate ? new Date(startDate) : new Date(now);
-    startOfDay.setHours(0, 0, 0, 0);
+    startOfDay.setUTCHours(0, 0, 0, 0);
 
     const endOfDay = endDate ? new Date(endDate) : new Date(now);
-    endOfDay.setHours(23, 59, 59, 999);
+    endOfDay.setUTCHours(23, 59, 59, 999);
 
-    // all days in range
+    const getDateKey = (date) =>
+        new Date(date).toISOString().split("T")[0];
+
+    const normalizeToUTCDate = (date) => {
+        const d = new Date(date);
+        d.setUTCHours(0, 0, 0, 0);
+        return d;
+    };
+
+    // 🔹 Build date range
     const allDates = [];
-    const tempDate = new Date(startOfDay);
-    while (tempDate <= endOfDay) {
-        allDates.push(new Date(tempDate));
-        tempDate.setDate(tempDate.getDate() + 1);
+    for (
+        let d = new Date(startOfDay);
+        d <= endOfDay;
+        d.setUTCDate(d.getUTCDate() + 1)
+    ) {
+        allDates.push(new Date(d));
     }
 
-    // 1️⃣ assemblies
+    // 1️⃣ Assemblies
     const assemblies = await AssemblyModal.findAll({
-        where: admin ? {} : { responsibility: user_id },
+        where: {
+            ...(admin ? {} : { responsibility: user_id }),
+            ...(company ? { company_id: company } : {}),
+            ...(plant ? { plant_id: plant } : {}),
+            createdAt: { [Op.lte]: endOfDay },
+        },
         attributes: ["_id", "createdAt"],
         include: [
             {
@@ -254,83 +274,111 @@ export const GetAssemblyLineDataReport = async (
         ],
     });
 
-    const assemblyIds = assemblies.map(a => a._id);
+    const total_assemblies = assemblies.length; // ✅ FIX ADDED
 
-    // 2️⃣ history
-    const histories = assemblyIds.length
-        ? await CheckListHistoryModal.findAll({
-            where: {
-                assembly: { [Op.in]: assemblyIds },
-                createdAt: { [Op.between]: [startOfDay, endOfDay] },
-            },
-        })
-        : [];
+    if (!assemblies.length) {
+        return {
+            total_assemblies,
+            total_count: 0,
+            total_checked: 0,
+            total_unchecked: 0,
+            total_errors: 0,
+            total_resolved: 0,
+        };
+    }
 
-    // 3️⃣ history map: assembly + process + date
+    const assemblyIds = assemblies.map((a) => a._id);
+
+    // 2️⃣ History (ITEM LEVEL)
+    const histories = await CheckListHistoryModal.findAll({
+        where: {
+            assembly: { [Op.in]: assemblyIds },
+            createdAt: { [Op.between]: [startOfDay, endOfDay] },
+        },
+        attributes: [
+            "assembly",
+            "process_id",
+            "checkList",
+            "createdAt",
+            "is_error",
+            "is_resolved",
+        ],
+    });
+
+    // 3️⃣ History Map
     const historyMap = new Map();
-
     for (const h of histories) {
-        const dateKey = new Date(h.createdAt).toDateString();
-        const key = `${h.assembly}:${h.process_id}:${dateKey}`;
+        const key = `${h.assembly}:${h.process_id}:${h.checkList}:${getDateKey(h.createdAt)}`;
         historyMap.set(key, h);
     }
 
-    // counters (DAY BASED)
+    // 🔢 Counters
     let total_count = 0;
     let total_checked = 0;
     let total_unchecked = 0;
     let total_errors = 0;
     let total_resolved = 0;
 
-    // 4️⃣ MAIN LOOP (assembly × day)
+    // 4️⃣ MAIN LOGIC
     for (const assembly of assemblies) {
-        const assemblyCreated = new Date(assembly.createdAt);
+        const assemblyCreated = normalizeToUTCDate(assembly.createdAt);
+        if (!Array.isArray(assembly.process_id)) continue;
 
         for (const day of allDates) {
-            // assembly exist hi nahi karti thi us din
             if (day < assemblyCreated) continue;
 
-            total_count++; // 🔥 assembly × day
+            total_count++;
+            const dateKey = getDateKey(day);
 
-            let dayChecked = false;
-            let dayError = false;
-            let dayResolved = false;
+            let checkedItems = 0;
+            let hasError = false;
+            let hasResolved = false;
 
-            for (const process of assembly.process_id || []) {
-                const dateKey = day.toDateString();
-                const key = `${assembly._id}:${process._id}:${dateKey}`;
-                const record = historyMap.get(key);
+            for (const process of assembly.process_id) {
+                const processItems = histories.filter(
+                    (h) =>
+                        String(h.assembly) === String(assembly._id) &&
+                        String(h.process_id) === String(process._id) &&
+                        getDateKey(h.createdAt) === dateKey
+                );
 
-                if (record) {
-                    dayChecked = true;
-
-                    if (record.is_error) {
-                        dayError = true;
-                    }
-
-                    if (record.is_resolved) {
-                        dayResolved = true; // 🔹 only true means resolved
-                    }
+                for (const item of processItems) {
+                    checkedItems++;
+                    if (item.is_error) hasError = true;
+                    if (item.is_resolved) hasResolved = true;
                 }
             }
 
-            if (dayChecked) total_checked++;
-            else total_unchecked++;
+            // Checked / Unchecked
+            if (checkedItems > 0) {
+                total_checked++;
+            } else {
+                total_unchecked++;
+            }
 
-            if (dayError) total_errors++;
-            if (dayResolved) total_resolved++; // 🔹 updated logic
+            // 🔥 FINAL RULE
+            if (hasError) {
+                total_errors++;
+            } else if (checkedItems > 0 && hasResolved) {
+                total_resolved++;
+            }
         }
     }
 
-    // 5️⃣ FINAL
+    // 5️⃣ Final response
     return {
-        total_count,       // assembly × day
+        total_assemblies,
+        total_count,
         total_checked,
         total_unchecked,
         total_errors,
         total_resolved,
     };
 };
+
+
+
+
 
 
 

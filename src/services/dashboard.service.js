@@ -457,21 +457,29 @@ export const GetMonthlyPerformance = async (admin, user, startDate, endDate) => 
     return [...monthMap.values()].sort((a, b) => (a.year - b.year) || (a.month - b.month));
 };
 
-export const GetDailyErrorsAssembly = async (admin, user, startDate, endDate) => {
+export const GetDailyErrorsAssembly = async (
+    admin,
+    user,
+    startDate,
+    endDate
+) => {
     const now = new Date();
 
     const startOfDay = startDate ? new Date(startDate) : new Date(now);
-    startOfDay.setHours(0, 0, 0, 0);
+    startOfDay.setUTCHours(0, 0, 0, 0);
 
     const endOfDay = endDate ? new Date(endDate) : new Date(now);
-    endOfDay.setHours(23, 59, 59, 999);
+    endOfDay.setUTCHours(23, 59, 59, 999);
 
+    // 1️⃣ Assemblies
     const assemblies = await AssemblyModal.findAll({
         where: admin ? {} : { responsibility: user },
         attributes: ["_id"],
     });
-    const assemblyIds = assemblies.map((a) => a._id);
 
+    const assemblyIds = assemblies.map(a => a._id);
+
+    // 2️⃣ History
     const histories = assemblyIds.length
         ? await CheckListHistoryModal.findAll({
             where: {
@@ -482,32 +490,60 @@ export const GetDailyErrorsAssembly = async (admin, user, startDate, endDate) =>
         })
         : [];
 
+    // 3️⃣ MAPS
     const assemblyMap = new Map();
     const processErrorCounts = new Map();
 
     for (const h of histories) {
-        const a = assemblyMap.get(h.assembly) || { has_error: false, has_unresolved_error: false };
+        const a =
+            assemblyMap.get(h.assembly) || {
+                has_error: false,
+                has_unresolved_error: false,
+                has_resolved_error: false,
+            };
+
+        // 🔴 if error ever occurred
         if (h.is_error === true) {
             a.has_error = true;
+
             const count = processErrorCounts.get(h.process_id) || 0;
             processErrorCounts.set(h.process_id, count + 1);
-            if (h.is_resolved === false) a.has_unresolved_error = true;
-        }
-        assemblyMap.set(h.assembly, a);
-    }
 
+            if (h.is_resolved === false) {
+                a.has_unresolved_error = true;
+            }
+        }
+
+        // ✅ RESOLVED CAN COME EVEN WHEN is_error = false
+        if (h.is_resolved === true) {
+            a.has_resolved_error = true;
+        }
+
+        assemblyMap.set(h.assembly, a);
+    };
+
+
+    
+
+    // 4️⃣ FINAL COUNTS
     let error_assemblies = 0;
     let still_error_assemblies = 0;
     let resolved_assemblies = 0;
 
-    for (const a of assemblyIds) {
-        const flags = assemblyMap.get(a);
+    for (const id of assemblyIds) {
+        const flags = assemblyMap.get(id);
         if (!flags?.has_error) continue;
-        error_assemblies += 1;
-        if (flags.has_unresolved_error) still_error_assemblies += 1;
-        else resolved_assemblies += 1;
+
+        error_assemblies++;
+
+        if (flags.has_unresolved_error) {
+            still_error_assemblies++;
+        } else if (flags.has_resolved_error) {
+            resolved_assemblies++; // ✅ FIXED
+        }
     }
 
+    // 5️⃣ TOP ERROR PROCESSES
     const topProcessIds = [...processErrorCounts.entries()]
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5)
@@ -520,9 +556,9 @@ export const GetDailyErrorsAssembly = async (admin, user, startDate, endDate) =>
         })
         : [];
 
-    const nameById = new Map(processes.map((p) => [p._id, p.process_name]));
+    const nameById = new Map(processes.map(p => [p._id, p.process_name]));
 
-    const top_error_processes = topProcessIds.map((pid) => ({
+    const top_error_processes = topProcessIds.map(pid => ({
         process_id: pid,
         process_name: nameById.get(pid) || null,
         error_count: processErrorCounts.get(pid) || 0,
@@ -537,6 +573,8 @@ export const GetDailyErrorsAssembly = async (admin, user, startDate, endDate) =>
         top_error_processes,
     };
 };
+
+
 
 
 
