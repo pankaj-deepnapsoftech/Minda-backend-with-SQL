@@ -1,4 +1,4 @@
-import {  Op, QueryTypes } from "sequelize";
+import { Op, QueryTypes } from "sequelize";
 import { sequelize } from "../sequelize.js";
 import { AssemblyModal } from "../models/AssemblyLine.modal.js";
 import { CheckListHistoryModal } from "../models/checkListHistory.modal.js";
@@ -461,7 +461,9 @@ export const GetDailyErrorsAssembly = async (
     admin,
     user,
     startDate,
-    endDate
+    endDate,
+    company,
+    plant
 ) => {
     const now = new Date();
 
@@ -471,9 +473,13 @@ export const GetDailyErrorsAssembly = async (
     const endOfDay = endDate ? new Date(endDate) : new Date(now);
     endOfDay.setUTCHours(23, 59, 59, 999);
 
-    // 1️⃣ Assemblies
+    // 1️⃣ Assemblies (✅ company & plant filter added)
     const assemblies = await AssemblyModal.findAll({
-        where: admin ? {} : { responsibility: user },
+        where: {
+            ...(admin ? {} : { responsibility: user }),
+            ...(company ? { company_id: company } : {}),
+            ...(plant ? { plant_id: plant } : {}),
+        },
         attributes: ["_id"],
     });
 
@@ -486,7 +492,12 @@ export const GetDailyErrorsAssembly = async (
                 assembly: { [Op.in]: assemblyIds },
                 createdAt: { [Op.between]: [startOfDay, endOfDay] },
             },
-            attributes: ["assembly", "process_id", "is_error", "is_resolved"],
+            attributes: [
+                "assembly",
+                "process_id",
+                "is_error",
+                "is_resolved",
+            ],
         })
         : [];
 
@@ -498,32 +509,24 @@ export const GetDailyErrorsAssembly = async (
         const a =
             assemblyMap.get(h.assembly) || {
                 has_error: false,
-                has_unresolved_error: false,
                 has_resolved_error: false,
             };
 
-        // 🔴 if error ever occurred
+        // 🔴 ERROR
         if (h.is_error === true) {
             a.has_error = true;
 
             const count = processErrorCounts.get(h.process_id) || 0;
             processErrorCounts.set(h.process_id, count + 1);
-
-            if (h.is_resolved === false) {
-                a.has_unresolved_error = true;
-            }
         }
 
-        // ✅ RESOLVED CAN COME EVEN WHEN is_error = false
-        if (h.is_resolved === true) {
+        // ✅ RESOLVED (same rule as AssemblyLineDataReport)
+        if (h.is_resolved === true && h.is_error !== true) {
             a.has_resolved_error = true;
         }
 
         assemblyMap.set(h.assembly, a);
-    };
-
-
-    
+    }
 
     // 4️⃣ FINAL COUNTS
     let error_assemblies = 0;
@@ -532,14 +535,13 @@ export const GetDailyErrorsAssembly = async (
 
     for (const id of assemblyIds) {
         const flags = assemblyMap.get(id);
-        if (!flags?.has_error) continue;
+        if (!flags?.has_error && !flags?.has_resolved_error) continue;
 
-        error_assemblies++;
-
-        if (flags.has_unresolved_error) {
+        if (flags.has_error) {
+            error_assemblies++;
             still_error_assemblies++;
         } else if (flags.has_resolved_error) {
-            resolved_assemblies++; // ✅ FIXED
+            resolved_assemblies++;
         }
     }
 
@@ -556,7 +558,9 @@ export const GetDailyErrorsAssembly = async (
         })
         : [];
 
-    const nameById = new Map(processes.map(p => [p._id, p.process_name]));
+    const nameById = new Map(
+        processes.map(p => [p._id, p.process_name])
+    );
 
     const top_error_processes = topProcessIds.map(pid => ({
         process_id: pid,
@@ -573,6 +577,8 @@ export const GetDailyErrorsAssembly = async (
         top_error_processes,
     };
 };
+
+
 
 
 

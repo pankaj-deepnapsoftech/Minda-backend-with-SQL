@@ -43,8 +43,8 @@ export const getAllActiveAssembyMonthly = AsyncHandler(async (req,res) => {
 
 export const getAllAssemblyErrorHistory = AsyncHandler(async (req,res) => {
     const user = req.currentUser;
-    const { start_date, end_date } = req.query;
-    const result = await GetDailyErrorsAssembly(user?.is_admin, user?._id, start_date, end_date);
+    const { start_date, end_date,company,plant } = req.query;
+    const result = await GetDailyErrorsAssembly(user?.is_admin, user?._id, start_date, end_date,company,plant);
     res.status(StatusCodes.OK).json({
         data: result
     });
