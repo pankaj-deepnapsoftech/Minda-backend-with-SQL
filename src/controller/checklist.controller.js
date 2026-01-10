@@ -8,6 +8,7 @@ import { createChecklistService, DeleteCheckListService, FindCheckListById, getC
 import { AsyncHandler } from "../utils/asyncHandler.js";
 import { NotFoundError } from "../utils/errorHandler.js";
 import { config } from "../config.js";
+import { createChecklistItemTimeService } from "../services/checkItemTime.service.js";
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -21,6 +22,11 @@ export const CreateChecklistData = AsyncHandler(async (req, res) => {
     const file_path = file ? `${config.NODE_ENV !== "development" ? config.SERVER_URL : config.LOCAL_SERVER_URL}/files/${file.filename}` : null;
 
     const result = await createChecklistService(file_path ? { ...data, file_path } : data);
+    if(data?.time){
+        const mapData = JSON.parse(data.time).map((timeItem)=>({check_time:timeItem,item_id:result._id}));
+        await createChecklistItemTimeService(mapData);
+    };
+
     res.status(StatusCodes.CREATED).json({
         message: "Item Created Successfully",
         data: result

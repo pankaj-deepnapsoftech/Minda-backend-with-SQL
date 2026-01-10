@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt"
-import { DataTypes, Op, Sequelize } from "sequelize";
+import { DataTypes, Sequelize } from "sequelize";
 import { sequelize } from "../sequelize.js";
 
 export const UserModel = sequelize.define(
@@ -35,22 +35,6 @@ export const UserModel = sequelize.define(
         ],
         hooks: {
             beforeCreate: async (user) => {
-                if (user.role && !user.user_id) {
-                    const lastUser = await UserModel.findOne({
-                        where: { user_id: { [Op.ne]: null } },
-                        order: [["createdAt", "DESC"]],
-                        attributes: ["user_id"],
-                    });
-
-                    let nextNumber = 1;
-                    if (lastUser?.user_id) {
-                        const lastNumber = Number.parseInt(lastUser.user_id.split("-")[1], 10);
-                        nextNumber = Number.isFinite(lastNumber) ? lastNumber + 1 : 1;
-                    }
-
-                    user.user_id = `EMP-${String(nextNumber).padStart(4, "0")}`;
-                }
-
                 if (user.password) {
                     user.password = await bcrypt.hash(user.password, 10);
                 }
