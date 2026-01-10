@@ -9,9 +9,10 @@ import { Op } from "sequelize";
 export const createUserService = async (data) => {
     const result = await UserModel.create(data);
     return result;
+
 };
 
-export const GetUsersService = async (skip,limit) => {
+export const GetUsersService = async (skip, limit) => {
     const result = await UserModel.findAll({
         where: { is_admin: false },
         include: [
@@ -35,7 +36,7 @@ export const GetAllUsersService = async () => {
     return result;
 };
 
-export const SearchUsersService = async (company,plant,search="",skip,limit) => {
+export const SearchUsersService = async (company, plant, search = "", skip, limit) => {
     const q = search || "";
     const where = {
         is_admin: false,
@@ -61,7 +62,7 @@ export const SearchUsersService = async (company,plant,search="",skip,limit) => 
     return result;
 };
 
-export const UpdateUsersService = async (id,data) => {
+export const UpdateUsersService = async (id, data) => {
     const user = await UserModel.findByPk(id);
     if (!user) return null;
     const result = await user.update(data);

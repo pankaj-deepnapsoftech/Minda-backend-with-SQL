@@ -14,14 +14,14 @@ import CheckListHistoryRoutes from "./routes/checkListHostory.routes.js";
 import DashboardRoutes from "./routes/dashboards.routes.js";
 import TypesRoutes from "./routes/types.routes.js";
 import NotificationRoutes from "./routes/notification.routes.js";
-
+import departmentRoutes from "./routes/department.routes.js";
 
 
 
 const routes = Router();
 
 
-routes.use("/users", usersRoutes);
+routes.use("/users",             usersRoutes);
 routes.use("/company",           Authorization, companyRoutes);
 routes.use("/plant",             Authorization, plantRoutes);
 routes.use("/roles",             Authorization, roleRoutes);
@@ -33,6 +33,7 @@ routes.use("/checkitem-history", Authorization, CheckListHistoryRoutes);
 routes.use("/dashboard",         Authorization, DashboardRoutes);
 routes.use("/types",             Authorization,TypesRoutes);
 routes.use("/notification",      Authorization,NotificationRoutes);
+routes.use("/department",        Authorization,departmentRoutes);
 
 
 

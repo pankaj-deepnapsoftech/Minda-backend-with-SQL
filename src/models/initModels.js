@@ -9,6 +9,7 @@ import { ProcessModel } from "./process.modal.js";
 import { RoleModel } from "./role.modal.js";
 import { TypeModal } from "./types.modal.js";
 import { UserModel } from "./user.modal.js";
+import { DepartmentModel } from "./department.modal.js";
 
 let modelsInitialized = false;
 
@@ -82,6 +83,9 @@ export const initModels = () => {
 
     CheckListModal.hasMany(NotificationModal, { foreignKey: "checkList", as: "notifications", constraints: false });
     NotificationModal.belongsTo(CheckListModal, { foreignKey: "checkList", as: "checklistItem", constraints: false });
+
+    DepartmentModel.hasMany(UserModel, { foreignKey: "department_id", as: "users", constraints: false });
+    UserModel.belongsTo(DepartmentModel, { foreignKey: "department_id", as: "department", constraints: false });
 
     modelsInitialized = true;
     

@@ -20,14 +20,14 @@ export const Authorization = AsyncHandler(async (req,res,next) => {
 
     if(!user){
         throw new NotFoundError("User not exist in database","Authorization() method error")
-    }
+    };
 
     if(user?.terminate){
         throw new NotFoundError("User Terminated by Admin Please Contact to organization","Authorization() method error")
-    }
+    };
 
     req.currentUser = user?.toJSON ? user.toJSON() : user;
-    next()
+    next();
 })
 
 

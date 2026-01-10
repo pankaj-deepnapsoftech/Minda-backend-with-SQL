@@ -25,6 +25,7 @@ export const registerUser = AsyncHandler(async (req, res) => {
         throw new BadRequestError("User already Register with the email or User id", "registerUser() method error")
     }
 
+
     const result = await createUserService(data);
     res.status(StatusCodes.CREATED).json({
         message: "User register successfully",
