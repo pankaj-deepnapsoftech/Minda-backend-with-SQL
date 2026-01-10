@@ -38,11 +38,6 @@ export const UpdateDepartment = AsyncHandler(async (req, res) => {
     const { id } = req.params;
     const data = req.body;
 
-    const exist = await getDipartmentByName(data?.name);
-    if (exist) {
-        throw new NotFoundError("Department already exist", "CreateDepartment() method error");
-    }
-
     const result = await UpdateDepartmentService(id, data);
     if (!result) {
         throw new NotFoundError("Department not found");

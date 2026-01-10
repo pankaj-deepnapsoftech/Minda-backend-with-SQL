@@ -10,7 +10,6 @@ export const CreateDepartmentService = async (data) => {
 
 export const GetAllDepartmentsService = async (skip, limit) => {
     const result = await DepartmentModel.findAll({
-        attributes: ["_id", "name"],
         order: [["_id", "DESC"]],
         offset: skip,
         limit,

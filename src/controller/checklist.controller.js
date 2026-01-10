@@ -4,9 +4,9 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 // ------------------------ local imports ---------------------------------
-import { createChecklistService, DeleteCheckListService, FindCheckListById, FindChecklistByName, getCheckListDataService, SearchCheckListDataService, updateChecklistService } from "../services/Checklist.service.js";
+import { createChecklistService, DeleteCheckListService, FindCheckListById, getCheckListDataService, SearchCheckListDataService, updateChecklistService } from "../services/Checklist.service.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
-import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
+import { NotFoundError } from "../utils/errorHandler.js";
 import { config } from "../config.js";
 
 
@@ -20,13 +20,7 @@ export const CreateChecklistData = AsyncHandler(async (req, res) => {
 
     const file_path = file ? `${config.NODE_ENV !== "development" ? config.SERVER_URL : config.LOCAL_SERVER_URL}/files/${file.filename}` : null;
 
-    const exist = await FindChecklistByName(data?.item);
-
-    if (exist) {
-        throw new BadRequestError("Item already exist", "CreateChecklistData() method error");
-    }
-
-    const result = await createChecklistService({ ...data, file_path });
+    const result = await createChecklistService(file_path ? { ...data, file_path } : data);
     res.status(StatusCodes.CREATED).json({
         message: "Item Created Successfully",
         data: result
