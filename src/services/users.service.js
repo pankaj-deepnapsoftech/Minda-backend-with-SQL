@@ -3,6 +3,7 @@ import { CompanyModel } from "../models/company.modal.js";
 import { PlantModel } from "../models/plant.modal.js";
 import { RoleModel } from "../models/role.modal.js";
 import { Op } from "sequelize";
+import { DepartmentModel } from "../models/department.modal.js";
 
 
 
@@ -54,6 +55,7 @@ export const SearchUsersService = async (company, plant, search = "", skip, limi
             { model: RoleModel, as: "userRole" },
             { model: CompanyModel, as: "company" },
             { model: PlantModel, as: "plant" },
+            { model: DepartmentModel, as: "department" },
         ],
         offset: skip,
         limit,
@@ -103,6 +105,7 @@ export const FindUserById = async (id) => {
             { model: PlantModel, as: "plant" },
             { model: CompanyModel, as: "company" },
             { model: RoleModel, as: "userRole" },
+            // { model: RoleModel, as: "department" },
         ],
     });
     return result;
