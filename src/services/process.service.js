@@ -3,8 +3,8 @@ import { Op } from "sequelize";
 
 
 export const createProcessService = async (data) => {
-    const result = await ProcessModel.create(data);
-    return result;
+     const result = await ProcessModel.create(data);
+     return result;
 };
 
 export const updateProcessService = async (id, data) => {
@@ -25,6 +25,7 @@ export const deleteProcessService = async (id) => {
 export const getProcessServiceList = async (skip, limit) => {
     const result = await ProcessModel.findAll({
         order: [["_id", "ASC"]],
+        
         offset: skip,
         limit,
     });

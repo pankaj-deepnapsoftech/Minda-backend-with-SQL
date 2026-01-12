@@ -88,6 +88,12 @@ export const initModels = () => {
     DepartmentModel.hasMany(UserModel, { foreignKey: "department_id", as: "users", constraints: false });
     UserModel.belongsTo(DepartmentModel, { foreignKey: "department_id", as: "department", constraints: false });
 
+    CompanyModel.hasMany(ProcessModel, { foreignKey: "company_id", as: "processes", constraints: false });
+    ProcessModel.belongsTo(CompanyModel, { foreignKey: "company_id", as: "company", constraints: false });
+
+    PlantModel.hasMany(ProcessModel, { foreignKey: "plant_id", as: "processes", constraints: false });
+    ProcessModel.belongsTo(PlantModel, { foreignKey: "plant_id", as: "plant", constraints: false });
+
     // Checklist → ItemCheckTime (1 : N)
     CheckListModal.hasMany(ItemCheckTimeModel, {
         foreignKey: "item_id",
