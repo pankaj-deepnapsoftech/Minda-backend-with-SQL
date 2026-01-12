@@ -25,20 +25,17 @@ export const DeleteCheckListService = async (id) => {
 };
 
 export const getCheckListDataService = async (skip,limit) => {
-    try {
         const result = await CheckListModal.findAll({
             include: [
                 { model: ProcessModel, as: "processInfo", attributes: ["_id", "process_name", "process_no"] },
-                // {model:ItemCheckTimeModel,as:"itemCheckTimeInfo",through:{attributes:[]} }
+                {model:ItemCheckTimeModel,as:"item_check_time" }
             ],
             order: [["_id", "DESC"]],
             offset: skip,
             limit,
         });
         return result;
-    } catch (error) {
-        console.log(error)
-    }
+   
 };
 
 export const SearchCheckListDataService = async (search="",process="",skip,limit) => {

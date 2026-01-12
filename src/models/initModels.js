@@ -88,11 +88,21 @@ export const initModels = () => {
     DepartmentModel.hasMany(UserModel, { foreignKey: "department_id", as: "users", constraints: false });
     UserModel.belongsTo(DepartmentModel, { foreignKey: "department_id", as: "department", constraints: false });
 
-    CheckListModal.hasMany(ItemCheckTimeModel, { foreignKey: "item_id", as: "checklist_times", constraints: false });
-    ItemCheckTimeModel.belongsTo(CheckListModal, { foreignKey: "item_id", as: "checklistItem", constraints: false });
+    // Checklist → ItemCheckTime (1 : N)
+    CheckListModal.hasMany(ItemCheckTimeModel, {
+        foreignKey: "item_id",
+        as: "item_check_time"
+    });
+
+    // ItemCheckTime → Checklist (N : 1)
+    ItemCheckTimeModel.belongsTo(CheckListModal, {
+        foreignKey: "item_id",
+        as: "checklistItem"
+    });
+
 
     modelsInitialized = true;
-    
+
     return {
         AssemblyModal,
         PartModal,
