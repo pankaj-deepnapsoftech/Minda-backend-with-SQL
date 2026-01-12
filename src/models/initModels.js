@@ -91,7 +91,7 @@ export const initModels = () => {
     // Checklist → ItemCheckTime (1 : N)
     CheckListModal.hasMany(ItemCheckTimeModel, {
         foreignKey: "item_id",
-        as: "item_check_time"
+        as: "time"
     });
 
     // ItemCheckTime → Checklist (N : 1)

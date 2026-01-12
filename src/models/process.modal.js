@@ -11,6 +11,8 @@ export const ProcessModel = sequelize.define(
         },
         process_name: { type: DataTypes.STRING(255), allowNull: false },
         process_no: { type: DataTypes.STRING(100), allowNull: false },
+        company_id: { type: DataTypes.UUID, allowNull: false },
+        plant_id: { type: DataTypes.UUID, allowNull: false },
     },
     {
         tableName: "processes",

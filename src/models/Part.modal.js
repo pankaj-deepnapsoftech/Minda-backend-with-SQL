@@ -13,6 +13,7 @@ export const PartModal = sequelize.define(
         part_number: { type: DataTypes.STRING(100), allowNull: false },
         description: { type: DataTypes.TEXT, allowNull: true },
         material_code: { type: DataTypes.STRING(100), allowNull: true },
+        modal_name: { type: DataTypes.STRING(255), allowNull: true }
     },
     {
         tableName: "parts",
