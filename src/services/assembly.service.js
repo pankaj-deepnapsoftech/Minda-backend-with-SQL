@@ -380,9 +380,6 @@ export const GetAssemblyLineDataReport = async (
 
 
 
-
-
-
 export const getAssemblyLineTodayReport = async (
     admin,
     user_id,
@@ -471,6 +468,10 @@ export const getAssemblyLineTodayReport = async (
     });
 };
 
+
+export const getAllITemsToCheckTimeBases = async  (assembly_id) => {
+
+}
 
 
 

@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { createAssemblyService, deleteAssemblyService, findAssemblyByName, getAllAssemblyDataService, getAllAssemblyService, getAssemblyLineByResponsibility, GetAssemblyLineDataReport, getAssemblyLineFormByResponsibility,  getAssemblyLineTodayReport,  searchAllAssemblyService, updateAssemblyService } from "../services/assembly.service.js";
+import { createAssemblyService, deleteAssemblyService, findAssemblyByName, getAllAssemblyDataService, getAllAssemblyService, getAllITemsToCheckTimeBases, getAssemblyLineByResponsibility, GetAssemblyLineDataReport, getAssemblyLineFormByResponsibility,  getAssemblyLineTodayReport,  searchAllAssemblyService, updateAssemblyService } from "../services/assembly.service.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 
@@ -111,6 +111,16 @@ export const assemblyLineDataTodayReport = AsyncHandler(async (req,res) => {
     const skip = (page - 1) * limit;
 
     const result = await getAssemblyLineTodayReport(user?.is_admin,user._id,skip,limit,startdate,endDate);
+    res.status(StatusCodes.OK).json({
+        data:result
+    })
+});
+
+
+
+export const getAllITemsToCheckTimeBase = AsyncHandler(async (req,res) => {
+    const {assembly_id} = req.params;
+    const result = await getAllITemsToCheckTimeBases(assembly_id);
     res.status(StatusCodes.OK).json({
         data:result
     })

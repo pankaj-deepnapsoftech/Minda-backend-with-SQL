@@ -1,4 +1,5 @@
 import { CheckListModal } from "../models/checkList.modal.js"
+import { ItemCheckTimeModel } from "../models/itemCheckTime.model.js";
 import { ProcessModel } from "../models/process.modal.js";
 import { Op } from "sequelize";
 
@@ -25,7 +26,10 @@ export const DeleteCheckListService = async (id) => {
 
 export const getCheckListDataService = async (skip,limit) => {
     const result = await CheckListModal.findAll({
-        include: [{ model: ProcessModel, as: "processInfo", attributes: ["_id", "process_name", "process_no"] }],
+        include: [
+            { model: ProcessModel, as: "processInfo", attributes: ["_id", "process_name", "process_no"] },
+            {model:ItemCheckTimeModel,as:"itemCheckTimeInfo",through:{attributes:[]} }
+        ],
         order: [["_id", "DESC"]],
         offset: skip,
         limit,
