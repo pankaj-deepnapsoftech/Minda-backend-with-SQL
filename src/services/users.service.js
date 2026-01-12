@@ -20,6 +20,7 @@ export const GetUsersService = async (skip, limit) => {
             { model: RoleModel, as: "userRole" },
             { model: CompanyModel, as: "company" },
             { model: PlantModel, as: "plant" },
+            { model: DepartmentModel, as: "department" },
         ],
         offset: skip,
         limit,
