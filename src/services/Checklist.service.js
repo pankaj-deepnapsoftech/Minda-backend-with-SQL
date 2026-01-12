@@ -30,7 +30,7 @@ export const getCheckListDataService = async (skip,limit) => {
                 { model: ProcessModel, as: "processInfo", attributes: ["_id", "process_name", "process_no"] },
                 {model:ItemCheckTimeModel,as:"item_check_time" }
             ],
-            order: [["_id", "DESC"]],
+            order: [["_id", "ASC"]],
             offset: skip,
             limit,
         });
@@ -46,7 +46,7 @@ export const SearchCheckListDataService = async (search="",process="",skip,limit
             item: { [Op.like]: `%${q}%` },
         },
         include: [{ model: ProcessModel, as: "processInfo", attributes: ["_id", "process_name", "process_no"] }],
-        order: [["_id", "DESC"]],
+        order: [["_id", "ASC"]],
         offset: skip,
         limit,
     });

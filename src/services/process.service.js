@@ -24,7 +24,7 @@ export const deleteProcessService = async (id) => {
 
 export const getProcessServiceList = async (skip, limit) => {
     const result = await ProcessModel.findAll({
-        order: [["_id", "DESC"]],
+        order: [["_id", "ASC"]],
         offset: skip,
         limit,
     });
@@ -40,7 +40,7 @@ export const searchProcessServiceList = async (search, skip, limit) => {
                 { process_no: { [Op.like]: `%${q}%` } },
             ],
         },
-        order: [["_id", "DESC"]],
+        order: [["_id", "ASC"]],
         offset: skip,
         limit,
     });
@@ -62,7 +62,7 @@ export const findProcessbyProcesNameOrNumber = async (name, number) => {
 export const allProcessService = async () => {
     const result = await ProcessModel.findAll({
         attributes: ["_id", "process_name", "process_no"],
-        order: [["_id", "DESC"]],
+        order: [["_id", "ASC"]],
     });
     return result;
 

@@ -23,7 +23,7 @@ export const deleteTypesService = async (id) => {
 };
 
 export const getTypesService = async () => {
-    const result = await TypeModal.findAll({ order: [["_id", "DESC"]] });
+    const result = await TypeModal.findAll({ order: [["_id", "ASC"]] });
     return result;
 };
 

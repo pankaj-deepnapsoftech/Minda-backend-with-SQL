@@ -24,7 +24,7 @@ export const GetUsersService = async (skip, limit) => {
         ],
         offset: skip,
         limit,
-        order: [["_id", "DESC"]],
+        order: [["_id", "ASC"]],
     });
     return result;
 };
@@ -33,7 +33,7 @@ export const GetAllUsersService = async () => {
     const result = await UserModel.findAll({
         where: { is_admin: false },
         attributes: ["_id", "email", "user_id", "full_name"],
-        order: [["_id", "DESC"]],
+        order: [["_id", "ASC"]],
     });
     return result;
 };
@@ -60,7 +60,7 @@ export const SearchUsersService = async (company, plant, search = "", skip, limi
         ],
         offset: skip,
         limit,
-        order: [["_id", "DESC"]],
+        order: [["_id", "ASC"]],
     });
     return result;
 };
