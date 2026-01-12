@@ -28,7 +28,7 @@ export const getCheckListDataService = async (skip,limit) => {
     const result = await CheckListModal.findAll({
         include: [
             { model: ProcessModel, as: "processInfo", attributes: ["_id", "process_name", "process_no"] },
-            // {model:ItemCheckTimeModel,as:"itemCheckTimeInfo",through:{attributes:[]} }
+            {model:ItemCheckTimeModel,as:"itemCheckTimeInfo",through:{attributes:[]} }
         ],
         order: [["_id", "DESC"]],
         offset: skip,

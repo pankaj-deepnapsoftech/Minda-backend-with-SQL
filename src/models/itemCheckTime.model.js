@@ -12,9 +12,7 @@ export const ItemCheckTimeModel = sequelize.define(
             primaryKey: true,
         },
         item_id: { type: DataTypes.UUID, allowNull: false },
-        check_time: {
-            type: DataTypes.TIME, allowNull: false
-        }
+        check_time:{ type: DataTypes.TIME, allowNull: false }
     }, {
     timestamps: true,
     tableName: "item_check_time"
