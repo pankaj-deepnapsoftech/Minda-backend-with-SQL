@@ -48,14 +48,14 @@ export const deleteAssemblyService = async (id) => {
 };
 
 export const getAllAssemblyService = async (IsAdmin, userId, skip, limit) => {
-    const result = await AssemblyModal.findAll({
-        where: IsAdmin ? {} : { responsibility: userId },
-        order: [["_id", "ASC"]],
-        offset: skip,
-        limit,
-        include: baseAssemblyIncludes,
-    });
-    return result;
+     const result = await AssemblyModal.findAll({
+         where: IsAdmin ? {} : { responsibility: userId },
+         order: [["_id", "ASC"]],
+         offset: skip,
+         limit,
+     });
+     return result;
+  
 };
 
 export const searchAllAssemblyService = async (
