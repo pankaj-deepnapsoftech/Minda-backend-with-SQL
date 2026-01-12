@@ -1,3 +1,5 @@
+import { CompanyModel } from "../models/company.modal.js";
+import { PlantModel } from "../models/plant.modal.js";
 import { ProcessModel } from "../models/process.modal.js"
 import { Op } from "sequelize";
 
@@ -25,7 +27,10 @@ export const deleteProcessService = async (id) => {
 export const getProcessServiceList = async (skip, limit) => {
     const result = await ProcessModel.findAll({
         order: [["_id", "ASC"]],
-        
+        include:[
+            {model:CompanyModel,as:"company",attributes:["_id","company_name","company_address"]},
+            {model:PlantModel,as:"plant",attributes:["_id","plant_name","plant_address"]},
+        ],
         offset: skip,
         limit,
     });
@@ -42,6 +47,10 @@ export const searchProcessServiceList = async (search, skip, limit) => {
             ],
         },
         order: [["_id", "ASC"]],
+        include:[
+            {model:CompanyModel,as:"company",attributes:["_id","company_name","company_address"]},
+            {model:PlantModel,as:"plant",attributes:["_id","plant_name","plant_address"]},
+        ],
         offset: skip,
         limit,
     });
