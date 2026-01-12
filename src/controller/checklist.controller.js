@@ -16,11 +16,8 @@ const __dirname = path.dirname(__filename);
 
 
 export const CreateChecklistData = AsyncHandler(async (req, res) => {
-    try {
         const data = req.body;
         const file = req.file;
-    
-        console.log(data)
     
         const file_path = file ? `${config.NODE_ENV !== "development" ? config.SERVER_URL : config.LOCAL_SERVER_URL}/files/${file.filename}` : null;
         const parsTime = JSON.parse(data.time);
@@ -36,9 +33,7 @@ export const CreateChecklistData = AsyncHandler(async (req, res) => {
             message: "Item Created Successfully",
             data: result
         });
-    } catch (error) {
-        console.log(error)
-    }
+ 
 });
 
 export const UpdateCheckListData = AsyncHandler(async (req, res) => {
