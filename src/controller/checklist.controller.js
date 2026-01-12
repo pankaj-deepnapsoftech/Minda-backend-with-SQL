@@ -21,7 +21,7 @@ export const CreateChecklistData = AsyncHandler(async (req, res) => {
 
     const file_path = file ? `${config.NODE_ENV !== "development" ? config.SERVER_URL : config.LOCAL_SERVER_URL}/files/${file.filename}` : null;
 
-    const result = await createChecklistService(file_path ? { ...data, file_path } : data);
+    const result = await createChecklistService(file_path ? { ...data, file_path,total_checks:JSON.parse(data.time) } : {...data,total_checks:JSON.parse(data.time)});
     if(data?.time){
         const mapData = JSON.parse(data.time).map((timeItem)=>({check_time:timeItem,item_id:result._id}));
         await createChecklistItemTimeService(mapData);
