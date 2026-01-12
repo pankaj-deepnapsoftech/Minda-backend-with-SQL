@@ -1,5 +1,5 @@
 import { AsyncHandler } from "../utils/asyncHandler.js";
-import { CreateDepartmentService, DeleteDepartmentService, GetAllDepartmentsService, getDipartmentByName, UpdateDepartmentService } from "../services/Department.service.js";
+import { CreateDepartmentService, DeleteDepartmentService, GetAllDepartmentsService, GetAllDepartmentWithoutPagination, getDipartmentByName, UpdateDepartmentService } from "../services/Department.service.js";
 import { StatusCodes } from "http-status-codes";
 import { NotFoundError } from "../utils/errorHandler.js";
 
@@ -64,7 +64,7 @@ export const DeleteDepartment = AsyncHandler(async (req, res) => {
 
 
 export const GetAllDepartmentData = AsyncHandler(async (req, res) => {
-    const result = await GetAllDepartmentsService();
+    const result = await GetAllDepartmentWithoutPagination();
     res.status(StatusCodes.OK).json({
         success: true,
         data: result
