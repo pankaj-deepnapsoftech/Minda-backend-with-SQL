@@ -134,63 +134,63 @@ export const getAllAssemblyDataService = async () => {
 
 export const getAssemblyLineByResponsibility = async (responsibility) => {
 
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-  
-      const todayEnd = new Date();
-      todayEnd.setHours(23, 59, 59, 999);
-  
-      const assemblies = await AssemblyModal.findAll({
-          where: { responsibility },
-          attributes: ["_id", "assembly_name", "assembly_number"],
-          include: [
-              {
-                  model: ProcessModel,
-                  as: "processes",
-                  attributes: ["_id", "process_name", "process_no"],
-                  through: { attributes: [] },
-              },
-          ],
-          order: [["_id", "ASC"]],
-      });
-  
-      const result = [];
-  
-      for (const assembly of assemblies) {
-          let isAssemblyChecked = true;
-  
-          for (const process of assembly.processes) {
-              // total checklist items for process
-              const totalChecklist = await CheckListModal.count({
-                  where: { process: process._id },
-              });
-  
-              // today's checklist history count
-              const checkedToday = await CheckListHistoryModal.count({
-                  where: {
-                      assembly: assembly._id,
-                      process_id: process._id,
-                      createdAt: {
-                          [Op.between]: [todayStart, todayEnd],
-                      },
-                      status: "Checked",
-                  },
-              });
-  
-              if (totalChecklist !== checkedToday) {
-                  isAssemblyChecked = false;
-                  break;
-              }
-          }
-  
-          result.push({
-              ...assembly.toJSON(),
-              checked: isAssemblyChecked,
-          });
-      }
-  
-      return result;
-  
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const assemblies = await AssemblyModal.findAll({
+        where: { responsibility },
+        attributes: ["_id", "assembly_name", "assembly_number"],
+        include: [
+            {
+                model: ProcessModel,
+                as: "processes",
+                attributes: ["_id", "process_name", "process_no"],
+                through: { attributes: [] },
+            },
+        ],
+        order: [["_id", "ASC"]],
+    });
+
+    const result = [];
+
+    for (const assembly of assemblies) {
+        let isAssemblyChecked = true;
+
+        for (const process of assembly.processes) {
+            // total checklist items for process
+            const totalChecklist = await CheckListModal.count({
+                where: { process: process._id },
+            });
+
+            // today's checklist history count
+            const checkedToday = await CheckListHistoryModal.count({
+                where: {
+                    assembly: assembly._id,
+                    process_id: process._id,
+                    createdAt: {
+                        [Op.between]: [todayStart, todayEnd],
+                    },
+                    status: "Checked",
+                },
+            });
+
+            if (totalChecklist !== checkedToday) {
+                isAssemblyChecked = false;
+                break;
+            }
+        }
+
+        result.push({
+            ...assembly.toJSON(),
+            checked: isAssemblyChecked,
+        });
+    }
+
+    return result;
+
 };
 
 export const getAssemblyLineFormByResponsibility = async (user, id) => {
@@ -202,7 +202,7 @@ export const getAssemblyLineFormByResponsibility = async (user, id) => {
     if (!assembly) return [];
 
     const assemblyJson = assembly.toJSON();
-    
+
     const processIds = Array.isArray(assemblyJson.processes) ? assemblyJson.processes.map((p) => p._id) : [];
     const checklists = processIds.length
         ? await CheckListModal.findAll({
@@ -286,6 +286,8 @@ export const GetAssemblyLineDataReport = async (
         ],
     });
 
+
+
     const total_assemblies = assemblies.length; // ✅ FIX ADDED
 
     if (!assemblies.length) {
@@ -300,6 +302,7 @@ export const GetAssemblyLineDataReport = async (
     }
 
     const assemblyIds = assemblies.map((a) => a._id);
+
 
     // 2️⃣ History (ITEM LEVEL)
     const histories = await CheckListHistoryModal.findAll({
@@ -316,6 +319,8 @@ export const GetAssemblyLineDataReport = async (
             "is_resolved",
         ],
     });
+
+
 
     // 3️⃣ History Map
     const historyMap = new Map();
@@ -334,10 +339,12 @@ export const GetAssemblyLineDataReport = async (
     // 4️⃣ MAIN LOGIC
     for (const assembly of assemblies) {
         const assemblyCreated = normalizeToUTCDate(assembly.createdAt);
-        if (!Array.isArray(assembly.process_id)) continue;
+        if (!Array.isArray(assembly.processes)) continue;
+
 
         for (const day of allDates) {
             if (day < assemblyCreated) continue;
+
 
             total_count++;
             const dateKey = getDateKey(day);
@@ -398,89 +405,92 @@ export const getAssemblyLineTodayReport = async (
     startdate,
     endDate
 ) => {
-       const today = new Date();
-       const startOfDay = startdate ? new Date(startdate) : new Date(today);
-       startOfDay.setHours(0, 0, 0, 0);
-       const endOfDay = endDate ? new Date(endDate) : new Date(today);
-       endOfDay.setHours(23, 59, 59, 999);
-   
-       const assemblies = await AssemblyModal.findAll({
-           where: admin ? {} : { responsibility: user_id },
-           order: [["_id", "ASC"]],
-           offset: skip,
-           limit,
-           include: baseAssemblyIncludes
-       });
-   
-   
-       const assemblyJsonList = assemblies.map((a) => a.toJSON());
-       const assemblyIds = assemblyJsonList.map((a) => a._id);
-   
-       const processIds = [
-           ...new Set(
-               assemblyJsonList.flatMap((a) => (Array.isArray(a.processes) ? a.processes.map((p) => p._id) : []))
-           ),
-       ];
-   
-       const checklists = processIds.length
-           ? await CheckListModal.findAll({
-               where: { process: { [Op.in]: processIds } },
-               order: [["_id", "ASC"]],
-           })
-           : [];
-   
-       const histories = assemblyIds.length
-           ? await CheckListHistoryModal.findAll({
-               where: {
-                   assembly: { [Op.in]: assemblyIds },
-                   createdAt: { [Op.between]: [startOfDay, endOfDay] },
-               },
-               attributes: ["_id", "checkList", "assembly", "process_id", "result", "is_error",  "status", "createdAt"],
-           })
-           : [];
-   
-           // console.log(histories);
-   
-       const checklistByProcess = new Map();
-       for (const cl of checklists) {
-           const json = cl.toJSON();
-           const pid = json.process;
-           const list = checklistByProcess.get(pid) || [];
-           list.push(json);
-           checklistByProcess.set(pid, list);
-       };
-   
-   
-       const historyByAssemblyProcessCheckList = new Map();
-       for (const h of histories) {
-           const json = h.toJSON();
-           const key = `${json.assembly}:${json.process_id}:${json.checkList}`;
-           const list = historyByAssemblyProcessCheckList.get(key) || [];
-           list.push(json);
-           historyByAssemblyProcessCheckList.set(key, list);
-       }
-   
-       return assemblyJsonList.map((assembly) => {
-           const processes = Array.isArray(assembly.process_id) ? assembly.process_id : [];
-           assembly.process_id = processes.map((proc) => {
-               const procChecklists = checklistByProcess.get(proc._id) || [];
-               return {
-                   ...proc,
-                   check_list_items: procChecklists.map((cli) => ({
-                       ...cli,
-                       check_items_history:
-                           historyByAssemblyProcessCheckList.get(`${assembly._id}:${proc._id}:${cli._id}`) || [],
-                   })),
-               };
-           });
-           return assembly;
-       });
+    const today = new Date();
+    const startOfDay = startdate ? new Date(startdate) : new Date(today);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = endDate ? new Date(endDate) : new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const assemblies = await AssemblyModal.findAll({
+        where: admin ? {} : { responsibility: user_id },
+        order: [["_id", "ASC"]],
+        offset: skip,
+        limit,
+        include: baseAssemblyIncludes
+    });
+
+
+    const assemblyJsonList = assemblies.map((a) => a.toJSON());
+    const assemblyIds = assemblyJsonList.map((a) => a._id);
+
+    const processIds = [
+        ...new Set(
+            assemblyJsonList.flatMap((a) => (Array.isArray(a.processes) ? a.processes.map((p) => p._id) : []))
+        ),
+    ];
+
+    const checklists = processIds.length
+        ? await CheckListModal.findAll({
+            where: { process: { [Op.in]: processIds } },
+            order: [["_id", "ASC"]],
+        })
+        : [];
+
+    const histories = assemblyIds.length
+        ? await CheckListHistoryModal.findAll({
+            where: {
+                assembly: { [Op.in]: assemblyIds },
+                createdAt: { [Op.between]: [startOfDay, endOfDay] },
+            },
+            attributes: ["_id", "checkList", "assembly", "process_id", "result", "is_error", "status", "createdAt"],
+        })
+        : [];
+
+    // console.log(histories);
+
+    const checklistByProcess = new Map();
+    for (const cl of checklists) {
+        const json = cl.toJSON();
+        const pid = json.process;
+        const list = checklistByProcess.get(pid) || [];
+        list.push(json);
+        checklistByProcess.set(pid, list);
+    };
+
+
+    const historyByAssemblyProcessCheckList = new Map();
+    for (const h of histories) {
+        const json = h.toJSON();
+        const key = `${json.assembly}:${json.process_id}:${json.checkList}`;
+        const list = historyByAssemblyProcessCheckList.get(key) || [];
+        list.push(json);
+        historyByAssemblyProcessCheckList.set(key, list);
+    }
+
+    // console.log(historyByAssemblyProcessCheckList);
+
+    return assemblyJsonList.map((assembly) => {
+
+        const processes = Array.isArray(assembly.processes) ? assembly.processes : [];
+        assembly.processes = processes.map((proc) => {
+            const procChecklists = checklistByProcess.get(proc._id) || [];
+            return {
+                ...proc,
+                check_list_items: procChecklists.map((cli) => ({
+                    ...cli,
+                    check_items_history:
+                        historyByAssemblyProcessCheckList.get(`${assembly._id}:${proc._id}:${cli._id}`) || [],
+                })),
+            };
+        });
+        return assembly;
+    });
 
 };
 
 
 export const getAllITemsToCheckTimeBases = async (assembly_id) => {
-    const assembly = await AssemblyModal.findByPk(assembly_id,{include:baseAssemblyIncludes});
+    const assembly = await AssemblyModal.findByPk(assembly_id, { include: baseAssemblyIncludes });
 
     return assembly;
 };
