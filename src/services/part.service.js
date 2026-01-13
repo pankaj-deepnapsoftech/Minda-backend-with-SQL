@@ -1,5 +1,5 @@
 import { PartModal } from "../models/Part.modal.js"
-import { AssemblyModal } from "../models/AssemblyLine.modal.js";
+// import { AssemblyModal } from "../models/AssemblyLine.modal.js";
 import { Op } from "sequelize";
 
 
@@ -45,24 +45,12 @@ export const getPartsServiceData = async (search="",skip,limit) => {
                 { part_number: { [Op.like]: `%${q}%` } },
             ],
         },
-        include: [
-            {
-                model: AssemblyModal,
-                as: "assemblies",
-                attributes: ["_id", "assembly_name", "assembly_number"],
-                required: false,
-            },
-        ],
         order: [["_id", "ASC"]],
         offset: skip,
         limit,
     });
 
-    return parts.map((p) => {
-        const json = p.toJSON();
-        json.total_assemblies = Array.isArray(json.assemblies) ? json.assemblies.length : 0;
-        return json;
-    });
+   return parts;
 }
 
 

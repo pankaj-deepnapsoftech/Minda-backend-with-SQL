@@ -22,11 +22,11 @@ export const CreateDepartment = AsyncHandler(async (req, res) => {
 
 
 export const GetAllDepartments = AsyncHandler(async (req, res) => {
-    let { page, limit } = req.query;
+    let { page, limit,search } = req.query;
     page = parseInt(page) || 1;
     limit = parseInt(limit) || 10;
     const skip = (page - 1) * limit;
-    const result = await GetAllDepartmentsService(skip, limit);
+    const result = await GetAllDepartmentsService(search,skip, limit);
     res.status(StatusCodes.OK).json({
         success: true,
         data: result

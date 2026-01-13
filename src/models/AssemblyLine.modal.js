@@ -14,7 +14,7 @@ export const AssemblyModal = sequelize.define(
         company_id: { type: DataTypes.UUID, allowNull: false },
         plant_id: { type: DataTypes.UUID, allowNull: false },
         responsibility: { type: DataTypes.UUID, allowNull: true },
-        part_id: { type: [DataTypes.UUID], allowNull: true },
+        part_id: { type: DataTypes.JSON, allowNull: true },
     },
     {
         tableName: "assemblies",
@@ -26,7 +26,6 @@ export const AssemblyModal = sequelize.define(
                     "company_id",
                     "plant_id",
                     "responsibility",
-                    "part_id",
                     "assembly_name",
                     "assembly_number",
                 ],

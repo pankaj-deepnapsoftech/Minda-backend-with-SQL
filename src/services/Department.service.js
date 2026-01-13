@@ -1,4 +1,5 @@
 import { DepartmentModel } from "../models/department.modal.js";
+import { Op } from "sequelize";
 
 
 
@@ -8,8 +9,11 @@ export const CreateDepartmentService = async (data) => {
 };
 
 
-export const GetAllDepartmentsService = async (skip, limit) => {
+export const GetAllDepartmentsService = async (search="",skip, limit) => {
     const result = await DepartmentModel.findAll({
+        where : {
+            name: { [Op.like]: `%${search}%` }
+        },
         order: [["_id", "ASC"]],
         offset: skip,
         limit,

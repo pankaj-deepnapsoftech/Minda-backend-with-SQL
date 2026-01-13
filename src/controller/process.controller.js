@@ -1,7 +1,7 @@
 import { StatusCodes } from "http-status-codes";
-import { allProcessService, createProcessService, deleteProcessService, findProcessbyProcesNameOrNumber, getProcessServiceList, searchProcessServiceList, updateProcessService } from "../services/process.service.js";
+import { allProcessService, createProcessService, deleteProcessService, getProcessServiceList, searchProcessServiceList, updateProcessService } from "../services/process.service.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
-import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
+import {  NotFoundError } from "../utils/errorHandler.js";
 
 
 
@@ -10,7 +10,6 @@ import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 export const createProcess = AsyncHandler(async (req, res) => {
     const data = req.body;
 
-    console.log ("data",data);
 
     // const exist = await findProcessbyProcesNameOrNumber(data.process_name, data.process_no);
     // if (exist) {
