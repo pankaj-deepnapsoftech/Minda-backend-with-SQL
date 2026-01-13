@@ -279,7 +279,7 @@ export const GetAssemblyLineDataReport = async (
         include: [
             {
                 model: ProcessModel,
-                as: "process_id",
+                as: "processes",
                 attributes: ["_id"],
                 through: { attributes: [] },
             },
@@ -346,7 +346,7 @@ export const GetAssemblyLineDataReport = async (
             let hasError = false;
             let hasResolved = false;
 
-            for (const process of assembly.process_id) {
+            for (const process of assembly.processes) {
                 const processItems = histories.filter(
                     (h) =>
                         String(h.assembly) === String(assembly._id) &&
@@ -398,79 +398,84 @@ export const getAssemblyLineTodayReport = async (
     startdate,
     endDate
 ) => {
-    const today = new Date();
-    const startOfDay = startdate ? new Date(startdate) : new Date(today);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = endDate ? new Date(endDate) : new Date(today);
-    endOfDay.setHours(23, 59, 59, 999);
+       const today = new Date();
+       const startOfDay = startdate ? new Date(startdate) : new Date(today);
+       startOfDay.setHours(0, 0, 0, 0);
+       const endOfDay = endDate ? new Date(endDate) : new Date(today);
+       endOfDay.setHours(23, 59, 59, 999);
+   
+       const assemblies = await AssemblyModal.findAll({
+           where: admin ? {} : { responsibility: user_id },
+           order: [["_id", "ASC"]],
+           offset: skip,
+           limit,
+           include: baseAssemblyIncludes
+       });
+   
+   
+       const assemblyJsonList = assemblies.map((a) => a.toJSON());
+       const assemblyIds = assemblyJsonList.map((a) => a._id);
+   
+       const processIds = [
+           ...new Set(
+               assemblyJsonList.flatMap((a) => (Array.isArray(a.processes) ? a.processes.map((p) => p._id) : []))
+           ),
+       ];
+   
+       const checklists = processIds.length
+           ? await CheckListModal.findAll({
+               where: { process: { [Op.in]: processIds } },
+               order: [["_id", "ASC"]],
+           })
+           : [];
+   
+       const histories = assemblyIds.length
+           ? await CheckListHistoryModal.findAll({
+               where: {
+                   assembly: { [Op.in]: assemblyIds },
+                   createdAt: { [Op.between]: [startOfDay, endOfDay] },
+               },
+               attributes: ["_id", "checkList", "assembly", "process_id", "result", "is_error",  "status", "createdAt"],
+           })
+           : [];
+   
+           // console.log(histories);
+   
+       const checklistByProcess = new Map();
+       for (const cl of checklists) {
+           const json = cl.toJSON();
+           const pid = json.process;
+           const list = checklistByProcess.get(pid) || [];
+           list.push(json);
+           checklistByProcess.set(pid, list);
+       };
+   
+   
+       const historyByAssemblyProcessCheckList = new Map();
+       for (const h of histories) {
+           const json = h.toJSON();
+           const key = `${json.assembly}:${json.process_id}:${json.checkList}`;
+           const list = historyByAssemblyProcessCheckList.get(key) || [];
+           list.push(json);
+           historyByAssemblyProcessCheckList.set(key, list);
+       }
+   
+       return assemblyJsonList.map((assembly) => {
+           const processes = Array.isArray(assembly.process_id) ? assembly.process_id : [];
+           assembly.process_id = processes.map((proc) => {
+               const procChecklists = checklistByProcess.get(proc._id) || [];
+               return {
+                   ...proc,
+                   check_list_items: procChecklists.map((cli) => ({
+                       ...cli,
+                       check_items_history:
+                           historyByAssemblyProcessCheckList.get(`${assembly._id}:${proc._id}:${cli._id}`) || [],
+                   })),
+               };
+           });
+           return assembly;
+       });
 
-    const assemblies = await AssemblyModal.findAll({
-        where: admin ? {} : { responsibility: user_id },
-        order: [["_id", "ASC"]],
-        offset: skip,
-        limit,
-        include: baseAssemblyIncludes
-    });
-
-    const assemblyJsonList = assemblies.map((a) => a.toJSON());
-    const assemblyIds = assemblyJsonList.map((a) => a._id);
-
-    const processIds = [
-        ...new Set(
-            assemblyJsonList.flatMap((a) => (Array.isArray(a.processes) ? a.processes.map((p) => p._id) : []))
-        ),
-    ];
-
-    const checklists = processIds.length
-        ? await CheckListModal.findAll({
-            where: { process: { [Op.in]: processIds } },
-            order: [["_id", "ASC"]],
-        })
-        : [];
-
-    const histories = assemblyIds.length
-        ? await CheckListHistoryModal.findAll({
-            where: {
-                assembly: { [Op.in]: assemblyIds },
-                createdAt: { [Op.between]: [startOfDay, endOfDay] },
-            },
-            attributes: ["_id", "checkList", "assembly", "process_id", "result", "is_error", "ASCription", "status", "createdAt"],
-        })
-        : [];
-
-    const checklistByProcess = new Map();
-    for (const cl of checklists) {
-        const json = cl.toJSON();
-        const pid = json.process;
-        const list = checklistByProcess.get(pid) || [];
-        list.push(json);
-        checklistByProcess.set(pid, list);
-    }
-
-    const historyByAssemblyProcessCheckList = new Map();
-    for (const h of histories) {
-        const json = h.toJSON();
-        const key = `${json.assembly}:${json.process_id}:${json.checkList}`;
-        const list = historyByAssemblyProcessCheckList.get(key) || [];
-        list.push(json);
-        historyByAssemblyProcessCheckList.set(key, list);
-    }
-
-    return assemblyJsonList.map((assembly) => {
-        const processes = Array.isArray(assembly.process_id) ? assembly.process_id : [];
-        assembly.process_id = processes.map((proc) => {
-            const procChecklists = checklistByProcess.get(proc._id) || [];
-            return {
-                ...proc,
-                check_list_items: procChecklists.map((cli) => ({
-                    ...cli,
-                    check_items_history:
-                        historyByAssemblyProcessCheckList.get(`${assembly._id}:${proc._id}:${cli._id}`) || [],
-                })),
-            };
-        });
-        return assembly;
-    });
 };
 
 
