@@ -133,62 +133,67 @@ export const getAllAssemblyDataService = async () => {
 };
 
 export const getAssemblyLineByResponsibility = async (responsibility) => {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
 
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
-
-    const assemblies = await AssemblyModal.findAll({
-        where: { responsibility },
-        attributes: ["_id", "assembly_name", "assembly_number"],
-        include: [
-            {
-                model: ProcessModel,
-                as: "processes",
-                attributes: ["_id", "process_name", "process_no"],
-                through: { attributes: [] },
-            },
-        ],
-        order: [["_id", "ASC"]],
-    });
-
-    const result = [];
-
-    for (const assembly of assemblies) {
-        let isAssemblyChecked = true;
-
-        for (const process of assembly.process_id) {
-            // total checklist items for process
-            const totalChecklist = await CheckListModal.count({
-                where: { process: process._id },
-            });
-
-            // today's checklist history count
-            const checkedToday = await CheckListHistoryModal.count({
-                where: {
-                    assembly: assembly._id,
-                    process_id: process._id,
-                    createdAt: {
-                        [Op.between]: [todayStart, todayEnd],
-                    },
-                    status: "Checked",
-                },
-            });
-
-            if (totalChecklist !== checkedToday) {
-                isAssemblyChecked = false;
-                break;
-            }
-        }
-
-        result.push({
-            ...assembly.toJSON(),
-            checked: isAssemblyChecked,
-        });
-    }
-
-    return result;
+  try {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+  
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+  
+      const assemblies = await AssemblyModal.findAll({
+          where: { responsibility },
+          attributes: ["_id", "assembly_name", "assembly_number"],
+          include: [
+              {
+                  model: ProcessModel,
+                  as: "processes",
+                  attributes: ["_id", "process_name", "process_no"],
+                  through: { attributes: [] },
+              },
+          ],
+          order: [["_id", "ASC"]],
+      });
+  
+      const result = [];
+  
+      for (const assembly of assemblies) {
+          let isAssemblyChecked = true;
+  
+          for (const process of assembly.processes) {
+              // total checklist items for process
+              const totalChecklist = await CheckListModal.count({
+                  where: { process: process._id },
+              });
+  
+              // today's checklist history count
+              const checkedToday = await CheckListHistoryModal.count({
+                  where: {
+                      assembly: assembly._id,
+                      process_id: process._id,
+                      createdAt: {
+                          [Op.between]: [todayStart, todayEnd],
+                      },
+                      status: "Checked",
+                  },
+              });
+  
+              if (totalChecklist !== checkedToday) {
+                  isAssemblyChecked = false;
+                  break;
+              }
+          }
+  
+          result.push({
+              ...assembly.toJSON(),
+              checked: isAssemblyChecked,
+          });
+      }
+  
+      return result;
+  } catch (error) {
+    console.log(error)
+  }
 };
 
 export const getAssemblyLineFormByResponsibility = async (user, id) => {
