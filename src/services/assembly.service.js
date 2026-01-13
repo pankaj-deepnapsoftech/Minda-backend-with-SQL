@@ -10,21 +10,23 @@ import { ProcessModel } from "../models/process.modal.js";
 import { UserModel } from "../models/user.modal.js";
 
 const baseAssemblyIncludes = [
-    { model: CompanyModel, as: "company", attributes: ["_id", "company_name", "company_address", "ASCription"] },
-    { model: PlantModel, as: "plant", attributes: ["_id", "plant_name", "plant_address", "ASCription"] },
+    { model: CompanyModel, as: "company", attributes: ["_id", "company_name", "company_address","description"] },
+    { model: PlantModel, as: "plant", attributes: ["_id", "plant_name", "plant_address","description" ] },
     { model: UserModel, as: "responsibleUser", attributes: ["_id", "full_name", "email", "user_id", "desigination"] },
-    { model: ProcessModel, as: "process_id", attributes: ["_id", "process_name", "process_no"], through: { attributes: [] } },
-    { model: PartModal, as: "part", attributes: ["_id", "part_number", "part_name"] },
+    { model: ProcessModel, as: "processes", attributes: ["_id", "process_name", "process_no"], through: { attributes: [] } },
+    // { model: PartModal, as: "part", attributes: ["_id", "part_number", "part_name"] },
 ];
 
 export const createAssemblyService = async (data) => {
-    const { process_id: processIds, ...assemblyData } = data || {};
-    const result = await AssemblyModal.create(assemblyData);
-    if (Array.isArray(processIds)) {
-        const ids = processIds.filter((v) => v !== null && v !== undefined && String(v).trim() !== "");
-        await result.setProcess_id(ids);
-    }
-    return await AssemblyModal.findByPk(result._id, { include: baseAssemblyIncludes });
+         const { process_id: processIds, ...assemblyData } = data || {};
+         const result = await AssemblyModal.create(assemblyData);
+         if (Array.isArray(processIds)) {
+             const ids = processIds.filter((v) => v !== null && v !== undefined && String(v).trim() !== "");
+             await result.setProcesses(ids);;
+         }
+         return await AssemblyModal.findByPk(result._id, { include: baseAssemblyIncludes });
+       
+      
 };
 
 export const updateAssemblyService = async (id, data) => {
@@ -48,14 +50,26 @@ export const deleteAssemblyService = async (id) => {
 };
 
 export const getAllAssemblyService = async (IsAdmin, userId, skip, limit) => {
-     const result = await AssemblyModal.findAll({
-         where: IsAdmin ? {} : { responsibility: userId },
-         order: [["_id", "ASC"]],
-         offset: skip,
-         limit,
-     });
-     return result;
-  
+    const result = await AssemblyModal.findAll({
+        where: IsAdmin ? {} : { responsibility: userId },
+        order: [["_id", "ASC"]],
+        offset: skip,
+        limit,
+        include: baseAssemblyIncludes,
+    });
+
+    const resultWithParts = Promise.all(result.map(async (item) => {
+        const ides = JSON.parse(item.part_id) || [];
+        const parts = await PartModal.findAll({
+            where :{
+                _id:{ [Op.in]: ides}
+            }
+        })
+        return {...item.toJSON(), part_details: parts };
+    }));
+    
+    return resultWithParts;
+
 };
 
 export const searchAllAssemblyService = async (
@@ -469,7 +483,7 @@ export const getAssemblyLineTodayReport = async (
 };
 
 
-export const getAllITemsToCheckTimeBases = async  (assembly_id) => {
+export const getAllITemsToCheckTimeBases = async (assembly_id) => {
 
 }
 

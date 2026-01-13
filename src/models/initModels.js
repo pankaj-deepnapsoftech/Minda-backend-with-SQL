@@ -39,14 +39,14 @@ export const initModels = () => {
     UserModel.hasMany(AssemblyModal, { foreignKey: "responsibility", as: "assigned_assemblies", constraints: false });
     AssemblyModal.belongsTo(UserModel, { foreignKey: "responsibility", as: "responsibleUser", constraints: false });
 
-    // PartModal.hasMany(AssemblyModal, { foreignKey: "part_id", as: "assemblies", constraints: false });
-    // AssemblyModal.belongsToMany(PartModal, {  through: "assembly_parts", foreignKey: "part_id", as: "part", constraints: false });
+    PartModal.hasMany(AssemblyModal, { foreignKey: "part_id", as: "assemblies", constraints: false });
+    AssemblyModal.belongsToMany(PartModal, {  through: "assembly_parts", foreignKey: "part_id", as: "part", constraints: false });
 
     AssemblyModal.belongsToMany(ProcessModel, {
         through: "assembly_processes",
         foreignKey: "assembly_id",
         otherKey: "process_id",
-        as: "process_id",
+        as: "processes",
     });
     ProcessModel.belongsToMany(AssemblyModal, {
         through: "assembly_processes",

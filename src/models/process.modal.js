@@ -22,7 +22,6 @@ export const ProcessModel = sequelize.define(
         hooks: {
             beforeCreate: async (process, options) => {
 
-                console.log("Generating process_no for new process");
                 // 1️⃣ Get Company
                 const company = await CompanyModel.findByPk(process.company_id);
                 if (!company || !company.company_code) {
