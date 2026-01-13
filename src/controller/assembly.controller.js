@@ -58,7 +58,6 @@ export const deleteAssemblyData = AsyncHandler(async (req, res) => {
 
 export const updateAssemblyData = AsyncHandler(async (req, res) => {
     const { id } = req.params;
-    console.log("id",id);
     const data = req.body;
     const result = await updateAssemblyService(id, data);
     if (!result) {
@@ -121,7 +120,7 @@ export const assemblyLineDataTodayReport = AsyncHandler(async (req,res) => {
 
 export const getAllITemsToCheckTimeBase = AsyncHandler(async (req,res) => {
     const {assembly_id} = req.params;
-    const result = await getAllITemsToCheckTimeBases(assembly_id);
+    const result = await getAllITemsToCheckTimeBases(assembly_id,);
     res.status(StatusCodes.OK).json({
         data:result
     })

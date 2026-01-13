@@ -145,7 +145,7 @@ export const getAssemblyLineByResponsibility = async (responsibility) => {
         include: [
             {
                 model: ProcessModel,
-                as: "process_id",
+                as: "processes",
                 attributes: ["_id", "process_name", "process_no"],
                 through: { attributes: [] },
             },
@@ -194,12 +194,7 @@ export const getAssemblyLineByResponsibility = async (responsibility) => {
 export const getAssemblyLineFormByResponsibility = async (user, id) => {
     const assembly = await AssemblyModal.findOne({
         where: { _id: id, responsibility: user },
-        include: [
-            { model: UserModel, as: "responsibleUser", attributes: ["_id", "full_name", "email", "user_id"] },
-            { model: CompanyModel, as: "company", attributes: ["_id", "company_name", "company_address"] },
-            { model: PlantModel, as: "plant", attributes: ["_id", "plant_name", "plant_address"] },
-            { model: ProcessModel, as: "process_id", attributes: ["_id", "process_name", "process_no"], through: { attributes: [] } },
-        ],
+        include: baseAssemblyIncludes
     });
 
     if (!assembly) return [];
@@ -392,8 +387,6 @@ export const GetAssemblyLineDataReport = async (
 
 
 
-
-
 export const getAssemblyLineTodayReport = async (
     admin,
     user_id,
@@ -484,8 +477,10 @@ export const getAssemblyLineTodayReport = async (
 
 
 export const getAllITemsToCheckTimeBases = async (assembly_id) => {
+    const assembly = await AssemblyModal.findByPk(assembly_id,{include:baseAssemblyIncludes});
 
-}
+    return assembly;
+};
 
 
 
