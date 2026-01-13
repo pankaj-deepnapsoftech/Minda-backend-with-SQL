@@ -58,6 +58,7 @@ export const deleteAssemblyData = AsyncHandler(async (req, res) => {
 
 export const updateAssemblyData = AsyncHandler(async (req, res) => {
     const { id } = req.params;
+    console.log("id",id);
     const data = req.body;
     const result = await updateAssemblyService(id, data);
     if (!result) {

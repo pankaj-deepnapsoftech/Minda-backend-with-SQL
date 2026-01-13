@@ -30,21 +30,25 @@ export const createAssemblyService = async (data) => {
 };
 
 export const updateAssemblyService = async (id, data) => {
-    const assembly = await AssemblyModal.findByPk(id);
-    if (!assembly) return null;
-    const { process_id: processIds, ...assemblyData } = data || {};
-    await assembly.update(assemblyData);
-    if (Array.isArray(processIds)) {
-        const ids = processIds.filter((v) => v !== null && v !== undefined && String(v).trim() !== "");
-        await assembly.setProcess_id(ids);
+    try {
+        const assembly = await AssemblyModal.findByPk(id);
+        if (!assembly) return null;
+        const { process_id: processIds, ...assemblyData } = data || {};
+        await assembly.update(assemblyData);
+        if (Array.isArray(processIds)) {
+            const ids = processIds.filter((v) => v !== null && v !== undefined && String(v).trim() !== "");
+            await assembly.setProcesses(ids);
+        }
+        return await AssemblyModal.findByPk(assembly._id, { include: baseAssemblyIncludes });
+    } catch (error) {
+        console.log(error)
     }
-    return await AssemblyModal.findByPk(assembly._id, { include: baseAssemblyIncludes });
 };
 
 export const deleteAssemblyService = async (id) => {
     const assembly = await AssemblyModal.findByPk(id);
     if (!assembly) return null;
-    await assembly.setProcess_id([]);
+    await assembly.setProcesses([]);
     await assembly.destroy();
     return assembly;
 };
@@ -67,7 +71,7 @@ export const getAllAssemblyService = async (IsAdmin, userId, skip, limit) => {
         })
         return {...item.toJSON(), part_details: parts };
     }));
-    
+
     return resultWithParts;
 
 };
