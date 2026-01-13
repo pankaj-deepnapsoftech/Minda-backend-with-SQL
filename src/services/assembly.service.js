@@ -223,7 +223,7 @@ export const getAssemblyLineFormByResponsibility = async (user, id) => {
         checklistByProcess.set(pid, list);
     };
 
-    console.log(checklistByProcess)
+
 
     assemblyJson.processes = (assemblyJson.processes     || []).map((p) => {
         const proc = { ...p };
