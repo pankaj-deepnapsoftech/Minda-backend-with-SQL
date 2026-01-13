@@ -16,221 +16,202 @@ export const allCardsData = async (
     endDate
 ) => {
 
-  try {
-      const hasDateFilter = Boolean(startDate && endDate);
-  
-      // =========================
-      // 🔹 DATE HELPERS
-      // =========================
-      const normalizeStart = (date) => {
-          const d = new Date(date);
-          d.setHours(0, 0, 0, 0);
-          return d;
-      };
-  
-      const normalizeEnd = (date) => {
-          const d = new Date(date);
-          d.setHours(23, 59, 59, 999);
-          return d;
-      };
-  
-      // =========================
-      // 🔹 BASE FILTERS
-      // =========================
-      const assemblyWhere = {
-          ...(company && { company_id: company }),
-          ...(plant && { plant_id: plant }),
-      };
-  
-      const userWhere = {
-          is_admin: false,
-          ...(company && { employee_company: company }),
-          ...(plant && { employee_plant: plant }),
-      };
-  
-      // =========================
-      // 🔹 DATE FILTER (ONLY IF PROVIDED)
-      // =========================
-      const currentDateFilter = hasDateFilter
-          ? {
-              createdAt: {
-                  [Op.gte]: normalizeStart(startDate),
-                  [Op.lte]: normalizeEnd(endDate),
-              },
-          }
-          : {};
-  
-      // =========================
-      // 🔹 CURRENT TOTALS
-      // =========================
-      const [
-          assembly_current,
-          employee_current,
-          process_current,
-          parts_current,
-      ] = await Promise.all([
-  
-          AssemblyModal.count({
-              where: {
-                  ...assemblyWhere,
-                  ...currentDateFilter,
-              },
-          }),
-  
-          UserModel.count({
-              where: {
-                  ...userWhere,
-                  ...currentDateFilter,
-              },
-          }),
-  
-          ProcessModel.count({
-              distinct: true,
-              col: "_id",
-              include: [{
-                  model: AssemblyModal,
-                  as: "assemblies",
-                  required: true,
-                  where: {
-                      ...assemblyWhere,
-                      ...currentDateFilter,
-                  },
-              }],
-          }),
-  
-          PartModal.count({
-              distinct: true,
-              col: "_id",
-              include: [{
-                  model: AssemblyModal,
-                  as: "assemblies",
-                  required: true,
-                  where: {
-                      ...assemblyWhere,
-                      ...currentDateFilter,
-                  },
-              }],
-          }),
-      ]);
-  
-      // =========================
-      // 🔹 NO DATE → RETURN FULL DATA ONLY
-      // =========================
-      if (!hasDateFilter) {
-          return {
-              totals: {
-                  assembly: assembly_current,
-                  employee: employee_current,
-                  process: process_current,
-                  parts: parts_current,
-              },
-              month_difference: {
-                  assembly: 0,
-                  employee: 0,
-                  process: 0,
-                  parts: 0,
-              },
-              period_difference: {
-                  assembly: 0,
-                  employee: 0,
-                  process: 0,
-                  parts: 0,
-              },
-          };
-      }
-  
-      // =========================
-      // 🔹 PREVIOUS PERIOD (ONLY IF DATE EXISTS)
-      // =========================
-      const currentStart = normalizeStart(startDate);
-      const currentEnd = normalizeEnd(endDate);
-  
-      const lastStart = new Date(currentStart);
-      lastStart.setMonth(lastStart.getMonth() - 1);
-  
-      const lastEnd = new Date(currentEnd);
-      lastEnd.setMonth(lastEnd.getMonth() - 1);
-  
-      const lastDateFilter = {
-          createdAt: {
-              [Op.gte]: lastStart,
-              [Op.lte]: lastEnd,
-          },
-      };
-  
-      const [
-          assembly_last,
-          employee_last,
-          process_last,
-          parts_last,
-      ] = await Promise.all([
-  
-          AssemblyModal.count({
-              where: {
-                  ...assemblyWhere,
-                  ...lastDateFilter,
-              },
-          }),
-  
-          UserModel.count({
-              where: {
-                  ...userWhere,
-                  ...lastDateFilter,
-              },
-          }),
-  
-          ProcessModel.count({
-              distinct: true,
-              col: "_id",
-              include: [{
-                  model: AssemblyModal,
-                  as: "assemblies",
-                  required: true,
-                  where: {
-                      ...assemblyWhere,
-                      ...lastDateFilter,
-                  },
-              }],
-          }),
-  
-          PartModal.count({
-              distinct: true,
-              col: "_id",
-              include: [{
-                  model: AssemblyModal,
-                  as: "assemblies",
-                  required: true,
-                  where: {
-                      ...assemblyWhere,
-                      ...lastDateFilter,
-                  },
-              }],
-          }),
-      ]);
-  
-      // =========================
-      // 🔹 DIFFERENCE
-      // =========================
-      const diff = {
-          assembly: assembly_current - assembly_last,
-          employee: employee_current - employee_last,
-          process: process_current - process_last,
-          parts: parts_current - parts_last,
-      };
-  
-      return {
-          totals: {
-              assembly: assembly_current,
-              employee: employee_current,
-              process: process_current,
-              parts: parts_current,
-          },
-          month_difference: diff,
-          period_difference: diff,
-      };
-  } catch (error) {
+   try {
+     const hasDateFilter = Boolean(startDate && endDate);
+ 
+     // =========================
+     // 🔹 DATE HELPERS
+     // =========================
+     const normalizeStart = (date) => {
+         const d = new Date(date);
+         d.setHours(0, 0, 0, 0);
+         return d;
+     };
+ 
+     const normalizeEnd = (date) => {
+         const d = new Date(date);
+         d.setHours(23, 59, 59, 999);
+         return d;
+     };
+ 
+     // =========================
+     // 🔹 BASE FILTERS
+     // =========================
+     const assemblyWhere = {
+         ...(company && { company_id: company }),
+         ...(plant && { plant_id: plant }),
+     };
+ 
+     const userWhere = {
+         is_admin: false,
+         ...(company && { employee_company: company }),
+         ...(plant && { employee_plant: plant }),
+     };
+ 
+     // =========================
+     // 🔹 DATE FILTER (ONLY IF PROVIDED)
+     // =========================
+     const currentDateFilter = hasDateFilter
+         ? {
+             createdAt: {
+                 [Op.gte]: normalizeStart(startDate),
+                 [Op.lte]: normalizeEnd(endDate),
+             },
+         }
+         : {};
+ 
+     // =========================
+     // 🔹 CURRENT TOTALS
+     // =========================
+     const [
+         assembly_current,
+         employee_current,
+         process_current,
+         parts_current,
+     ] = await Promise.all([
+ 
+         AssemblyModal.count({
+             where: {
+                 ...assemblyWhere,
+                 ...currentDateFilter,
+             },
+         }),
+ 
+         UserModel.count({
+             where: {
+                 ...userWhere,
+                 ...currentDateFilter,
+             },
+         }),
+ 
+         ProcessModel.count({
+             distinct: true,
+             col: "_id",
+             include: [{
+                 model: AssemblyModal,
+                 as: "assemblies",
+                 required: true,
+                 where: {
+                     ...assemblyWhere,
+                     ...currentDateFilter,
+                 },
+             }],
+         }),
+ 
+         PartModal.count({
+             where: currentDateFilter,
+         })
+     ]);
+ 
+     // =========================
+     // 🔹 NO DATE → RETURN FULL DATA ONLY
+     // =========================
+     if (!hasDateFilter) {
+         return {
+             totals: {
+                 assembly: assembly_current,
+                 employee: employee_current,
+                 process: process_current,
+                 parts: parts_current,
+             },
+             month_difference: {
+                 assembly: 0,
+                 employee: 0,
+                 process: 0,
+                 parts: 0,
+             },
+             period_difference: {
+                 assembly: 0,
+                 employee: 0,
+                 process: 0,
+                 parts: 0,
+             },
+         };
+     }
+ 
+     // =========================
+     // 🔹 PREVIOUS PERIOD (ONLY IF DATE EXISTS)
+     // =========================
+     const currentStart = normalizeStart(startDate);
+     const currentEnd = normalizeEnd(endDate);
+ 
+     const lastStart = new Date(currentStart);
+     lastStart.setMonth(lastStart.getMonth() - 1);
+ 
+     const lastEnd = new Date(currentEnd);
+     lastEnd.setMonth(lastEnd.getMonth() - 1);
+ 
+     const lastDateFilter = {
+         createdAt: {
+             [Op.gte]: lastStart,
+             [Op.lte]: lastEnd,
+         },
+     };
+ 
+     const [
+         assembly_last,
+         employee_last,
+         process_last,
+         parts_last,
+     ] = await Promise.all([
+ 
+         AssemblyModal.count({
+             where: {
+                 ...assemblyWhere,
+                 ...lastDateFilter,
+             },
+         }),
+ 
+         UserModel.count({
+             where: {
+                 ...userWhere,
+                 ...lastDateFilter,
+             },
+         }),
+ 
+         ProcessModel.count({
+             distinct: true,
+             col: "_id",
+             include: [{
+                 model: AssemblyModal,
+                 as: "assemblies",
+                 required: true,
+                 where: {
+                     ...assemblyWhere,
+                     ...lastDateFilter,
+                 },
+             }],
+         }),
+ 
+       PartModal.count({
+             where: lastDateFilter
+         })
+     ]);
+ 
+     // =========================
+     // 🔹 DIFFERENCE
+     // =========================
+     const diff = {
+         assembly: assembly_current - assembly_last,
+         employee: employee_current - employee_last,
+         process: process_current - process_last,
+         parts: parts_current - parts_last,
+     };
+ 
+     return {
+         totals: {
+             assembly: assembly_current,
+             employee: employee_current,
+             process: process_current,
+             parts: parts_current,
+         },
+         month_difference: diff,
+         period_difference: diff,
+     };
+   } catch (error) {
     console.log(error)
-  }
+   }
+
 };
 
 
@@ -361,7 +342,8 @@ export const GetDailyAssemblyStatus = async (admin, user, date = new Date()) => 
             { model: PartModal, as: "part", attributes: ["_id", "part_name", "part_number"] },
             { model: UserModel, as: "responsibleUser", attributes: ["_id", "full_name", "email", "user_id"] },
             {
-                model: ProcessModel, as: "processes", attributes: ["_id"], through: { attributes: [] } },
+                model: ProcessModel, as: "processes", attributes: ["_id"], through: { attributes: [] }
+            },
         ],
         order: [["assembly_name", "ASC"]],
     });
