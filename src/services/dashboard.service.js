@@ -16,7 +16,6 @@ export const allCardsData = async (
     endDate
 ) => {
 
-   try {
      const hasDateFilter = Boolean(startDate && endDate);
  
      // =========================
@@ -208,10 +207,7 @@ export const allCardsData = async (
          month_difference: diff,
          period_difference: diff,
      };
-   } catch (error) {
-    console.log(error)
-   }
-
+   
 };
 
 
@@ -295,7 +291,7 @@ export const GetMonthlyTrend = async (admin, user) => {
     // 6️⃣ Aggregate month-wise
     const monthAgg = new Map();
 
-    for (const [_, entry] of monthlyMap.entries()) {
+    for (const [, entry] of monthlyMap.entries()) {
         const monthKey = `${entry.year}-${entry.month}`;
         if (!monthAgg.has(monthKey)) {
             monthAgg.set(monthKey, {
