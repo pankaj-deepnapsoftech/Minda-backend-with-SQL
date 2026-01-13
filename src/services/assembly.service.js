@@ -205,6 +205,7 @@ export const getAssemblyLineFormByResponsibility = async (user, id) => {
     if (!assembly) return [];
 
     const assemblyJson = assembly.toJSON();
+    
     const processIds = Array.isArray(assemblyJson.processes) ? assemblyJson.processes.map((p) => p._id) : [];
     const checklists = processIds.length
         ? await CheckListModal.findAll({
@@ -220,9 +221,11 @@ export const getAssemblyLineFormByResponsibility = async (user, id) => {
         const list = checklistByProcess.get(pid) || [];
         list.push(json);
         checklistByProcess.set(pid, list);
-    }
+    };
 
-    assemblyJson.process_id = (assemblyJson.process_id || []).map((p) => {
+    console.log(checklistByProcess)
+
+    assemblyJson.processes = (assemblyJson.processes     || []).map((p) => {
         const proc = { ...p };
         proc.checklist_item = checklistByProcess.get(proc._id) || [];
         return proc;
