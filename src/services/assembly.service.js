@@ -134,7 +134,6 @@ export const getAllAssemblyDataService = async () => {
 
 export const getAssemblyLineByResponsibility = async (responsibility) => {
 
-  try {
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
   
@@ -191,9 +190,7 @@ export const getAssemblyLineByResponsibility = async (responsibility) => {
       }
   
       return result;
-  } catch (error) {
-    console.log(error)
-  }
+  
 };
 
 export const getAssemblyLineFormByResponsibility = async (user, id) => {
