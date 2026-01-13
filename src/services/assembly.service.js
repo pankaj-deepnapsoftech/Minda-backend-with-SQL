@@ -220,9 +220,7 @@ export const getAssemblyLineFormByResponsibility = async (user, id) => {
         checklistByProcess.set(pid, list);
     };
 
-    console.log(checklistByProcess)
-
-    assemblyJson.processes = (assemblyJson.processes     || []).map((p) => {
+    assemblyJson.processes = (assemblyJson.processes || []).map((p) => {
         const proc = { ...p };
         proc.checklist_item = checklistByProcess.get(proc._id) || [];
         return proc;
@@ -411,12 +409,7 @@ export const getAssemblyLineTodayReport = async (
         order: [["_id", "ASC"]],
         offset: skip,
         limit,
-        include: [
-            { model: CompanyModel, as: "company", attributes: ["_id", "company_name", "company_address", "ASCription"] },
-            { model: PlantModel, as: "plant", attributes: ["_id", "plant_name", "plant_address", "ASCription"] },
-            { model: UserModel, as: "responsibleUser", attributes: ["_id", "full_name", "email", "user_id", "desigination"] },
-            { model: ProcessModel, as: "process_id", attributes: ["_id", "process_name", "process_no"], through: { attributes: [] } },
-        ],
+        include: baseAssemblyIncludes
     });
 
     const assemblyJsonList = assemblies.map((a) => a.toJSON());
@@ -424,7 +417,7 @@ export const getAssemblyLineTodayReport = async (
 
     const processIds = [
         ...new Set(
-            assemblyJsonList.flatMap((a) => (Array.isArray(a.process_id) ? a.process_id.map((p) => p._id) : []))
+            assemblyJsonList.flatMap((a) => (Array.isArray(a.processes) ? a.processes.map((p) => p._id) : []))
         ),
     ];
 
