@@ -7,7 +7,7 @@ import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 
 export const createAssembly = AsyncHandler(async (req, res) => {
     const data = req.body;
-    const exist = await findAssemblyByName(data.assembly_name, data.assembly_number);
+    const exist = await findAssemblyByName(data.assembly_name);
     if (exist) {
         throw new BadRequestError("Assembly already created please check", "createAssembly() method error")
     }
