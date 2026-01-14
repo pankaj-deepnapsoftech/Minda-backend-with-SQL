@@ -118,9 +118,9 @@ export const searchAllAssemblyService = async (
     return result;
 };
 
-export const findAssemblyByName = async (name, number) => {
+export const findAssemblyByName = async (name) => {
     const result = await AssemblyModal.findOne({
-        where: { assembly_name: name, assembly_number: number },
+        where: { assembly_name: name },
     });
     return result;
 };
