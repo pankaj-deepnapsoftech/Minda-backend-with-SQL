@@ -8,7 +8,7 @@ export const createPartsService = async (data) => {
     return result;
 };
 
-export const UpdatePartService = async (id,data) => {
+export const UpdatePartService = async (id, data) => {
     const part = await PartModal.findByPk(id);
     if (!part) return null;
     const result = await part.update(data);
@@ -24,44 +24,41 @@ export const DeletePartService = async (id) => {
 };
 
 export const GetAllPartsService = async () => {
-  const result = await PartModal.findAll({
-      attributes: ["_id", "part_number", "part_name"],
-      order: [
-          ["createdAt", "ASC"]
+    const result = await PartModal.findAll({
+        attributes: ["_id", "part_number", "part_name"],
+        order: [
+            ["createdAt", "ASC"]
         ],
-  });
-  return result;
+    });
+    return result;
 };
 
-
-export const FindPartServiceByName =  async (data) => {
+export const FindPartServiceByName = async (data) => {
     const result = await PartModal.findOne({ where: data });
     return result;
 }
 
-
-
 export const getPartsServiceData = async (search = "", skip = 0, limit = 10) => {
-  const q = search.trim();
+    const q = search.trim();
 
-  const parts = await PartModal.findAll({
-    where: {
-      [Op.or]: [
-        { part_name: { [Op.like]: `%${q}%` } },
-        { part_number: { [Op.like]: `%${q}%` } },
-      ],
-    },
-    attributes: [
-      "_id",
-      "part_name",
-      "part_number",
-      "description",
-      "material_code",
-      "modal_name",
+    const parts = await PartModal.findAll({
+        where: {
+            [Op.or]: [
+                { part_name: { [Op.like]: `%${q}%` } },
+                { part_number: { [Op.like]: `%${q}%` } },
+            ],
+        },
+        attributes: [
+            "_id",
+            "part_name",
+            "part_number",
+            "description",
+            "material_code",
+            "modal_name",
 
-      // 🔧 count
-      [
-        Sequelize.literal(`(
+            // 🔧 count
+            [
+                Sequelize.literal(`(
           SELECT COUNT(*)
           FROM assemblies A
           WHERE EXISTS (
@@ -70,12 +67,12 @@ export const getPartsServiceData = async (search = "", skip = 0, limit = 10) => 
             WHERE value = Part._id
           )
         )`),
-        "integration_count",
-      ],
+                "integration_count",
+            ],
 
-      // 🧰 ARRAY of assemblies (name + number)
-      [
-        Sequelize.literal(`JSON_QUERY((
+            // 🧰 ARRAY of assemblies (name + number)
+            [
+                Sequelize.literal(`JSON_QUERY((
           SELECT 
             A.assembly_name,
             A.assembly_number
@@ -87,27 +84,27 @@ export const getPartsServiceData = async (search = "", skip = 0, limit = 10) => 
           )
           FOR JSON PATH
         ))`),
-        "assemblies_used",
-      ],
-    ],
-    order: [
-      [Sequelize.col("createdAt"), "ASC"],
-      [Sequelize.col("_id"), "ASC"],
-    ],
-    offset: skip,
-    limit,
-  });
+                "assemblies_used",
+            ],
+        ],
+        order: [
+            [Sequelize.col("createdAt"), "ASC"],
+            [Sequelize.col("_id"), "ASC"],
+        ],
+        offset: skip,
+        limit,
+    });
 
-  return parts.map(p => {
-  const row = p.get({ plain: true });
+    return parts.map(p => {
+        const row = p.get({ plain: true });
 
-  return {
-    ...row,
-    assemblies_used: row.assemblies_used
-      ? JSON.parse(row.assemblies_used)
-      : [],
-  };
-});
+        return {
+            ...row,
+            assemblies_used: row.assemblies_used
+                ? JSON.parse(row.assemblies_used)
+                : [],
+        };
+    });
 
 };
 
