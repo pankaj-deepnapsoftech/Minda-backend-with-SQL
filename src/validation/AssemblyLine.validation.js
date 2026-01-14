@@ -12,11 +12,6 @@ export const assemblyValidationSchema = yup.object().shape({
     .trim()
     .required("Assembly name is required"),
 
-  assembly_number: yup
-    .string()
-    .trim()
-    .required("Assembly number is required"),
-
   company_id: yup
     .mixed()
     .test("is-uuid", "Invalid company ID", (value) => isUUID(value))

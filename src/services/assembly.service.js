@@ -8,6 +8,7 @@ import { CompanyModel } from "../models/company.modal.js";
 import { PlantModel } from "../models/plant.modal.js";
 import { ProcessModel } from "../models/process.modal.js";
 import { UserModel } from "../models/user.modal.js";
+import { ItemCheckTimeModel } from "../models/itemCheckTime.model.js";
 
 const baseAssemblyIncludes = [
     { model: CompanyModel, as: "company", attributes: ["_id", "company_name", "company_address", "description"] },
@@ -198,10 +199,20 @@ export const getAssemblyLineFormByResponsibility = async (user, id) => {
         where: { _id: id, responsibility: user },
         include: baseAssemblyIncludes
     });
+   
 
     if (!assembly) return [];
 
     const assemblyJson = assembly.toJSON();
+
+    const partIds = JSON.parse(assemblyJson.part_id) 
+
+  
+    assemblyJson.part_details = await PartModal.findAll({
+        where: {
+            _id: { [Op.in]: partIds }
+        }
+    });
 
     const processIds = Array.isArray(assemblyJson.processes) ? assemblyJson.processes.map((p) => p._id) : [];
     const checklists = processIds.length
@@ -489,10 +500,54 @@ export const getAssemblyLineTodayReport = async (
 };
 
 
-export const getAllITemsToCheckTimeBases = async (assembly_id) => {
-    const assembly = await AssemblyModal.findByPk(assembly_id, { include: baseAssemblyIncludes });
+export const getAllITemsToCheckTimeBases = async (id,user) => {
+   const assembly = await AssemblyModal.findOne({
+        where: { _id: id, responsibility: user },
+        include: baseAssemblyIncludes
+    });
+   
 
-    return assembly;
+    if (!assembly) return [];
+
+    const assemblyJson = assembly.toJSON();
+
+    const partIds = JSON.parse(assemblyJson.part_id) 
+
+  
+    assemblyJson.part_details = await PartModal.findAll({
+        where: {
+            _id: { [Op.in]: partIds }
+        }
+    });
+
+    const processIds = Array.isArray(assemblyJson.processes) ? assemblyJson.processes.map((p) => p._id) : [];
+    const checklists = processIds.length
+        ? await CheckListModal.findAll({
+            where: { process: { [Op.in]: processIds },total_checks:{[Op.gte]:1} },
+            order: [["_id", "ASC"]],
+        })
+        : [];
+
+    const checklistByProcess = new Map();
+    for (const cl of checklists) {
+        const json = cl.toJSON();
+        const pid = json.process;
+        json.check_timing = await ItemCheckTimeModel.findAll({
+            where: {item_id:cl._id},
+            attributes:["_id","check_time"]
+        })
+        const list = checklistByProcess.get(pid) || [];
+        list.push(json);
+        checklistByProcess.set(pid, list);
+    };
+
+    assemblyJson.processes = (assemblyJson.processes || []).map((p) => {
+        const proc = { ...p };
+        proc.checklist_item = checklistByProcess.get(proc._id) || [];
+        return proc;
+    });
+
+    return [assemblyJson];
 };
 
 

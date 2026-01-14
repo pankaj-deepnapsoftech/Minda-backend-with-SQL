@@ -120,7 +120,8 @@ export const assemblyLineDataTodayReport = AsyncHandler(async (req,res) => {
 
 export const getAllITemsToCheckTimeBase = AsyncHandler(async (req,res) => {
     const {assembly_id} = req.params;
-    const result = await getAllITemsToCheckTimeBases(assembly_id,);
+     const user = req.currentUser;
+    const result = await getAllITemsToCheckTimeBases(assembly_id,user._id);
     res.status(StatusCodes.OK).json({
         data:result
     })
