@@ -1,6 +1,6 @@
 import { PartModal } from "../models/Part.modal.js"
 // import { AssemblyModal } from "../models/AssemblyLine.modal.js";
-import { Op } from "sequelize";
+import { Op, Sequelize } from "sequelize";
 
 
 export const createPartsService = async (data) => {
@@ -39,22 +39,78 @@ export const FindPartServiceByName =  async (data) => {
     return result;
 }
 
-export const getPartsServiceData = async (search="",skip,limit) => {
-    const q = search || "";
-    const parts = await PartModal.findAll({
-        where: {
-            [Op.or]: [
-                { part_name: { [Op.like]: `%${q}%` } },
-                { part_number: { [Op.like]: `%${q}%` } },
-            ],
-        },
-        order: [["createdAt", "ASC"]],
-        offset: skip,
-        limit,
-    });
 
-   return parts;
-}
+
+export const getPartsServiceData = async (search = "", skip = 0, limit = 10) => {
+  const q = search.trim();
+
+  const parts = await PartModal.findAll({
+    where: {
+      [Op.or]: [
+        { part_name: { [Op.like]: `%${q}%` } },
+        { part_number: { [Op.like]: `%${q}%` } },
+      ],
+    },
+    attributes: [
+      "_id",
+      "part_name",
+      "part_number",
+      "description",
+      "material_code",
+      "modal_name",
+
+      // 🔧 count
+      [
+        Sequelize.literal(`(
+          SELECT COUNT(*)
+          FROM assemblies A
+          WHERE EXISTS (
+            SELECT 1
+            FROM OPENJSON(A.part_id)
+            WHERE value = Part._id
+          )
+        )`),
+        "integration_count",
+      ],
+
+      // 🧰 ARRAY of assemblies (name + number)
+      [
+        Sequelize.literal(`JSON_QUERY((
+          SELECT 
+            A.assembly_name,
+            A.assembly_number
+          FROM assemblies A
+          WHERE EXISTS (
+            SELECT 1
+            FROM OPENJSON(A.part_id)
+            WHERE value = Part._id
+          )
+          FOR JSON PATH
+        ))`),
+        "assemblies_used",
+      ],
+    ],
+    order: [
+      [Sequelize.col("createdAt"), "ASC"],
+      [Sequelize.col("_id"), "ASC"],
+    ],
+    offset: skip,
+    limit,
+  });
+
+  return parts.map(p => {
+  const row = p.get({ plain: true });
+
+  return {
+    ...row,
+    assemblies_used: row.assemblies_used
+      ? JSON.parse(row.assemblies_used)
+      : [],
+  };
+});
+
+};
+
 
 
 
