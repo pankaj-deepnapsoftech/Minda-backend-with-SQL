@@ -10,7 +10,7 @@ export const createRoleService = async (data) => {
 
 export const getRolesListService = async (skip,limit) => {
     const result = await RoleModel.findAll({
-        order: [["_id", "ASC"]],
+        order: [["createdAt", "ASC"]],
         offset: skip,
         limit,
     });
@@ -41,7 +41,7 @@ export const searchRoleByName = async (name,skip,limit) => {
     const q = name || "";
     const result = await RoleModel.findAll({
         where: { name: { [Op.like]: `%${q}%` } },
-        order: [["_id", "ASC"]],
+        order: [["createdAt", "ASC"]],
         offset: skip,
         limit,
     });
@@ -51,7 +51,7 @@ export const searchRoleByName = async (name,skip,limit) => {
 export const getAllRoleService = async () => {
     const result = await RoleModel.findAll({
         attributes: ["_id", "name"],
-        order: [["_id", "ASC"]],
+        order: [["createdAt", "ASC"]],
     });
     return result;
 }

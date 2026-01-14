@@ -14,7 +14,7 @@ export const GetAllDepartmentsService = async (search="",skip, limit) => {
         where : {
             name: { [Op.like]: `%${search}%` }
         },
-        order: [["_id", "ASC"]],
+        order: [["createdAt", "ASC"]],
         offset: skip,
         limit,
     });
@@ -35,7 +35,7 @@ export const DeleteDepartmentService = async (id) => {
 export const GetAllDepartmentWithoutPagination = async () => {
     const result = await DepartmentModel.findAll({
         attributes: ["_id", "name"],
-        order: [["_id", "ASC"]],
+        order: [["createdAt", "ASC"]],
     });
     return result;
 };

@@ -26,7 +26,7 @@ export const deleteProcessService = async (id) => {
 
 export const getProcessServiceList = async (skip, limit) => {
     const result = await ProcessModel.findAll({
-        order: [["_id", "ASC"]],
+        order: [["createdAt", "ASC"]],
         include:[
             {model:CompanyModel,as:"company",attributes:["_id","company_name","company_address"]},
             {model:PlantModel,as:"plant",attributes:["_id","plant_name","plant_address"]},
@@ -46,7 +46,7 @@ export const searchProcessServiceList = async (search, skip, limit) => {
                 { process_no: { [Op.like]: `%${q}%` } },
             ],
         },
-        order: [["_id", "ASC"]],
+        order: [["createdAt", "ASC"]],
         include:[
             {model:CompanyModel,as:"company",attributes:["_id","company_name","company_address"]},
             {model:PlantModel,as:"plant",attributes:["_id","plant_name","plant_address"]},
@@ -72,7 +72,7 @@ export const findProcessbyProcesNameOrNumber = async (name, number) => {
 export const allProcessService = async () => {
     const result = await ProcessModel.findAll({
         attributes: ["_id", "process_name", "process_no"],
-        order: [["_id", "ASC"]],
+        order: [["createdAt", "ASC"]],
     });
     return result;
 

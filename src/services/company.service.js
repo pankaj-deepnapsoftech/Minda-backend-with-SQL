@@ -10,7 +10,7 @@ export const companyCreateService = async (data) => {
 
 export const companyListService = async (skip, limit) => {
         const result = await CompanyModel.findAll({
-            order: [["_id", "ASC"]],
+            order: [["createdAt", "ASC"]],
             offset: skip,
             limit,
         });
@@ -55,7 +55,7 @@ export const GetAllSearchItems = async (search, skip, limit) => {
         },
         offset: skip,
         limit,
-        order: [["_id", "ASC"]],
+        order: [["createdAt", "ASC"]],
     });
     return result;
 };
@@ -63,7 +63,7 @@ export const GetAllSearchItems = async (search, skip, limit) => {
 export const getAllCompanyesData = async () => {
     const result = await CompanyModel.findAll({
         attributes: ["_id", "company_name"],
-        order: [["_id", "ASC"]],
+        order: [["createdAt", "ASC"]],
     });
     return result
 }

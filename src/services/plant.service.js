@@ -13,7 +13,7 @@ export const plantlistService = async (skip,limit) => {
         include: [{ model: CompanyModel, as: "company" }],
         offset: skip,
         limit,
-        order: [["_id", "ASC"]],
+        order: [["createdAt", "ASC"]],
     });
     return result;
 };
@@ -52,7 +52,7 @@ export const plantSearchService = async (query="",company,skip,limit) => {
         include: [{ model: CompanyModel, as: "company" }],
         offset: skip,
         limit,
-        order: [["_id", "ASC"]],
+        order: [["createdAt", "ASC"]],
     });
     return result;
 };
@@ -61,7 +61,7 @@ export const AllPlantDataService = async (companyId) => {
     const result = await PlantModel.findAll({
         where: { company_id: companyId },
         attributes: ["_id", "plant_name"],
-        order: [["_id", "ASC"]],
+        order: [["createdAt", "ASC"]],
     });
     return result;
 };

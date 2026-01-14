@@ -27,7 +27,7 @@ export const findTodayChecklistHistory = async (data) => {
       })),
     },
     attributes: ["checkList", "process_id", "assembly"],
-    order: [["_id", "ASC"]],
+    order: [["createdAt", "ASC"]],
   });
 };
 
@@ -58,7 +58,7 @@ export const GetAllErrorsHistory = async (startDate,endDate,admin, user) => {
       { model: AssemblyModal, as: "assemblyLine" },
       { model: ProcessModel, as: "processInfo" },
     ],
-    order: [["_id", "ASC"]],
+    order: [["createdAt", "ASC"]],
   });
   return result;
 };

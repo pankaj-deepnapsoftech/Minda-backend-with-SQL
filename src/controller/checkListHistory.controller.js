@@ -68,6 +68,46 @@ export const createCheckListHistory = AsyncHandler(async (req, res) => {
 
 });
 
+export const createCheckListHistoryTiming = AsyncHandler(async (req, res) => {
+  const { data } = req.body;
+  const user_id = req.currentUser._id
+
+  // 1️⃣ Validate request
+  if (!Array.isArray(data) || data.length === 0) {
+    throw new NotFoundError("Data array is required","createCheckListHistory() method error");
+  }
+
+
+  // 6️⃣ Insert only new records
+  const result = await createChecklistHistory(data.map((item)=>({...item,user_id})));
+
+
+
+  // 7️⃣ Response
+  res.status(StatusCodes.CREATED).json({
+    message: "Checklist history saved successfully",
+    insertedCount: result.length,
+    skippedCount: data.length - result.length,
+    data: result,
+  });
+
+
+  const lastData = result.filter((item) => item?.is_error);
+
+
+  // console.log(lastData);
+
+  const admin = await GetAdmin();
+
+
+ await Promise.all(lastData.map(async(item)=>{
+    const notification = await CreateNotification({title:"assembly have an error ",description:item.description,senderId:req.currentUser?._id,status:"send",reciverId:admin._id,assembly:item.assembly,process_id:item.process_id,checkList:item.checkList});
+    const notificationData = await singleNotification(notification._id);
+    sendNotification(notificationData);
+
+  }));
+
+});
 export const updateCheckListHistory = AsyncHandler(async (req,res) => {
     const {id} = req.params;
     const data = req.body;

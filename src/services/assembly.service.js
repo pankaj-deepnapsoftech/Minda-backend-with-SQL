@@ -53,7 +53,7 @@ export const deleteAssemblyService = async (id) => {
 export const getAllAssemblyService = async (IsAdmin, userId, skip, limit) => {
     const result = await AssemblyModal.findAll({
         where: IsAdmin ? {} : { responsibility: userId },
-        order: [["_id", "ASC"]],
+        order: [["createdAt", "ASC"]],
         offset: skip,
         limit,
         include: baseAssemblyIncludes,
@@ -109,7 +109,7 @@ export const searchAllAssemblyService = async (
 
     const result = await AssemblyModal.findAll({
         where,
-        order: [["_id", "ASC"]],
+        order: [["createdAt", "ASC"]],
         offset: Number(skip),
         limit: Number(limit),
         include: baseAssemblyIncludes,
@@ -128,7 +128,7 @@ export const findAssemblyByName = async (name, number) => {
 export const getAllAssemblyDataService = async () => {
     const result = await AssemblyModal.findAll({
         attributes: ["_id", "assembly_number", "assembly_name"],
-        order: [["_id", "ASC"]],
+        order: [["createdAt", "ASC"]],
     });
     return result;
 };
@@ -152,7 +152,7 @@ export const getAssemblyLineByResponsibility = async (responsibility) => {
                 through: { attributes: [] },
             },
         ],
-        order: [["_id", "ASC"]],
+        order: [["createdAt", "ASC"]],
     });
 
     const result = [];
@@ -218,7 +218,7 @@ export const getAssemblyLineFormByResponsibility = async (user, id) => {
     const checklists = processIds.length
         ? await CheckListModal.findAll({
             where: { process: { [Op.in]: processIds } },
-            order: [["_id", "ASC"]],
+            order: [["createdAt", "ASC"]],
         })
         : [];
 
@@ -239,8 +239,6 @@ export const getAssemblyLineFormByResponsibility = async (user, id) => {
 
     return [assemblyJson];
 };
-
-
 
 export const GetAssemblyLineDataReport = async (
     admin,
@@ -406,8 +404,6 @@ export const GetAssemblyLineDataReport = async (
     };
 };
 
-
-
 export const getAssemblyLineTodayReport = async (
     admin,
     user_id,
@@ -424,7 +420,7 @@ export const getAssemblyLineTodayReport = async (
 
     const assemblies = await AssemblyModal.findAll({
         where: admin ? {} : { responsibility: user_id },
-        order: [["_id", "ASC"]],
+        order: [["createdAt", "ASC"]],
         offset: skip,
         limit,
         include: baseAssemblyIncludes
@@ -443,7 +439,7 @@ export const getAssemblyLineTodayReport = async (
     const checklists = processIds.length
         ? await CheckListModal.findAll({
             where: { process: { [Op.in]: processIds } },
-            order: [["_id", "ASC"]],
+            order: [["createdAt", "ASC"]],
         })
         : [];
 
@@ -499,7 +495,6 @@ export const getAssemblyLineTodayReport = async (
 
 };
 
-
 export const getAllITemsToCheckTimeBases = async (id,user) => {
    const assembly = await AssemblyModal.findOne({
         where: { _id: id, responsibility: user },
@@ -524,7 +519,7 @@ export const getAllITemsToCheckTimeBases = async (id,user) => {
     const checklists = processIds.length
         ? await CheckListModal.findAll({
             where: { process: { [Op.in]: processIds },total_checks:{[Op.gte]:1} },
-            order: [["_id", "ASC"]],
+            order: [["createdAt", "ASC"]],
         })
         : [];
 
