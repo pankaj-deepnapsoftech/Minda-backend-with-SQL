@@ -9,6 +9,18 @@ export const createChecklistItemTimeService = async (data) => {
 }
 
 
+export const DeleteManyCheckListsItemService  = async (id) => {
+   const result = await ItemCheckTimeModel.destroy({
+    where: {
+      item_id:id
+    },
+  });
+
+  return result; 
+}
+
+
+
 
 
 

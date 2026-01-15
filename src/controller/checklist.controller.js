@@ -8,7 +8,7 @@ import { createChecklistService, DeleteCheckListService, FindCheckListById, getC
 import { AsyncHandler } from "../utils/asyncHandler.js";
 import { NotFoundError } from "../utils/errorHandler.js";
 import { config } from "../config.js";
-import { createChecklistItemTimeService } from "../services/checkItemTime.service.js";
+import { createChecklistItemTimeService, DeleteManyCheckListsItemService} from "../services/checkItemTime.service.js";
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -16,22 +16,22 @@ const __dirname = path.dirname(__filename);
 
 
 export const CreateChecklistData = AsyncHandler(async (req, res) => {
-        const data = req.body;
-        const file = req.file;
-        const file_path = file ? `${config.NODE_ENV !== "development" ? config.SERVER_URL : config.LOCAL_SERVER_URL}/files/${file.filename}` : null;
-        const parsTime = data.time;
-    
+    const data = req.body;
+    const file = req.file;
+    const file_path = file ? `${config.NODE_ENV !== "development" ? config.SERVER_URL : config.LOCAL_SERVER_URL}/files/${file.filename}` : null;
+    const parsTime = data.time;
+
     const result = await createChecklistService(file_path ? { ...data, file_path, total_checks: parsTime?.length || 0 } : { ...data, total_checks: parsTime?.length || 0 });
-        if(data?.time){
-            const mapData = parsTime.map((timeItem)=>({check_time:timeItem,item_id:result._id}));
-            await createChecklistItemTimeService(mapData);
-        };
-    
-        res.status(StatusCodes.CREATED).json({
-            message: "Item Created Successfully",
-            data: result
-        });
- 
+    if (data?.time) {
+        const mapData = parsTime.map((timeItem) => ({ check_time: timeItem, item_id: result._id }));
+        await createChecklistItemTimeService(mapData);
+    };
+
+    res.status(StatusCodes.CREATED).json({
+        message: "Item Created Successfully",
+        data: result
+    });
+
 });
 
 export const UpdateCheckListData = AsyncHandler(async (req, res) => {
@@ -60,6 +60,15 @@ export const UpdateCheckListData = AsyncHandler(async (req, res) => {
         message: "Check Item Updated Successfully",
         result
     })
+
+    if(data?.time){
+        await DeleteManyCheckListsItemService(result._id)
+    }
+
+    if (data?.time) {
+        const mapData = data?.time.map((timeItem) => ({ check_time: timeItem, item_id: result._id }));
+        await createChecklistItemTimeService(mapData);
+    };
 });
 
 export const DeleteCheckList = AsyncHandler(async (req, res) => {

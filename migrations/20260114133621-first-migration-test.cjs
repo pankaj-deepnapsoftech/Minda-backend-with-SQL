@@ -11,6 +11,7 @@ module.exports = {
      * 
      */
 
+
   },
 
   async down (queryInterface, Sequelize) {
@@ -20,6 +21,6 @@ module.exports = {
      * Example:
      * await queryInterface.dropTable('users');
      */
-    
+
   }
 };
