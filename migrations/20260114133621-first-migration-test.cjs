@@ -11,6 +11,8 @@ module.exports = {
      * 
      */
 
+    await queryInterface.addColumn("plants",'gst',{type:Sequelize.STRING})
+
 
   },
 
@@ -21,6 +23,8 @@ module.exports = {
      * Example:
      * await queryInterface.dropTable('users');
      */
+
+    // await queryInterface.removeColumn('users',"age");
 
   }
 };

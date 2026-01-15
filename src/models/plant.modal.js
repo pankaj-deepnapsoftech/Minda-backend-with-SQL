@@ -14,6 +14,7 @@ export const PlantModel = sequelize.define(
         company_id: { type: DataTypes.UUID, allowNull: false },
         description: { type: DataTypes.TEXT, allowNull: true },
         plant_code: { type: DataTypes.STRING(100), allowNull: true },
+        gst:{type:DataTypes.STRING(100),allowNull:true}
     },
     {
         tableName: "plants",
