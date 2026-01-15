@@ -1,15 +1,15 @@
 {
   "development": {
     "username": "sa",
-    "password": "admin@123",
-    "database": "test",
+    "password": "Deepakrai@123",
+    "database": "Minda",
     "host": "localhost",
     "dialect": "mssql"
   },
   "production": {
     "username": "sa",
-    "password": null,
-    "database": "database_production",
+    "password": "123@S0luS0ft$$itit",
+    "database": "JPMDO",
     "host": "localhost",
     "dialect": "mssql"
   }
