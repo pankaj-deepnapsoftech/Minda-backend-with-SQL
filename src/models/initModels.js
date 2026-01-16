@@ -12,6 +12,7 @@ import { UserModel } from "./user.modal.js";
 import { DepartmentModel } from "./department.modal.js";
 import { ItemCheckTimeModel } from "./itemCheckTime.model.js";
 import { GroupUsersModel } from "./groupUsers.model.js";
+import { ReleseGroupModel } from "./ReleseGroup.modal.js";
 
 let modelsInitialized = false;
 
@@ -95,8 +96,11 @@ export const initModels = () => {
     PlantModel.hasMany(ProcessModel, { foreignKey: "plant_id", as: "processes", constraints: false });
     ProcessModel.belongsTo(PlantModel, { foreignKey: "plant_id", as: "plant", constraints: false });
 
-    UserModel.hasMany(GroupUsersModel,{foreignKey:"user_id", as:"groupUsers"})
-    GroupUsersModel.belongsTo(UserModel,{foreignKey:"user_id",as:"user"})
+    UserModel.hasMany(GroupUsersModel,{foreignKey:"user_id", as:"groupUsers"});
+    GroupUsersModel.belongsTo(UserModel,{foreignKey:"user_id",as:"user"});
+
+    ReleseGroupModel.hasMany(GroupUsersModel,{foreignKey:"relese_group_id",as:"groupUsers"})
+    GroupUsersModel.belongsTo(ReleseGroupModel,{foreignKey:"relese_group_id",as:"releaseGroup"})
 
     // Checklist → ItemCheckTime (1 : N)
     CheckListModal.hasMany(ItemCheckTimeModel, {

@@ -1,4 +1,5 @@
-import { ReleseGroupModel } from "../models/ReleseGroup.modal"
+import { ReleseGroupModel } from "../models/ReleseGroup.modal.js"
+import { BadRequestError } from "../utils/errorHandler.js";
 
 
 
@@ -20,9 +21,21 @@ export const getRelesGroup = async (skip,limit) => {
 };
 
 export const updateRelesGroup = async (id,data) => {
-    // const result = await 
+    const result = await ReleseGroupModel.findByPk(id);
+    if(!result){
+        throw new BadRequestError("Data Not Found");
+    };
+    await result.update(data);
+    return result;
 };
 
+export const DeleteRelesGroup = async (id) => {
+    const result = await ReleseGroupModel.destroy({
+        where:{_id:id}
+    });
+
+    return result;
+};
 
 
 

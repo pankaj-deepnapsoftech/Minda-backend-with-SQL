@@ -14,7 +14,6 @@ module.exports = {
       _id:{type:Sequelize.UUID,defaultValue:Sequelize.literal("NEWID()"),primaryKey: true},
       group_name:{type:Sequelize.STRING,allowNull:false},
       group_department:{type:Sequelize.STRING,allowNull:false},
-      group_users:{type:Sequelize.JSON,allowNull:false,defaultValue:"[]"},
       createdAt: {
         type: Sequelize.DATE,
         allowNull: false,

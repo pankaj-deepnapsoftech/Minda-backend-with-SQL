@@ -35,6 +35,8 @@ module.exports = {
         defaultValue: "[]"
       },
 
+      relese_group_id:{type:Sequelize.UUID,allowNull:false, references:{model:"relesegroups",key:"_id"},  onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'},
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE,
