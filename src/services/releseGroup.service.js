@@ -23,7 +23,7 @@ export const getRelesGroup = async (skip,limit) => {
 export const updateRelesGroup = async (id,data) => {
     const result = await ReleseGroupModel.findByPk(id);
     if(!result){
-        throw new BadRequestError("Data Not Found");
+        throw new BadRequestError("Data Not Found","updateRelesGroup() method error");
     };
     await result.update(data);
     return result;
