@@ -20,7 +20,7 @@ export const getRelesGroup = async (skip,limit) => {
 };
 
 export const updateRelesGroup = async (id,data) => {
-    const result = await 
+    // const result = await 
 };
 
 

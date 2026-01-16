@@ -74,7 +74,7 @@ export const deleteManyPlantsByCompany = async (company_id) => {
 
 export const AllPlantDataWithPageService = async () => {
     const result = await PlantModel.findAll({
-        attributes: ["_id", "plant_name"],
+        attributes: ["_id", "plant_name","plant_code"],
         order: [["createdAt", "ASC"]],
     });
     return result
