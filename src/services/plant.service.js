@@ -8,7 +8,7 @@ export const plantCreateService = async (data) => {
     return result;
 };
 
-export const plantlistService = async (skip,limit) => {
+export const plantlistService = async (skip, limit) => {
     const result = await PlantModel.findAll({
         include: [{ model: CompanyModel, as: "company" }],
         offset: skip,
@@ -18,7 +18,7 @@ export const plantlistService = async (skip,limit) => {
     return result;
 };
 
-export const plantUpdateService = async (id,data) => {
+export const plantUpdateService = async (id, data) => {
     const plant = await PlantModel.findByPk(id);
     if (!plant) return null;
     const result = await plant.update(data);
@@ -38,7 +38,7 @@ export const getPlantByIdService = async (id) => {
     return result;
 };
 
-export const plantSearchService = async (query="",company,skip,limit) => {
+export const plantSearchService = async (query = "", company, skip, limit) => {
     const q = query || "";
     const where = {
         ...(company ? { company_id: company } : {}),
@@ -69,6 +69,15 @@ export const AllPlantDataService = async (companyId) => {
 export const deleteManyPlantsByCompany = async (company_id) => {
     const result = await PlantModel.destroy({ where: { company_id } });
     return result;
+};
+
+
+export const AllPlantDataWithPageService = async () => {
+    const result = await PlantModel.findAll({
+        attributes: ["_id", "plant_name"],
+        order: [["createdAt", "ASC"]],
+    });
+    return result
 }
 
 
