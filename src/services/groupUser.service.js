@@ -1,4 +1,5 @@
 import { GroupUsersModel } from "../models/groupUsers.model.js"
+import { BadRequestError } from "../utils/errorHandler.js";
 
 export const CreateGroupUsersService = async (data) => {
     const result = await GroupUsersModel.create(data);
@@ -7,7 +8,25 @@ export const CreateGroupUsersService = async (data) => {
 
 
 export const GetGroupUsersService = async (id) => {
-    // const result = await G
+    const result = await GroupUsersModel.findAll({
+        where:{relese_group_id:id}
+    });
+    return result;
+};
+
+export const deleteGroupUsersService = async (id) => {
+    const result = await GroupUsersModel.destroy({where:{_id:id}});
+    return result;
+};
+
+export const UpdateGroupUsersService = async (id,data) => {
+    const result = await GroupUsersModel.findByPk(id);
+    if(!result){
+        throw new BadRequestError("Data not found","UpdateGroupUsersService()  method error")
+    }
+
+    await result.update(data);
+    return result;
 }
 
 
