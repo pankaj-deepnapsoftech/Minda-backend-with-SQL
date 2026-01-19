@@ -23,6 +23,16 @@ export const updateDocumentService = async (id,data) =>{
     }
     await result.update(data);
     return result;
+};
+
+export const deleteDocumentService = async (id) => {
+    const result = await DocumentModel.destroy({
+        where:{
+            _id:id
+        },
+    });
+
+    return result;
 }
 
 
