@@ -1,16 +1,17 @@
 import { StatusCodes } from "http-status-codes";
-import { createReleseGroup, getReleaseGroupByNames } from "../services/releaseGroup.service.js";
+import { createReleseGroup, getReleaseGroupByNames, getRelesGroup } from "../services/releaseGroup.service.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
-import { CreateGroupUsersService } from "../services/groupUser.service.js";
+import { CreateGroupUsersService, GetGroupUsersService } from "../services/groupUser.service.js";
 import { BadRequestError } from "../utils/errorHandler.js";
+import { getPlantById } from "../services/plant.service.js";
 
 
 export const createRelasingGroup = AsyncHandler(async (req, res) => {
     const data = req.body;
 
-    const exist = await getReleaseGroupByNames(data.group_department,data.group_name);
-    if(exist){
-        throw new BadRequestError("Group already exist","createRelasingGroup() method error")
+    const exist = await getReleaseGroupByNames(data.group_department, data.group_name);
+    if (exist) {
+        throw new BadRequestError("Group already exist", "createRelasingGroup() method error")
     }
     const group = await createReleseGroup(data);
 
@@ -19,7 +20,62 @@ export const createRelasingGroup = AsyncHandler(async (req, res) => {
     });
 
     if (data?.users && data?.users.length > 0) {
-        const newData = data?.users.map((item) => ({ ...item,plants_id:JSON.stringify(item.plants_id), relese_group_id: group._id }));
+        const newData = data?.users.map((item) => ({ ...item, plants_id: JSON.stringify(item.plants_id), relese_group_id: group._id }));
         await CreateGroupUsersService(newData)
     };
+});
+
+
+
+
+
+export const getReleasingGroup = AsyncHandler(async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const result = await getRelesGroup(skip, limit);
+
+    // Collect all unique plant IDs first to avoid duplicate queries
+    const allPlantIds = new Set();
+    const usersByGroup = await Promise.all(
+        result.map(async (item) => {
+            const users = await GetGroupUsersService(item._id);
+
+            // Collect plant IDs
+            users.forEach(user => {
+                const plantIds = JSON.parse(user.plants_id);
+                plantIds.forEach(id => allPlantIds.add(id));
+            });
+
+            return { group: item, users };
+        })
+    );
+
+    // Fetch all plants in one batch (if getPlantById supports batch fetching)
+    // Otherwise, fetch them all in parallel
+    const plantDataMap = new Map();
+    await Promise.all(
+        Array.from(allPlantIds).map(async (plantId) => {
+            const plant = await getPlantById(plantId);
+            plantDataMap.set(plantId, plant);
+        })
+    );
+
+    // Build final response using cached plant data
+    const data = usersByGroup.map(({ group, users }) => {
+        if (users?.length > 0) {
+            const usersWithPlants = users.map(user => {
+                const plantIds = JSON.parse(user.plants_id);
+                const plants = plantIds.map(id => plantDataMap.get(id));
+
+                return { ...user.dataValues, plants };
+            });
+
+            return { ...group.dataValues, users: usersWithPlants };
+        }
+        return group.dataValues;
+    });
+
+    res.status(StatusCodes.OK).json({ data });
 });

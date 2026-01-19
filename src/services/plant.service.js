@@ -78,7 +78,12 @@ export const AllPlantDataWithPageService = async () => {
         order: [["createdAt", "ASC"]],
     });
     return result
-}
+};
+
+export const getPlantById = async (id) => {
+    const result = await PlantModel.findByPk(id);
+    return result;
+};
 
 
 
