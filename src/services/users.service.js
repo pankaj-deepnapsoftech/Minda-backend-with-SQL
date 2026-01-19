@@ -121,6 +121,23 @@ export const FindUserByEmail = async (email) => {
 export const GetAdmin = async () => {
     const result = await UserModel.findOne({ where: { is_admin: true } });
     return result;
+};
+
+
+export const GetUsersByIdService = async (id) => {
+    const result = await UserModel.findOne({
+        where:{
+            _id:id
+        },
+        attributes:[
+              "_id",
+            "full_name",
+            "email",
+            "desigination",
+            "user_id",
+        ]
+    });
+    return result;
 }
 
 

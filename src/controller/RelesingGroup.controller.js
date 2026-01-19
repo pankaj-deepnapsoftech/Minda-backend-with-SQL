@@ -4,6 +4,7 @@ import { AsyncHandler } from "../utils/asyncHandler.js";
 import { CreateGroupUsersService, DeleteManyGroupUsersService, GetGroupUsersService } from "../services/groupUser.service.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 import { getPlantById } from "../services/plant.service.js";
+import {  GetUsersByIdService } from "../services/users.service.js";
 
 
 export const createRelasingGroup = AsyncHandler(async (req, res) => {
@@ -34,6 +35,7 @@ export const getReleasingGroup = AsyncHandler(async (req, res) => {
 
     // Collect all unique plant IDs first to avoid duplicate queries
     const allPlantIds = new Set();
+    const userData = new Set();
     const usersByGroup = await Promise.all(
         result.map(async (item) => {
             const users = await GetGroupUsersService(item._id);
@@ -42,11 +44,13 @@ export const getReleasingGroup = AsyncHandler(async (req, res) => {
             users.forEach(user => {
                 const plantIds = JSON.parse(user.plants_id);
                 plantIds.forEach(id => allPlantIds.add(id));
+                userData.add(user.user_id);
             });
 
             return { group: item, users };
         })
     );
+
 
     // Fetch all plants in one batch (if getPlantById supports batch fetching)
     // Otherwise, fetch them all in parallel
@@ -58,14 +62,23 @@ export const getReleasingGroup = AsyncHandler(async (req, res) => {
         })
     );
 
+    const userDetail = new Map();
+    await Promise.all(
+        Array.from(userData).map(async (userid) => {
+            const user = await GetUsersByIdService(userid);
+            userDetail.set(userid, user);
+        })
+    );
+
+
     // Build final response using cached plant data
     const data = usersByGroup.map(({ group, users }) => {
         if (users?.length > 0) {
             const usersWithPlants = users.map(user => {
                 const plantIds = JSON.parse(user.plants_id);
                 const plants = plantIds.map(id => plantDataMap.get(id));
-
-                return { ...user.dataValues, plants };
+                const users_detail = userDetail.get(user.user_id);
+                return { ...user.dataValues, plants,users_detail };
             });
 
             return { ...group.dataValues, users: usersWithPlants };

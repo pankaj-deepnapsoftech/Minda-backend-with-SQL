@@ -13,7 +13,7 @@ export const createCompany = AsyncHandler(async (req, res) => {
 
     const exist = await FindCompanyByName(data?.company_name,data?.gst_no);
     if (exist) {
-        throw new BadRequestError("Company name or pen number  already exists", "createCompany() method error");
+        throw new BadRequestError("Company name or PAN number  already exists", "createCompany() method error");
     }
 
     const result = await companyCreateService(data);

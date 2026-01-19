@@ -52,6 +52,15 @@ export const getCheckingMethodTypeService = async () => {
 };
 
 
+export const getCatgoryTypeService = async () => {
+      const result = await TypeModal.findOne({
+        where: { [Op.or]: [{ category: null }, { category: "" }] },
+        order: [["createdAt", "ASC"]],
+    });
+    return result;
+}
+
+
 
 
 

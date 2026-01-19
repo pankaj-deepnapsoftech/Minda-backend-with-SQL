@@ -12,6 +12,7 @@ export const TypeModal = sequelize.define(
         uom: { type: DataTypes.STRING(100), allowNull: true },
         checking_time: { type: DataTypes.STRING(100), allowNull: true },
         checking_method: { type: DataTypes.STRING(255), allowNull: true },
+        category:{type:DataTypes.STRING(255),allowNull:true}
     },
     {
         tableName: "types",

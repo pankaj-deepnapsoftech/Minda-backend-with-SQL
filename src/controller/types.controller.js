@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { createTypesService, deleteTypesService, getCheckingMethodTypeService, getCheckingTimeTypeService, getTypesService, getUomTypeService, updatetypesService } from "../services/types.service.js";
+import { createTypesService, deleteTypesService, getCatgoryTypeService, getCheckingMethodTypeService, getCheckingTimeTypeService, getTypesService, getUomTypeService, updatetypesService } from "../services/types.service.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
 import { BadRequestError } from "../utils/errorHandler.js";
 
@@ -34,6 +34,18 @@ export const CreateTypes = AsyncHandler(async (req, res) => {
         const find = await getCheckingTimeTypeService();
         if (find) {
             const result = await updatetypesService(find._id, { checking_time: data.checking_time });
+            return res.status(StatusCodes.CREATED).json({
+                message: "type created successfully",
+                data: result
+            });
+        };
+    };
+
+
+    if (data?.category) {
+        const find = await getCatgoryTypeService();
+        if (find) {
+            const result = await updatetypesService(find._id, { category: data.category });
             return res.status(StatusCodes.CREATED).json({
                 message: "type created successfully",
                 data: result
