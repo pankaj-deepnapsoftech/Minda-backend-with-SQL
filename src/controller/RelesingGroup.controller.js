@@ -27,11 +27,12 @@ export const createRelasingGroup = AsyncHandler(async (req, res) => {
 });
 
 export const getReleasingGroup = AsyncHandler(async (req, res) => {
+    const {search} = req.query;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const result = await getRelesGroup(skip, limit);
+    const result = await getRelesGroup(search,skip, limit);
 
     // Collect all unique plant IDs first to avoid duplicate queries
     const allPlantIds = new Set();

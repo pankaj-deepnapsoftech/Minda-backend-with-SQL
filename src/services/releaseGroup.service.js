@@ -11,8 +11,11 @@ export const createReleseGroup = async (data) => {
 };
 
 
-export const getRelesGroup = async (skip,limit) => {
+export const getRelesGroup = async (search="",skip,limit) => {
     const result = await ReleseGroupModel.findAll({
+        where:{
+            [Op.or]:[{group_department:{[Op.like]:`%${search}%`}},{group_name:{[Op.like]:`%${search}%`}}]
+        },
         offset:skip,
         limit
     });
