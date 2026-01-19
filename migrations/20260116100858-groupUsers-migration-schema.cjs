@@ -30,9 +30,8 @@ module.exports = {
       },
 
       plants_id: {
-        type: Sequelize.JSON,
-        allowNull: false,
-        defaultValue: "[]"
+        type: Sequelize.TEXT,
+        allowNull: false
       },
 
       relese_group_id:{type:Sequelize.UUID,allowNull:false, references:{model:"relesegroups",key:"_id"},  onUpdate: 'CASCADE',

@@ -2,8 +2,8 @@ import { GroupUsersModel } from "../models/groupUsers.model.js"
 import { BadRequestError } from "../utils/errorHandler.js";
 
 export const CreateGroupUsersService = async (data) => {
-    const result = await GroupUsersModel.create(data);
-    return result;
+     const result = await GroupUsersModel.bulkCreate(data);
+     return result;
 };
 
 

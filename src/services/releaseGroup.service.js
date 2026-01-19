@@ -1,7 +1,7 @@
 import { ReleseGroupModel } from "../models/ReleseGroup.modal.js"
 import { BadRequestError } from "../utils/errorHandler.js";
 
-
+import { Op } from "sequelize";
 
 
 
@@ -37,6 +37,15 @@ export const DeleteRelesGroup = async (id) => {
     return result;
 };
 
+
+export const getReleaseGroupByNames = async (group_department,group_name) => {
+    const result = await ReleseGroupModel.findOne({
+        where:{
+            [Op.or]:[{group_department},{group_name}]
+        }
+    });
+    return result;
+}
 
 
 

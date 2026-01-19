@@ -15,6 +15,7 @@ import DashboardRoutes from "./routes/dashboards.routes.js";
 import TypesRoutes from "./routes/types.routes.js";
 import NotificationRoutes from "./routes/notification.routes.js";
 import departmentRoutes from "./routes/department.routes.js";
+import ReleaseGroupRoutes from "./routes/releasingGroup.route.js";
 
 
 
@@ -34,6 +35,7 @@ routes.use("/dashboard",         Authorization, DashboardRoutes);
 routes.use("/types",             Authorization,TypesRoutes);
 routes.use("/notification",      Authorization,NotificationRoutes);
 routes.use("/department",        Authorization,departmentRoutes);
+routes.use("/release-group",      Authorization,ReleaseGroupRoutes);
 
 
 
