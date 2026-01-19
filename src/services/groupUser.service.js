@@ -27,6 +27,17 @@ export const UpdateGroupUsersService = async (id,data) => {
 
     await result.update(data);
     return result;
+};
+
+
+export const DeleteManyGroupUsersService = async (id) => {
+    const result = await GroupUsersModel.destroy({
+        where:{
+            relese_group_id:id
+        }
+    });
+
+    return result;
 }
 
 

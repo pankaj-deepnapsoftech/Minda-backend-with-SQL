@@ -1,8 +1,8 @@
 import { StatusCodes } from "http-status-codes";
-import { createReleseGroup, getReleaseGroupByNames, getRelesGroup } from "../services/releaseGroup.service.js";
+import { createReleseGroup, DeleteRelesGroup, getReleaseGroupByNames, getRelesGroup } from "../services/releaseGroup.service.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
-import { CreateGroupUsersService, GetGroupUsersService } from "../services/groupUser.service.js";
-import { BadRequestError } from "../utils/errorHandler.js";
+import { CreateGroupUsersService, DeleteManyGroupUsersService, GetGroupUsersService } from "../services/groupUser.service.js";
+import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 import { getPlantById } from "../services/plant.service.js";
 
 
@@ -24,8 +24,6 @@ export const createRelasingGroup = AsyncHandler(async (req, res) => {
         await CreateGroupUsersService(newData)
     };
 });
-
-
 
 
 
@@ -78,4 +76,19 @@ export const getReleasingGroup = AsyncHandler(async (req, res) => {
     });
 
     res.status(StatusCodes.OK).json({ data });
+});
+
+
+export const DeleteReleasingGroup = AsyncHandler(async (req,res) =>{
+    const {id} =  req.params;
+    const result = await DeleteRelesGroup(id);
+    if(!result){
+        throw new NotFoundError("Release group not found","DeleteReleasingGroup() method error");
+    };
+
+    res.status(StatusCodes.OK).json({
+        message:"Releasing group deleted"
+    });
+
+    await DeleteManyGroupUsersService(result._id)
 });
