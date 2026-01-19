@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { createReleseGroup, DeleteRelesGroup, getReleaseGroupByNames, getRelesGroup } from "../services/releaseGroup.service.js";
+import { createReleseGroup, DeleteRelesGroup, getReleaseGroupByNames, getRelesGroup, updateRelesGroup } from "../services/releaseGroup.service.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
 import { CreateGroupUsersService, DeleteManyGroupUsersService, GetGroupUsersService } from "../services/groupUser.service.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
@@ -24,8 +24,6 @@ export const createRelasingGroup = AsyncHandler(async (req, res) => {
         await CreateGroupUsersService(newData)
     };
 });
-
-
 
 export const getReleasingGroup = AsyncHandler(async (req, res) => {
     const page = parseInt(req.query.page) || 1;
@@ -78,17 +76,37 @@ export const getReleasingGroup = AsyncHandler(async (req, res) => {
     res.status(StatusCodes.OK).json({ data });
 });
 
-
-export const DeleteReleasingGroup = AsyncHandler(async (req,res) =>{
-    const {id} =  req.params;
+export const DeleteReleasingGroup = AsyncHandler(async (req, res) => {
+    const { id } = req.params;
     const result = await DeleteRelesGroup(id);
-    if(!result){
-        throw new NotFoundError("Release group not found","DeleteReleasingGroup() method error");
+    if (!result) {
+        throw new NotFoundError("Release group not found", "DeleteReleasingGroup() method error");
     };
 
     res.status(StatusCodes.OK).json({
-        message:"Releasing group deleted"
+        message: "Releasing group deleted"
     });
 
     await DeleteManyGroupUsersService(result._id)
 });
+
+export const UpdateReleasingGroup = AsyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const data = req.body;
+
+     await updateRelesGroup(id, data);
+
+    if (data?.users && data?.users.length > 0) {
+        await DeleteManyGroupUsersService(id);
+        const newData = data?.users.map((item) => ({ ...item, plants_id: JSON.stringify(item.plants_id), relese_group_id: id }));
+        await CreateGroupUsersService(newData)
+    };
+
+    res.status(StatusCodes.OK).json({
+        message:"Release Updated Successfully"
+    });
+})
+
+
+
+
