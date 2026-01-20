@@ -109,3 +109,19 @@ export const deleteFieldService = async (fieldId) => {
   return true;
 };
 
+export const deleteTemplateService = async (templateId) => {
+  const template = await TemplateMasterModel.findByPk(templateId);
+  if (!template) {
+    throw new NotFoundError("Template not found", "deleteTemplateService()");
+  }
+
+  // Delete all fields associated with this template first
+  await TemplateFieldModel.destroy({
+    where: { template_id: templateId },
+  });
+
+  // Then delete the template
+  await template.destroy();
+  return true;
+};
+

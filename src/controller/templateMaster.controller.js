@@ -4,6 +4,7 @@ import {
   addFieldToTemplateService,
   createTemplateService,
   deleteFieldService,
+  deleteTemplateService,
   getTemplateByIdService,
   listTemplatesService,
 } from "../services/templateMaster.service.js";
@@ -44,6 +45,13 @@ export const deleteField = AsyncHandler(async (req, res) => {
   await deleteFieldService(req.params.fieldId);
   res.status(StatusCodes.OK).json({
     message: "Field deleted successfully",
+  });
+});
+
+export const deleteTemplate = AsyncHandler(async (req, res) => {
+  await deleteTemplateService(req.params.id);
+  res.status(StatusCodes.OK).json({
+    message: "Template deleted successfully",
   });
 });
 
