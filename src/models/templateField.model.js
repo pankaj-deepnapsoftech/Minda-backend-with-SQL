@@ -23,6 +23,7 @@ export const TemplateFieldModel = sequelize.define(
             "DROPDOWN",
             "DATE",
             "TEXTAREA",
+            "IMAGE",
           ],
         ],
       },
