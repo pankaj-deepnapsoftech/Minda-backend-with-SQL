@@ -100,6 +100,56 @@ export const addFieldToTemplateService = async (
   return created;
 };
 
+export const updateFieldService = async (
+  fieldId,
+  { field_name, field_type, is_mandatory, dropdown_options }
+) => {
+  const field = await TemplateFieldModel.findByPk(fieldId);
+  if (!field) {
+    throw new NotFoundError("Field not found", "updateFieldService()");
+  }
+
+  const name = (field_name || "").trim();
+  if (!name) {
+    throw new BadRequestError("Field Name is required", "updateFieldService()");
+  }
+  if (!field_type) {
+    throw new BadRequestError("Field Type is required", "updateFieldService()");
+  }
+
+  let dropdownOptionsString = null;
+  if (field_type === "DROPDOWN") {
+    if (!dropdown_options || (Array.isArray(dropdown_options) && dropdown_options.length === 0)) {
+      throw new BadRequestError(
+        "Dropdown options are required for DROPDOWN field type",
+        "updateFieldService()"
+      );
+    }
+    let arr = [];
+    if (Array.isArray(dropdown_options)) {
+      arr = dropdown_options.map((x) => String(x).trim()).filter(Boolean);
+    } else if (typeof dropdown_options === "string") {
+      arr = dropdown_options.split(",").map((x) => x.trim()).filter(Boolean);
+    }
+    if (arr.length === 0) {
+      throw new BadRequestError(
+        "Dropdown options are required for DROPDOWN field type",
+        "updateFieldService()"
+      );
+    }
+    dropdownOptionsString = JSON.stringify(arr);
+  }
+
+  await field.update({
+    field_name: name,
+    field_type,
+    is_mandatory: Boolean(is_mandatory),
+    dropdown_options: dropdownOptionsString,
+  });
+
+  return field;
+};
+
 export const deleteFieldService = async (fieldId) => {
   const field = await TemplateFieldModel.findByPk(fieldId);
   if (!field) {

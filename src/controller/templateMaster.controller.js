@@ -7,6 +7,7 @@ import {
   deleteTemplateService,
   getTemplateByIdService,
   listTemplatesService,
+  updateFieldService,
   updateTemplateService,
 } from "../services/templateMaster.service.js";
 
@@ -47,6 +48,14 @@ export const addFieldToTemplate = AsyncHandler(async (req, res) => {
   res.status(StatusCodes.CREATED).json({
     message: "Field added successfully",
     data: created,
+  });
+});
+
+export const updateField = AsyncHandler(async (req, res) => {
+  const result = await updateFieldService(req.params.fieldId, req.body);
+  res.status(StatusCodes.OK).json({
+    message: "Field updated successfully",
+    data: result,
   });
 });
 
