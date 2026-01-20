@@ -6,6 +6,7 @@ import {
   deleteTemplate,
   getTemplateById,
   listTemplates,
+  updateTemplate,
 } from "../controller/templateMaster.controller.js";
 
 const router = Router();
@@ -13,6 +14,7 @@ const router = Router();
 // More specific routes first
 router.post("/templates/:id/fields", addFieldToTemplate);
 router.delete("/fields/:fieldId", deleteField);
+router.put("/templates/:id", updateTemplate);
 router.delete("/templates/:id", deleteTemplate);
 router.get("/templates/:id", getTemplateById);
 router.post("/templates", createTemplate);

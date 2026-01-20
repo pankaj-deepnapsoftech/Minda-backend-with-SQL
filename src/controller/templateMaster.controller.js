@@ -7,6 +7,7 @@ import {
   deleteTemplateService,
   getTemplateByIdService,
   listTemplatesService,
+  updateTemplateService,
 } from "../services/templateMaster.service.js";
 
 export const createTemplate = AsyncHandler(async (req, res) => {
@@ -29,6 +30,14 @@ export const getTemplateById = AsyncHandler(async (req, res) => {
   const result = await getTemplateByIdService(req.params.id);
   res.status(StatusCodes.OK).json({
     message: "Template fetched successfully",
+    data: result,
+  });
+});
+
+export const updateTemplate = AsyncHandler(async (req, res) => {
+  const result = await updateTemplateService(req.params.id, req.body);
+  res.status(StatusCodes.OK).json({
+    message: "Template updated successfully",
     data: result,
   });
 });

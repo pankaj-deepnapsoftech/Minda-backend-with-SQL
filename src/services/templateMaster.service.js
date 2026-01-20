@@ -109,6 +109,36 @@ export const deleteFieldService = async (fieldId) => {
   return true;
 };
 
+export const updateTemplateService = async (templateId, { template_name, template_type }) => {
+  const template = await TemplateMasterModel.findByPk(templateId);
+  if (!template) {
+    throw new NotFoundError("Template not found", "updateTemplateService()");
+  }
+
+  const name = (template_name || "").trim();
+  if (!name) {
+    throw new BadRequestError("Template Name is required", "updateTemplateService()");
+  }
+
+  // Check if another template with same name exists (excluding current template)
+  const exist = await TemplateMasterModel.findOne({
+    where: {
+      template_name: { [Op.eq]: name },
+      _id: { [Op.ne]: templateId },
+    },
+  });
+  if (exist) {
+    throw new BadRequestError("Template already exists", "updateTemplateService()");
+  }
+
+  await template.update({
+    template_name: name,
+    template_type: template_type || null,
+  });
+
+  return template;
+};
+
 export const deleteTemplateService = async (templateId) => {
   const template = await TemplateMasterModel.findByPk(templateId);
   if (!template) {
