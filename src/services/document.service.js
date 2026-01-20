@@ -36,7 +36,6 @@ export const deleteDocumentService = async (id) => {
             _id:id
         },
     });
-    console.log(result);
     return result;
 };
 
