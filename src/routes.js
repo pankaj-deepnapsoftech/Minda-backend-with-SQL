@@ -16,6 +16,7 @@ import TypesRoutes from "./routes/types.routes.js";
 import NotificationRoutes from "./routes/notification.routes.js";
 import departmentRoutes from "./routes/department.routes.js";
 import ReleaseGroupRoutes from "./routes/releasingGroup.route.js";
+import TemplateMasterRoutes from "./routes/templateMaster.routes.js";
 
 
 
@@ -36,6 +37,7 @@ routes.use("/types",             Authorization,TypesRoutes);
 routes.use("/notification",      Authorization,NotificationRoutes);
 routes.use("/department",        Authorization,departmentRoutes);
 routes.use("/release-group",      Authorization,ReleaseGroupRoutes);
+routes.use("/template-master",    Authorization, TemplateMasterRoutes);
 
 
 
