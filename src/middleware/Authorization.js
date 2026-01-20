@@ -24,6 +24,7 @@ export const Authorization = AsyncHandler(async (req,res,next) => {
 
     if(user?.terminate){
         throw new NotFoundError("User Terminated by Admin Please Contact to organization","Authorization() method error")
+    //  throw new Error("user terminated")
     };
 
     req.currentUser = user?.toJSON ? user.toJSON() : user;

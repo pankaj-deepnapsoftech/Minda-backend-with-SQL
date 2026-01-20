@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import { DocumentModel } from "../models/Document.model.js"
 import { NotFoundError } from "../utils/errorHandler.js";
 
@@ -7,13 +8,17 @@ export const createDocumentService = async (data) => {
     return result;
 };
 
-export const getDocumentService = async (skip, limit) => {
+export const getDocumentService = async (search="",skip, limit) => {
     const result = await DocumentModel.findAll({
+        where:{
+            doc_name:{[Op.like]:`%${search}%`}
+        },
         offset: skip,
         limit,
         order: [["createdAt", "ASC"]],
     });
-    return result;
+    const total = await DocumentModel.count();
+    return {data:result,total_pages:Math.ceil(total/limit),total_data:total};
 };
 
 export const updateDocumentService = async (id,data) =>{
@@ -31,10 +36,15 @@ export const deleteDocumentService = async (id) => {
             _id:id
         },
     });
-
+    console.log(result);
     return result;
-}
+};
 
+
+export const findDocumentById = async (id) => {
+    const result = await DocumentModel.findByPk(id);
+    return result;
+};
 
 
 

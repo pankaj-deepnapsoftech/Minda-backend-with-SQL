@@ -16,28 +16,29 @@ const __dirname = path.dirname(__filename);
 
 
 export const CreateChecklistData = AsyncHandler(async (req, res) => {
-    
-          const data = req.body;
-          const file = req.file;
-          
-          console.log(data)
-          const file_path = file ? `${config.NODE_ENV !== "development" ? config.SERVER_URL : config.LOCAL_SERVER_URL}/files/${file.filename}` : null;
-          const parsTime = data?.time && Array.isArray(data?.time)  ? data?.time : [data?.time] ;
 
-      
-          const result = await createChecklistService(file_path ? { ...data, file_path, total_checks: parsTime?.length || 0 } : { ...data, total_checks: parsTime?.length || 0 });
-  
-          if(data?.time){
-              const mapData = parsTime?.map((timeItem) => ({ check_time: timeItem, item_id: result._id }));
-              await createChecklistItemTimeService(mapData);
-          }
-      
-          res.status(StatusCodes.CREATED).json({
-              message: "Item Created Successfully",
-              data: result
-          });
-     
-  
+    const data = req.body;
+    const file = req.file;
+
+    if (!file) {
+        throw new NotFoundError("file is required", "CreateChecklistData() method error");
+    }
+
+    const file_path = file ? `${config.NODE_ENV !== "development" ? config.SERVER_URL : config.LOCAL_SERVER_URL}/files/${file.filename}` : null;
+    const parsTime = data?.time && Array.isArray(data?.time) ? data?.time : [data?.time];
+
+
+    const result = await createChecklistService(file_path ? { ...data, file_path, total_checks: parsTime?.length || 0 } : { ...data, total_checks: parsTime?.length || 0 });
+
+    if (data?.time) {
+        const mapData = parsTime?.map((timeItem) => ({ check_time: timeItem, item_id: result._id }));
+        await createChecklistItemTimeService(mapData);
+    }
+
+    res.status(StatusCodes.CREATED).json({
+        message: "Item Created Successfully",
+        data: result
+    });
 
 });
 
@@ -46,9 +47,9 @@ export const UpdateCheckListData = AsyncHandler(async (req, res) => {
     const data = req.body;
     const file = req.file;
 
-    
 
-  
+
+
     const times = Array.isArray(data?.time)
         ? data.time
         : data?.time
@@ -64,7 +65,7 @@ export const UpdateCheckListData = AsyncHandler(async (req, res) => {
         throw new NotFoundError("Item not found", "UpdateCheckListData() method error");
     }
 
-    
+
     if (file && exist.file_path) {
         fs.unlinkSync(
             path.join(
@@ -74,14 +75,14 @@ export const UpdateCheckListData = AsyncHandler(async (req, res) => {
         );
     }
 
-    
+
     const updatePayload = {
         ...data,
         ...(file_path && { file_path }),
-        total_checks: times.length, 
+        total_checks: times.length,
     };
 
-    delete updatePayload.time; 
+    delete updatePayload.time;
 
     const result = await updateChecklistService(id, updatePayload);
 
@@ -94,13 +95,13 @@ export const UpdateCheckListData = AsyncHandler(async (req, res) => {
         result,
     });
 
-   
+
     if (times.length > 0) {
         await DeleteManyCheckListsItemService(result._id);
 
         const mapData = times.map((t) => ({
             item_id: result._id,
-            check_time: `${t}:00`, 
+            check_time: `${t}:00`,
         }));
 
         await createChecklistItemTimeService(mapData);

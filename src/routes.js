@@ -36,8 +36,8 @@ routes.use("/dashboard",         Authorization, DashboardRoutes);
 routes.use("/types",             Authorization,TypesRoutes);
 routes.use("/notification",      Authorization,NotificationRoutes);
 routes.use("/department",        Authorization,departmentRoutes);
-routes.use("/release-group",      Authorization,ReleaseGroupRoutes);
-routes.use("/document",      Authorization,documentsRoutes);
+routes.use("/release-group",     Authorization,ReleaseGroupRoutes);
+routes.use("/document",          Authorization,documentsRoutes);
 
 
 
