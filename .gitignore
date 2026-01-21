@@ -21,3 +21,4 @@ lerna-debug.log*
 out
 logs
 config
+**/config.json
