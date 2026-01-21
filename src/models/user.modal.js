@@ -34,6 +34,7 @@ export const UserModel = sequelize.define(
             { fields: ["employee_plant"] },
             { fields: ["employee_company"] },
             { fields: ["role"] },
+            { fields: ["hod_id"] },
         ],
         hooks: {
             beforeCreate: async (user) => {
