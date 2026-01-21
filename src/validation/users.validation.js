@@ -43,6 +43,7 @@ export const userValidationSchema = yup.object({
 
   role: uuidId.nullable(),
   department_id: uuidId.nullable(),
+  hod_id: uuidId.nullable(),
 
   terminate: yup
     .boolean()
