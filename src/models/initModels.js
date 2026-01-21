@@ -13,6 +13,8 @@ import { DepartmentModel } from "./department.modal.js";
 import { ItemCheckTimeModel } from "./itemCheckTime.model.js";
 import { GroupUsersModel } from "./groupUsers.model.js";
 import { ReleseGroupModel } from "./ReleseGroup.modal.js";
+import { TemplateMasterModel } from "./templateMaster.model.js";
+import { TemplateFieldModel } from "./templateField.model.js";
 
 let modelsInitialized = false;
 
@@ -101,6 +103,17 @@ export const initModels = () => {
 
     ReleseGroupModel.hasMany(GroupUsersModel,{foreignKey:"relese_group_id",as:"groupUsers"})
     GroupUsersModel.belongsTo(ReleseGroupModel,{foreignKey:"relese_group_id",as:"releaseGroup"})
+
+    TemplateMasterModel.hasMany(TemplateFieldModel, {
+        foreignKey: "template_id",
+        as: "fields",
+        constraints: false
+    });
+    TemplateFieldModel.belongsTo(TemplateMasterModel, {
+        foreignKey: "template_id",
+        as: "template",
+        constraints: false
+    });
 
     // Checklist → ItemCheckTime (1 : N)
     CheckListModal.hasMany(ItemCheckTimeModel, {

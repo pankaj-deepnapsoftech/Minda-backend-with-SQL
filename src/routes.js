@@ -17,13 +17,14 @@ import NotificationRoutes from "./routes/notification.routes.js";
 import departmentRoutes from "./routes/department.routes.js";
 import ReleaseGroupRoutes from "./routes/releasingGroup.route.js";
 import documentsRoutes from "./routes/documents.routes.js"
+import TemplateMasterRoutes from "./routes/templateMaster.routes.js";
 
 
 
 const routes = Router();
 
 
-routes.use("/users",             usersRoutes);
+routes.use("/users",            usersRoutes);
 routes.use("/company",           Authorization, companyRoutes);
 routes.use("/plant",             Authorization, plantRoutes);
 routes.use("/roles",             Authorization, roleRoutes);
@@ -36,8 +37,9 @@ routes.use("/dashboard",         Authorization, DashboardRoutes);
 routes.use("/types",             Authorization,TypesRoutes);
 routes.use("/notification",      Authorization,NotificationRoutes);
 routes.use("/department",        Authorization,departmentRoutes);
-routes.use("/release-group",     Authorization,ReleaseGroupRoutes);
 routes.use("/document",          Authorization,documentsRoutes);
+routes.use("/release-group",      Authorization,ReleaseGroupRoutes);
+routes.use("/template-master",    Authorization, TemplateMasterRoutes);
 
 
 
