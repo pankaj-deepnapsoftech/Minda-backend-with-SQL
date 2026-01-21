@@ -110,6 +110,9 @@ export const initModels = () => {
     TemplateMasterModel.hasMany(TemplateFieldModel, {foreignKey: "template_id",as: "fields",constraints: false});
     TemplateFieldModel.belongsTo(TemplateMasterModel, {foreignKey: "template_id",as: "template",constraints: false});
 
+    UserModel.hasMany(TemplateMasterModel, {foreignKey: "assigned_user",as: "assignedTemplates",constraints: false});
+    TemplateMasterModel.belongsTo(UserModel, {foreignKey: "assigned_user",as: "assignedUser",constraints: false});
+
     CheckListModal.hasMany(ItemCheckTimeModel, {foreignKey: "item_id",as: "time"});
     ItemCheckTimeModel.belongsTo(CheckListModal, {foreignKey: "item_id",as: "checklistItem"});
 

@@ -1,9 +1,24 @@
+// @ts-nocheck
 import { Op } from "sequelize";
 import { TemplateMasterModel } from "../models/templateMaster.model.js";
 import { TemplateFieldModel } from "../models/templateField.model.js";
+import { UserModel } from "../models/user.modal.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 
-export const createTemplateService = async ({ template_name, template_type }) => {
+const assignedUserInclude = {
+  model: UserModel,
+  as: "assignedUser",
+  required: false,
+  attributes: ["_id", "full_name", "email", "user_id"],
+};
+
+const templateFieldsInclude = {
+  model: TemplateFieldModel,
+  as: "fields",
+  required: false,
+};
+
+export const createTemplateService = async ({ template_name, template_type, assigned_user }) => {
   const name = (template_name || "").trim();
   if (!name) {
     throw new BadRequestError("Template Name is required", "createTemplateService()");
@@ -16,9 +31,24 @@ export const createTemplateService = async ({ template_name, template_type }) =>
     throw new BadRequestError("Template already exists", "createTemplateService()");
   }
 
+  // Validate assigned_user if provided
+  let assignedUserId = null;
+  if (assigned_user) {
+    const userId = String(assigned_user).trim();
+    if (userId) {
+      // Check if user exists
+      const user = await UserModel.findByPk(userId);
+      if (!user) {
+        throw new BadRequestError("Assigned user not found", "createTemplateService()");
+      }
+      assignedUserId = userId;
+    }
+  }
+
   const created = await TemplateMasterModel.create({
     template_name: name,
     template_type: template_type || null,
+    assigned_user: assignedUserId,
   });
 
   return created;
@@ -26,6 +56,7 @@ export const createTemplateService = async ({ template_name, template_type }) =>
 
 export const listTemplatesService = async () => {
   return await TemplateMasterModel.findAll({
+    include: [assignedUserInclude],
     order: [["createdAt", "DESC"]],
   });
 };
@@ -34,12 +65,11 @@ export const getTemplateByIdService = async (id) => {
   const result = await TemplateMasterModel.findByPk(id, {
     include: [
       {
-        model: TemplateFieldModel,
-        as: "fields",
-        required: false,
+        ...templateFieldsInclude,
+        order: [["sort_order", "ASC"]],
       },
+      assignedUserInclude,
     ],
-    order: [[{ model: TemplateFieldModel, as: "fields" }, "sort_order", "ASC"]],
   });
   if (!result) {
     throw new NotFoundError("Template not found", "getTemplateByIdService()");
@@ -159,7 +189,7 @@ export const deleteFieldService = async (fieldId) => {
   return true;
 };
 
-export const updateTemplateService = async (templateId, { template_name, template_type }) => {
+export const updateTemplateService = async (templateId, { template_name, template_type, assigned_user }) => {
   const template = await TemplateMasterModel.findByPk(templateId);
   if (!template) {
     throw new NotFoundError("Template not found", "updateTemplateService()");
@@ -181,9 +211,30 @@ export const updateTemplateService = async (templateId, { template_name, templat
     throw new BadRequestError("Template already exists", "updateTemplateService()");
   }
 
+  // Handle assigned_user update
+  let assignedUserId = template.assigned_user; // Keep existing value by default
+  if (assigned_user !== undefined) {
+    if (assigned_user === null || assigned_user === "") {
+      assignedUserId = null;
+    } else {
+      const userId = String(assigned_user).trim();
+      if (userId) {
+        // Check if user exists
+        const user = await UserModel.findByPk(userId);
+        if (!user) {
+          throw new BadRequestError("Assigned user not found", "updateTemplateService()");
+        }
+        assignedUserId = userId;
+      } else {
+        assignedUserId = null;
+      }
+    }
+  }
+
   await template.update({
     template_name: name,
     template_type: template_type || null,
+    assigned_user: assignedUserId,
   });
 
   return template;
