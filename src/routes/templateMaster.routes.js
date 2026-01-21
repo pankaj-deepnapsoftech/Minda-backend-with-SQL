@@ -8,6 +8,7 @@ import {
   listTemplates,
   updateField,
   updateTemplate,
+  getAssignedTemplates,
 } from "../controller/templateMaster.controller.js";
 
 const router = Router();
@@ -15,6 +16,7 @@ const router = Router();
 // Less specific routes first (without parameters)
 router.post("/templates", createTemplate);
 router.get("/templates", listTemplates);
+router.get("/assigned-templates", getAssignedTemplates);
 
 // More specific routes (with parameters) - must come after less specific ones
 router.post("/templates/:id/fields", addFieldToTemplate);

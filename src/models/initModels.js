@@ -15,6 +15,7 @@ import { GroupUsersModel } from "./groupUsers.model.js";
 import { ReleseGroupModel } from "./ReleseGroup.modal.js";
 import { TemplateMasterModel } from "./templateMaster.model.js";
 import { TemplateFieldModel } from "./templateField.model.js";
+import { TemplateSubmissionModel } from "./templateSubmission.model.js";
 
 let modelsInitialized = false;
 
@@ -112,6 +113,12 @@ export const initModels = () => {
 
     UserModel.hasMany(TemplateMasterModel, {foreignKey: "assigned_user",as: "assignedTemplates",constraints: false});
     TemplateMasterModel.belongsTo(UserModel, {foreignKey: "assigned_user",as: "assignedUser",constraints: false});
+
+    TemplateMasterModel.hasMany(TemplateSubmissionModel, {foreignKey: "template_id",as: "submissions",constraints: false});
+    TemplateSubmissionModel.belongsTo(TemplateMasterModel, {foreignKey: "template_id",as: "template",constraints: false});
+
+    UserModel.hasMany(TemplateSubmissionModel, {foreignKey: "user_id",as: "templateSubmissions",constraints: false});
+    TemplateSubmissionModel.belongsTo(UserModel, {foreignKey: "user_id",as: "user",constraints: false});
 
     CheckListModal.hasMany(ItemCheckTimeModel, {foreignKey: "item_id",as: "time"});
     ItemCheckTimeModel.belongsTo(CheckListModal, {foreignKey: "item_id",as: "checklistItem"});

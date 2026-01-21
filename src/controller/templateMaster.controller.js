@@ -9,6 +9,7 @@ import {
   listTemplatesService,
   updateFieldService,
   updateTemplateService,
+  getAssignedTemplatesService,
 } from "../services/templateMaster.service.js";
 
 export const createTemplate = AsyncHandler(async (req, res) => {
@@ -70,6 +71,15 @@ export const deleteTemplate = AsyncHandler(async (req, res) => {
   await deleteTemplateService(req.params.id);
   res.status(StatusCodes.OK).json({
     message: "Template deleted successfully",
+  });
+});
+
+export const getAssignedTemplates = AsyncHandler(async (req, res) => {
+  const userId = req.currentUser._id;
+  const result = await getAssignedTemplatesService(userId);
+  res.status(StatusCodes.OK).json({
+    message: "Assigned templates fetched successfully",
+    data: result,
   });
 });
 

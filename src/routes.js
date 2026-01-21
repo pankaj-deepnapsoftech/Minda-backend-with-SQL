@@ -19,6 +19,7 @@ import ReleaseGroupRoutes from "./routes/releasingGroup.route.js";
 import documentsRoutes from "./routes/documents.routes.js"
 import TemplateMasterRoutes from "./routes/templateMaster.routes.js";
 import WorkflowRoutes from "./routes/workflow.routes.js";
+import TemplateSubmissionRoutes from "./routes/templateSubmission.routes.js";
 
 
 
@@ -42,6 +43,7 @@ routes.use("/document",          Authorization,documentsRoutes);
 routes.use("/release-group",      Authorization,ReleaseGroupRoutes);
 routes.use("/template-master",    Authorization, TemplateMasterRoutes);
 routes.use("/workflow",            Authorization, WorkflowRoutes);
+routes.use("/template-submission", Authorization, TemplateSubmissionRoutes);
 
 
 

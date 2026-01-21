@@ -256,3 +256,20 @@ export const deleteTemplateService = async (templateId) => {
   return true;
 };
 
+export const getAssignedTemplatesService = async (userId) => {
+  return await TemplateMasterModel.findAll({
+    where: {
+      assigned_user: userId,
+      is_active: true,
+    },
+    include: [
+      {
+        ...templateFieldsInclude,
+        order: [["sort_order", "ASC"]],
+      },
+      assignedUserInclude,
+    ],
+    order: [["createdAt", "DESC"]],
+  });
+};
+
