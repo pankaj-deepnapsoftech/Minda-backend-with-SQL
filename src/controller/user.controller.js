@@ -5,7 +5,7 @@ import path from "path";
 
 // ---------------------------- local imports  -------------------------
 import { AsyncHandler } from "../utils/asyncHandler.js";
-import { createUserService, FindUserByEmail, FindUserByEmailOrUserId, FindUserById, GetAllUsersService, GetUsersService, SearchUsersService, UpdateUsersService } from "../services/users.service.js";
+import { createUserService, FindUserByEmail, FindUserByEmailOrUserId, FindUserById, getAllHodsServicesData, GetAllUsersService, GetUsersService, SearchUsersService, UpdateUsersService } from "../services/users.service.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 import { StatusCodes } from "http-status-codes";
 import { config } from "../config.js";
@@ -242,3 +242,17 @@ export const GetAllEmployees = AsyncHandler(async (req, res) => {
         data: result
     })
 });
+
+
+export const GetAllHodData = AsyncHandler(async (req,res) => {
+    const result = await getAllHodsServicesData();
+    res.status(StatusCodes.OK).json({
+        data:result,
+        success:true
+    })
+});
+
+
+
+
+

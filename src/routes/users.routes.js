@@ -1,7 +1,7 @@
 import {Router} from "express";
 
 // ---------------------- local imports --------------------------
-import { GetAllEmployees, GetAllemployees, LogedInUser, LoginUser, LogoutUser, RefreshToken, registerUser, RenderResetPasswordpage, Resetpassword, SearchEmployees, UpdateUser, verifyEmail } from "../controller/user.controller.js";
+import { GetAllEmployees, GetAllemployees, GetAllHodData, LogedInUser, LoginUser, LogoutUser, RefreshToken, registerUser, RenderResetPasswordpage, Resetpassword, SearchEmployees, UpdateUser, verifyEmail } from "../controller/user.controller.js";
 import { Validater } from "../middleware/validator.js";
 import { userValidationSchema } from "../validation/users.validation.js";
 import { Authorization } from "../middleware/Authorization.js";
@@ -21,6 +21,7 @@ routes.route("/verify-email").post(verifyEmail);
 routes.route("/reset-page").get(RenderResetPasswordpage);
 routes.route("/reset-password").post(Resetpassword);
 routes.route("/get-all-employees").get(Authorization,GetAllEmployees);
+routes.route("/get-all-hods").get(Authorization,GetAllHodData);
 
 
 

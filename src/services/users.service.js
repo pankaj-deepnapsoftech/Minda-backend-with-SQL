@@ -138,6 +138,16 @@ export const GetUsersByIdService = async (id) => {
         ]
     });
     return result;
+};
+
+export const getAllHodsServicesData = async () => {
+    const result = await UserModel.findAll({
+        attributes:["_id","full_name","email","user_id"],
+        where:{
+            is_hod:true
+        }
+    });
+    return result;
 }
 
 
