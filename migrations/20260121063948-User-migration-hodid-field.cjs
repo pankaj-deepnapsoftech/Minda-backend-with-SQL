@@ -10,17 +10,15 @@ module.exports = {
      * await queryInterface.createTable('users', { id: Sequelize.INTEGER });
      */
 
-    try {
+    
       await queryInterface.addColumn("users", "hod_id", {
       type: Sequelize.UUID, allowNull: true, references: {
         model: "users",
         key: "_id"
       },
        onDelete: "SET NULL",
-    })
-    } catch (error) {
-      console.log(error)
-    }
+    });
+   
      
   },
 
