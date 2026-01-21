@@ -44,7 +44,7 @@ export const initModels = () => {
     AssemblyModal.belongsTo(UserModel, { foreignKey: "responsibility", as: "responsibleUser", constraints: false });
 
     PartModal.hasMany(AssemblyModal, { foreignKey: "part_id", as: "assemblies", constraints: false });
-    AssemblyModal.belongsToMany(PartModal, {  through: "assembly_parts", foreignKey: "part_id", as: "part", constraints: false });
+    AssemblyModal.belongsToMany(PartModal, { through: "assembly_parts", foreignKey: "part_id", as: "part", constraints: false });
 
     AssemblyModal.belongsToMany(ProcessModel, {
         through: "assembly_processes",
@@ -98,34 +98,20 @@ export const initModels = () => {
     PlantModel.hasMany(ProcessModel, { foreignKey: "plant_id", as: "processes", constraints: false });
     ProcessModel.belongsTo(PlantModel, { foreignKey: "plant_id", as: "plant", constraints: false });
 
-    UserModel.hasMany(GroupUsersModel,{foreignKey:"user_id", as:"groupUsers"});
-    GroupUsersModel.belongsTo(UserModel,{foreignKey:"user_id",as:"user"});
+    UserModel.hasMany(GroupUsersModel, { foreignKey: "user_id", as: "groupUsers" });
+    GroupUsersModel.belongsTo(UserModel, { foreignKey: "user_id", as: "user" });
 
-    ReleseGroupModel.hasMany(GroupUsersModel,{foreignKey:"relese_group_id",as:"groupUsers"})
-    GroupUsersModel.belongsTo(ReleseGroupModel,{foreignKey:"relese_group_id",as:"releaseGroup"})
+    ReleseGroupModel.hasMany(GroupUsersModel, { foreignKey: "relese_group_id", as: "groupUsers" })
+    GroupUsersModel.belongsTo(ReleseGroupModel, { foreignKey: "relese_group_id", as: "releaseGroup" })
 
-    TemplateMasterModel.hasMany(TemplateFieldModel, {
-        foreignKey: "template_id",
-        as: "fields",
-        constraints: false
-    });
-    TemplateFieldModel.belongsTo(TemplateMasterModel, {
-        foreignKey: "template_id",
-        as: "template",
-        constraints: false
-    });
+    UserModel.hasMany(UserModel, {foreignKey: "hod_id",as: "employees"});
+    UserModel.belongsTo(UserModel, {foreignKey: "hod_id",as: "hod"});
 
-    // Checklist → ItemCheckTime (1 : N)
-    CheckListModal.hasMany(ItemCheckTimeModel, {
-        foreignKey: "item_id",
-        as: "time"
-    });
+    TemplateMasterModel.hasMany(TemplateFieldModel, {foreignKey: "template_id",as: "fields",constraints: false});
+    TemplateFieldModel.belongsTo(TemplateMasterModel, {foreignKey: "template_id",as: "template",constraints: false});
 
-    // ItemCheckTime → Checklist (N : 1)
-    ItemCheckTimeModel.belongsTo(CheckListModal, {
-        foreignKey: "item_id",
-        as: "checklistItem"
-    });
+    CheckListModal.hasMany(ItemCheckTimeModel, {foreignKey: "item_id",as: "time"});
+    ItemCheckTimeModel.belongsTo(CheckListModal, {foreignKey: "item_id",as: "checklistItem"});
 
 
     modelsInitialized = true;

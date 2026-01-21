@@ -21,7 +21,9 @@ export const UserModel = sequelize.define(
         terminate: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
         refresh_token: { type: DataTypes.TEXT, allowNull: true },
         is_admin: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
-        department_id:{type:DataTypes.UUID,allowNull:true}
+        department_id:{type:DataTypes.UUID,allowNull:true},
+        is_hod:{type:DataTypes.BOOLEAN,allowNull:false,defaultValue:false},
+        hod_id:{type:DataTypes.UUID,allowNull:true}
     },
     {
         tableName: "users",
