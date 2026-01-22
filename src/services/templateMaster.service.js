@@ -95,10 +95,10 @@ export const addFieldToTemplateService = async (
   }
 
   let dropdownOptionsString = null;
-  if (field_type === "DROPDOWN") {
+  if (field_type === "DROPDOWN" || field_type === "RADIO") {
     if (!dropdown_options || (Array.isArray(dropdown_options) && dropdown_options.length === 0)) {
       throw new BadRequestError(
-        "Dropdown options are required for DROPDOWN field type",
+        `Options are required for ${field_type} field type`,
         "addFieldToTemplateService()"
       );
     }
@@ -111,7 +111,7 @@ export const addFieldToTemplateService = async (
     }
     if (arr.length === 0) {
       throw new BadRequestError(
-        "Dropdown options are required for DROPDOWN field type",
+        `Options are required for ${field_type} field type`,
         "addFieldToTemplateService()"
       );
     }
@@ -148,10 +148,10 @@ export const updateFieldService = async (
   }
 
   let dropdownOptionsString = null;
-  if (field_type === "DROPDOWN") {
+  if (field_type === "DROPDOWN" || field_type === "RADIO") {
     if (!dropdown_options || (Array.isArray(dropdown_options) && dropdown_options.length === 0)) {
       throw new BadRequestError(
-        "Dropdown options are required for DROPDOWN field type",
+        `Options are required for ${field_type} field type`,
         "updateFieldService()"
       );
     }
@@ -163,7 +163,7 @@ export const updateFieldService = async (
     }
     if (arr.length === 0) {
       throw new BadRequestError(
-        "Dropdown options are required for DROPDOWN field type",
+        `Options are required for ${field_type} field type`,
         "updateFieldService()"
       );
     }
