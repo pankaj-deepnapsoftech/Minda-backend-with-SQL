@@ -13,6 +13,7 @@ export const TemplateMasterModel = sequelize.define(
     template_type: { type: DataTypes.STRING, allowNull: true }, // NEW / AMENDMENT (optional)
     is_active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     assigned_user: { type: DataTypes.UUID, allowNull: true },
+    workflow_id: { type: DataTypes.UUID, allowNull: true },
   },
   {
     timestamps: true,

@@ -21,11 +21,14 @@ export const createTemplateSubmissionService = async (data) => {
     where: {
       template_id,
       user_id,
-      status: "DRAFT",
     },
   });
 
   if (existingSubmission) {
+    if (existingSubmission.status === "SUBMITTED") {
+      throw new BadRequestError("You have already submitted this template", "createTemplateSubmissionService()");
+    }
+    
     // Update existing draft
     await existingSubmission.update({
       form_data: form_data || {},
@@ -106,6 +109,18 @@ export const getUserTemplateSubmissionsService = async (userId, templateId = nul
   });
 
   return submissions;
+};
+
+export const getLatestUserSubmissionForTemplateService = async (userId, templateId) => {
+  const submission = await TemplateSubmissionModel.findOne({
+    where: {
+      user_id: userId,
+      template_id: templateId,
+    },
+    order: [["createdAt", "DESC"]],
+  });
+
+  return submission;
 };
 
 export const submitTemplateSubmissionService = async (submissionId) => {
