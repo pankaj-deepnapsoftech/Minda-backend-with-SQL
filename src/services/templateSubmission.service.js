@@ -1,5 +1,6 @@
 import { TemplateSubmissionModel } from "../models/templateSubmission.model.js";
 import { TemplateMasterModel } from "../models/templateMaster.model.js";
+import { UserModel } from "../models/user.modal.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 import { Op } from "sequelize";
 
@@ -25,14 +26,15 @@ export const createTemplateSubmissionService = async (data) => {
   });
 
   if (existingSubmission) {
-    if (existingSubmission.status === "SUBMITTED") {
-      throw new BadRequestError("You have already submitted this template", "createTemplateSubmissionService()");
+    // Allow updating SUBMITTED submissions - change status to DRAFT when editing
+    if (existingSubmission.status === "SUBMITTED" && status === "SUBMITTED") {
+      throw new BadRequestError("Please edit the existing submission first", "createTemplateSubmissionService()");
     }
     
-    // Update existing draft
+    // Update existing submission (DRAFT or SUBMITTED)
     await existingSubmission.update({
       form_data: form_data || {},
-      status: status || "DRAFT",
+      status: status || (existingSubmission.status === "SUBMITTED" ? "DRAFT" : "DRAFT"),
     });
     return existingSubmission;
   }
@@ -54,10 +56,13 @@ export const updateTemplateSubmissionService = async (submissionId, data) => {
     throw new NotFoundError("Submission not found", "updateTemplateSubmissionService()");
   }
 
-  await submission.update({
+  // Allow editing SUBMITTED submissions - change status to DRAFT when editing
+  const updateData = {
     form_data: data.form_data !== undefined ? data.form_data : submission.form_data,
-    status: data.status !== undefined ? data.status : submission.status,
-  });
+    status: data.status !== undefined ? data.status : (submission.status === "SUBMITTED" ? "DRAFT" : submission.status),
+  };
+
+  await submission.update(updateData);
 
   return submission;
 };
