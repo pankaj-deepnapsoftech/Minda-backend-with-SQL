@@ -26,7 +26,7 @@ const templateFieldsInclude = {
   required: false,
 };
 
-export const createTemplateService = async ({ template_name, template_type, assigned_user }) => {
+export const createTemplateService = async ({ template_name, template_type, assigned_user, assigned_users }) => {
   const name = (template_name || "").trim();
   if (!name) {
     throw new BadRequestError("Template Name is required", "createTemplateService()");
@@ -39,24 +39,34 @@ export const createTemplateService = async ({ template_name, template_type, assi
     throw new BadRequestError("Template already exists", "createTemplateService()");
   }
 
-  // Validate assigned_user if provided
-  let assignedUserId = null;
-  if (assigned_user) {
+  // Handle assigned_users (array) - preferred
+  let assignedUsersArray = null;
+  if (assigned_users && Array.isArray(assigned_users) && assigned_users.length > 0) {
+    // Validate all users exist
+    for (const userId of assigned_users) {
+      const user = await UserModel.findByPk(userId);
+      if (!user) {
+        throw new BadRequestError(`Assigned user ${userId} not found`, "createTemplateService()");
+      }
+    }
+    assignedUsersArray = assigned_users;
+  } else if (assigned_user) {
+    // Backward compatibility: handle single assigned_user
     const userId = String(assigned_user).trim();
     if (userId) {
-      // Check if user exists
       const user = await UserModel.findByPk(userId);
       if (!user) {
         throw new BadRequestError("Assigned user not found", "createTemplateService()");
       }
-      assignedUserId = userId;
+      assignedUsersArray = [userId];
     }
   }
 
   const created = await TemplateMasterModel.create({
     template_name: name,
     template_type: template_type || null,
-    assigned_user: assignedUserId,
+    assigned_user: assignedUsersArray && assignedUsersArray.length > 0 ? assignedUsersArray[0] : null, // Keep first user for backward compatibility
+    assigned_users: assignedUsersArray,
   });
 
   return created;
@@ -198,7 +208,7 @@ export const deleteFieldService = async (fieldId) => {
   return true;
 };
 
-export const updateTemplateService = async (templateId, { template_name, template_type, assigned_user }) => {
+export const updateTemplateService = async (templateId, { template_name, template_type, assigned_user, assigned_users }) => {
   const template = await TemplateMasterModel.findByPk(templateId);
   if (!template) {
     throw new NotFoundError("Template not found", "updateTemplateService()");
@@ -220,22 +230,35 @@ export const updateTemplateService = async (templateId, { template_name, templat
     throw new BadRequestError("Template already exists", "updateTemplateService()");
   }
 
-  // Handle assigned_user update
-  let assignedUserId = template.assigned_user; // Keep existing value by default
-  if (assigned_user !== undefined) {
+  // Handle assigned_users (array) - preferred
+  let assignedUsersArray = template.assigned_users || []; // Keep existing value by default
+  if (assigned_users !== undefined) {
+    if (assigned_users === null || (Array.isArray(assigned_users) && assigned_users.length === 0)) {
+      assignedUsersArray = null;
+    } else if (Array.isArray(assigned_users) && assigned_users.length > 0) {
+      // Validate all users exist
+      for (const userId of assigned_users) {
+        const user = await UserModel.findByPk(userId);
+        if (!user) {
+          throw new BadRequestError(`Assigned user ${userId} not found`, "updateTemplateService()");
+        }
+      }
+      assignedUsersArray = assigned_users;
+    }
+  } else if (assigned_user !== undefined) {
+    // Backward compatibility: handle single assigned_user
     if (assigned_user === null || assigned_user === "") {
-      assignedUserId = null;
+      assignedUsersArray = null;
     } else {
       const userId = String(assigned_user).trim();
       if (userId) {
-        // Check if user exists
         const user = await UserModel.findByPk(userId);
         if (!user) {
           throw new BadRequestError("Assigned user not found", "updateTemplateService()");
         }
-        assignedUserId = userId;
+        assignedUsersArray = [userId];
       } else {
-        assignedUserId = null;
+        assignedUsersArray = null;
       }
     }
   }
@@ -243,7 +266,8 @@ export const updateTemplateService = async (templateId, { template_name, templat
   await template.update({
     template_name: name,
     template_type: template_type || null,
-    assigned_user: assignedUserId,
+    assigned_user: assignedUsersArray && assignedUsersArray.length > 0 ? assignedUsersArray[0] : null, // Keep first user for backward compatibility
+    assigned_users: assignedUsersArray,
   });
 
   return template;
@@ -266,9 +290,9 @@ export const deleteTemplateService = async (templateId) => {
 };
 
 export const getAssignedTemplatesService = async (userId) => {
-  return await TemplateMasterModel.findAll({
+  // Fetch all active templates
+  const allTemplates = await TemplateMasterModel.findAll({
     where: {
-      assigned_user: userId,
       is_active: true,
     },
     include: [
@@ -280,6 +304,22 @@ export const getAssignedTemplatesService = async (userId) => {
     ],
     order: [["createdAt", "DESC"]],
   });
+
+  // Filter templates where user is assigned (either in assigned_user or assigned_users array)
+  const assignedTemplates = allTemplates.filter((template) => {
+    // Check backward compatibility: single assigned_user
+    if (template.assigned_user === userId) {
+      return true;
+    }
+    // Check assigned_users array
+    const assignedUsers = template.assigned_users || [];
+    if (Array.isArray(assignedUsers) && assignedUsers.includes(userId)) {
+      return true;
+    }
+    return false;
+  });
+
+  return assignedTemplates;
 };
 
 export const assignWorkflowToTemplateService = async (templateId, workflowId) => {
