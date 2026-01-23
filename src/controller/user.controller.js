@@ -152,11 +152,11 @@ export const GetAllemployees = AsyncHandler(async (req, res) => {
 });
 
 export const SearchEmployees = AsyncHandler(async (req, res) => {
-    let {company,plant, search, limit, page } = req.query;
+    let {is_hod,company,plant, search, limit, page } = req.query;
     limit = parseInt(limit) || 10;
     page = parseInt(page) || 1;
     const skip = (page - 1) * limit;
-    const result = await SearchUsersService(company,plant,search, skip, limit);
+    const result = await SearchUsersService(is_hod,company,plant,search, skip, limit);
     res.status(StatusCodes.OK).json({
         data: result
     });

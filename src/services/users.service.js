@@ -38,17 +38,15 @@ export const GetAllUsersService = async () => {
     return result;
 };
 
-export const SearchUsersService = async (company, plant, search = "", skip, limit) => {
+export const SearchUsersService = async (is_hod,company, plant, search = "", skip, limit) => {
     const q = search || "";
     const where = {
-        is_admin: false,
-        [Op.or]: [
-            { email: { [Op.like]: `%${q}%` } },
-            { user_id: { [Op.like]: `%${q}%` } },
-        ],
-        ...(company ? { employee_company: company } : {}),
-        ...(plant ? { employee_plant: plant } : {}),
-    };
+      is_admin: false,
+      [Op.or]: [{ email: { [Op.like]: `%${q}%` } }, { user_id: { [Op.like]: `%${q}%` } }],
+      ...(is_hod ? { is_hod } : {}),
+      ...(company ? { employee_company: company } : {}),
+      ...(plant ? { employee_plant: plant } : {}),
+    }
 
     const result = await UserModel.findAll({
         where,
