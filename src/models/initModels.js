@@ -16,6 +16,7 @@ import { ReleseGroupModel } from "./ReleseGroup.modal.js";
 import { TemplateMasterModel } from "./templateMaster.model.js";
 import { TemplateFieldModel } from "./templateField.model.js";
 import { TemplateSubmissionModel } from "./templateSubmission.model.js";
+import { WorkflowModel } from "./workflow.modal.js";
 
 let modelsInitialized = false;
 
@@ -113,6 +114,9 @@ export const initModels = () => {
 
     UserModel.hasMany(TemplateMasterModel, {foreignKey: "assigned_user",as: "assignedTemplates",constraints: false});
     TemplateMasterModel.belongsTo(UserModel, {foreignKey: "assigned_user",as: "assignedUser",constraints: false});
+
+    WorkflowModel.hasMany(TemplateMasterModel, {foreignKey: "workflow_id",as: "templates",constraints: false});
+    TemplateMasterModel.belongsTo(WorkflowModel, {foreignKey: "workflow_id",as: "workflow",constraints: false});
 
     TemplateMasterModel.hasMany(TemplateSubmissionModel, {foreignKey: "template_id",as: "submissions",constraints: false});
     TemplateSubmissionModel.belongsTo(TemplateMasterModel, {foreignKey: "template_id",as: "template",constraints: false});
