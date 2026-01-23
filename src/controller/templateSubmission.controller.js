@@ -5,6 +5,7 @@ import {
   updateTemplateSubmissionService,
   getTemplateSubmissionService,
   getUserTemplateSubmissionsService,
+  getLatestUserSubmissionForTemplateService,
   submitTemplateSubmissionService,
 } from "../services/templateSubmission.service.js";
 
@@ -58,6 +59,18 @@ export const getUserTemplateSubmissions = AsyncHandler(async (req, res) => {
 
   return res.status(StatusCodes.OK).json({
     message: "Template submissions fetched successfully",
+    data: result,
+  });
+});
+
+export const getLatestUserSubmissionForTemplate = AsyncHandler(async (req, res) => {
+  const userId = req.currentUser._id;
+  const { template_id } = req.params;
+
+  const result = await getLatestUserSubmissionForTemplateService(userId, template_id);
+
+  return res.status(StatusCodes.OK).json({
+    message: "Latest template submission fetched successfully",
     data: result,
   });
 });

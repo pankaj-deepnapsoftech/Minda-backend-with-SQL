@@ -3,6 +3,7 @@ import { Op } from "sequelize";
 import { TemplateMasterModel } from "../models/templateMaster.model.js";
 import { TemplateFieldModel } from "../models/templateField.model.js";
 import { UserModel } from "../models/user.modal.js";
+import { WorkflowModel } from "../models/workflow.modal.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 
 const assignedUserInclude = {
@@ -10,6 +11,13 @@ const assignedUserInclude = {
   as: "assignedUser",
   required: false,
   attributes: ["_id", "full_name", "email", "user_id"],
+};
+
+const workflowInclude = {
+  model: WorkflowModel,
+  as: "workflow",
+  required: false,
+  attributes: ["_id", "name"],
 };
 
 const templateFieldsInclude = {
@@ -56,7 +64,7 @@ export const createTemplateService = async ({ template_name, template_type, assi
 
 export const listTemplatesService = async () => {
   return await TemplateMasterModel.findAll({
-    include: [assignedUserInclude],
+    include: [assignedUserInclude, workflowInclude],
     order: [["createdAt", "DESC"]],
   });
 };
@@ -69,6 +77,7 @@ export const getTemplateByIdService = async (id) => {
         order: [["sort_order", "ASC"]],
       },
       assignedUserInclude,
+      workflowInclude,
     ],
   });
   if (!result) {
@@ -271,5 +280,28 @@ export const getAssignedTemplatesService = async (userId) => {
     ],
     order: [["createdAt", "DESC"]],
   });
+};
+
+export const assignWorkflowToTemplateService = async (templateId, workflowId) => {
+  // Validate template exists
+  const template = await TemplateMasterModel.findByPk(templateId);
+  if (!template) {
+    throw new NotFoundError("Template not found", "assignWorkflowToTemplateService()");
+  }
+
+  // Validate workflow exists (if workflowId is provided)
+  if (workflowId) {
+    const workflow = await WorkflowModel.findByPk(workflowId);
+    if (!workflow) {
+      throw new NotFoundError("Workflow not found", "assignWorkflowToTemplateService()");
+    }
+  }
+
+  // Update template with workflow_id (can be null to unassign)
+  await template.update({
+    workflow_id: workflowId || null,
+  });
+
+  return template;
 };
 
