@@ -20,7 +20,7 @@ export const CheckDbConnection = async () => {
                 // Use sequelize.sync() - it should handle table creation order
                 // But for SQL Server, we need to ensure tables are created in the right order
                 // The issue is foreign keys being created inline
-                await sequelize.sync({ alter: false, force: false });
+                await sequelize.sync({ alter: false, force: false    });
                 
                 logger.info("Database sync completed.");
             }
