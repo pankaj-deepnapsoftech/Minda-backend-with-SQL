@@ -21,6 +21,7 @@ export const TemplateFieldModel = sequelize.define(
             "NUMBER",
             "CHECKBOX",
             "DROPDOWN",
+            "RADIO",
             "DATE",
             "TEXTAREA",
             "IMAGE",
