@@ -8,8 +8,9 @@ import {
   getLatestUserSubmissionForTemplateService,
   submitTemplateSubmissionService,
 } from "../services/templateSubmission.service.js";
+import { updateAssignedUserStatusService, UpdateOnlyTemplateMaster } from "../services/templateMaster.service.js";
 
-export const createTemplateSubmission = AsyncHandler(async (req, res) => {
+export const createTemplateSubmission = AsyncHandler(async (req, res,next) => {
   const userId = req.currentUser._id;
   const { template_id, form_data, status } = req.body;
 
@@ -20,10 +21,14 @@ export const createTemplateSubmission = AsyncHandler(async (req, res) => {
     status,
   });
 
-  return res.status(StatusCodes.CREATED).json({
+  res.status(StatusCodes.CREATED).json({
     message: "Template submission saved successfully",
     data: result,
   });
+
+   await updateAssignedUserStatusService(template_id, { user_id:userId, status: "in-progress"});
+
+
 });
 
 export const updateTemplateSubmission = AsyncHandler(async (req, res) => {
