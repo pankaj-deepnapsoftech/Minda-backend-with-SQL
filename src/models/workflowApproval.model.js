@@ -15,7 +15,7 @@ export const WorkflowApprovalModel = sequelize.define(
     },
     reassign_stage: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
     workflow_id: {
       type: DataTypes.UUID,

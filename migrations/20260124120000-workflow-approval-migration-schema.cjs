@@ -16,7 +16,7 @@ module.exports = {
       },
       reassign_stage: {
         type: Sequelize.INTEGER,
-        allowNull: false
+        allowNull: true
       },
       workflow_id: {
         type: Sequelize.UUID,
