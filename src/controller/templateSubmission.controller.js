@@ -8,7 +8,7 @@ import {
   getLatestUserSubmissionForTemplateService,
   submitTemplateSubmissionService,
 } from "../services/templateSubmission.service.js";
-import { UpdateOnlyTemplateMaster } from "../services/templateMaster.service.js";
+import { updateAssignedUserStatusService, UpdateOnlyTemplateMaster } from "../services/templateMaster.service.js";
 
 export const createTemplateSubmission = AsyncHandler(async (req, res,next) => {
   const userId = req.currentUser._id;
@@ -26,7 +26,7 @@ export const createTemplateSubmission = AsyncHandler(async (req, res,next) => {
     data: result,
   });
 
-   await UpdateOnlyTemplateMaster(template_id,next,{status:"in-progress"})
+   await updateAssignedUserStatusService(template_id, { user_id:userId, status: "in-progress"});
 
 
 });
