@@ -10,6 +10,7 @@ import {
   updateFieldService,
   updateTemplateService,
   getAssignedTemplatesService,
+  getTemplateStatusListService,
   assignWorkflowToTemplateService,
   updateAssignedUserStatusService,
 } from "../services/templateMaster.service.js";
@@ -81,6 +82,14 @@ export const getAssignedTemplates = AsyncHandler(async (req, res) => {
   const result = await getAssignedTemplatesService(userId);
   res.status(StatusCodes.OK).json({
     message: "Assigned templates fetched successfully",
+    data: result,
+  });
+});
+
+export const getTemplateStatusList = AsyncHandler(async (_req, res) => {
+  const result = await getTemplateStatusListService();
+  res.status(StatusCodes.OK).json({
+    message: "Template status list fetched successfully",
     data: result,
   });
 });

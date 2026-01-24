@@ -348,6 +348,60 @@ export const getAssignedTemplatesService = async (userId) => {
   return assignedTemplates;
 };
 
+// assigned_users ke andar wale status: har (template, user) ke liye ek row, assigned_user fallback
+export const getTemplateStatusListService = async () => {
+  const templates = await TemplateMasterModel.findAll({
+    include: [workflowInclude],
+    order: [["createdAt", "DESC"]],
+  });
+  const allUserIds = [];
+  const rows = [];
+  for (const t of templates) {
+    const list = t.assigned_users || [];
+    const seen = new Set();
+    for (const au of list) {
+      if (au && au.user_id) {
+        seen.add(au.user_id);
+        allUserIds.push(au.user_id);
+        rows.push({
+          template_id: t._id,
+          template_name: t.template_name,
+          template_type: t.template_type || null,
+          workflow_name: t.workflow?.name || null,
+          user_id: au.user_id,
+          user_name: null,
+          status: au.status || "pending",
+        });
+      }
+    }
+    const legacyId = t.assigned_user;
+    if (legacyId && !seen.has(legacyId)) {
+      allUserIds.push(legacyId);
+      rows.push({
+        template_id: t._id,
+        template_name: t.template_name,
+        template_type: t.template_type || null,
+        workflow_name: t.workflow?.name || null,
+        user_id: legacyId,
+        user_name: null,
+        status: "pending",
+      });
+    }
+  }
+  const uniqueIds = [...new Set(allUserIds)];
+  if (uniqueIds.length > 0) {
+    const users = await UserModel.findAll({
+      where: { _id: { [Op.in]: uniqueIds } },
+      attributes: ["_id", "full_name"],
+    });
+    const nameMap = Object.fromEntries(users.map((u) => [u._id, u.full_name || u._id]));
+    for (const r of rows) {
+      r.user_name = nameMap[r.user_id] || r.user_id;
+    }
+  }
+  return rows;
+};
+
 export const assignWorkflowToTemplateService = async (templateId, workflowId) => {
   // Validate template exists
   const template = await TemplateMasterModel.findByPk(templateId);
