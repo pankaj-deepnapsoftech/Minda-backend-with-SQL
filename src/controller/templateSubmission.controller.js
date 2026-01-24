@@ -8,9 +8,9 @@ import {
   getLatestUserSubmissionForTemplateService,
   submitTemplateSubmissionService,
 } from "../services/templateSubmission.service.js";
-import { updateAssignedUserStatusService, UpdateOnlyTemplateMaster } from "../services/templateMaster.service.js";
+import { updateAssignedUserStatusService } from "../services/templateMaster.service.js";
 
-export const createTemplateSubmission = AsyncHandler(async (req, res,next) => {
+export const createTemplateSubmission = AsyncHandler(async (req, res) => {
   const userId = req.currentUser._id;
   const { template_id, form_data, status } = req.body;
 

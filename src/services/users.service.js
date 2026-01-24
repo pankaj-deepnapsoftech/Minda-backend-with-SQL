@@ -146,7 +146,18 @@ export const getAllHodsServicesData = async () => {
         }
     });
     return result;
-}
+};
+
+
+export const getAllUsersUnderHod = async (id) => {
+    const result = await UserModel.findAll({
+        where:{
+            hod_id:id
+        },
+        attributes:["_id"]
+    });
+    return result.map((item)=>item._id)
+};
 
 
 
