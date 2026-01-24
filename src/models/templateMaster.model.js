@@ -13,7 +13,7 @@ export const TemplateMasterModel = sequelize.define(
     template_type: { type: DataTypes.STRING, allowNull: true }, // NEW / AMENDMENT (optional)
     is_active: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     assigned_user: { type: DataTypes.UUID, allowNull: true }, // Keep for backward compatibility
-    status:{type:DataTypes.ENUM("pending","completed","rejected","re-assign",'in-progress'),allowNull:true,defaultValue:"pending"},
+    // status:{type:DataTypes.ENUM("pending","completed","rejected","re-assign",'in-progress'),allowNull:true,defaultValue:"pending"},
     assigned_users: { 
       type: DataTypes.TEXT, 
       allowNull: true,
