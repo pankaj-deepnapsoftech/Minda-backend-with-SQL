@@ -1,10 +1,36 @@
 // @ts-nocheck
 import { Op } from "sequelize";
-import { TemplateMasterModel } from "../models/templateMaster.model.js";
+import { TemplateMasterModel, ASSIGNED_USER_STATUS_ENUM } from "../models/templateMaster.model.js";
 import { TemplateFieldModel } from "../models/templateField.model.js";
 import { UserModel } from "../models/user.modal.js";
 import { WorkflowModel } from "../models/workflow.modal.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
+
+// Normalize to [{ user_id, status }]. Accepts: [id], [{ user_id, status? }], [{ _id }]
+function toAssignedUsersArray(raw) {
+  if (!raw) return null;
+  if (!Array.isArray(raw) || raw.length === 0) return null;
+  const out = raw
+    .map((x) => {
+      if (typeof x === "string" && x) return { user_id: String(x), status: "pending" };
+      if (x && typeof x === "object" && (x.user_id != null || x._id != null)) {
+        return {
+          user_id: String(x.user_id ?? x._id),
+          status: ASSIGNED_USER_STATUS_ENUM.includes(x.status) ? x.status : "pending",
+        };
+      }
+      return null;
+    })
+    .filter(Boolean);
+  return out.length ? out : null;
+}
+
+function extractUserIds(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .map((x) => (typeof x === "string" ? x : x && (x.user_id || x._id)))
+    .filter(Boolean);
+}
 
 const assignedUserInclude = {
   model: UserModel,
@@ -39,33 +65,30 @@ export const createTemplateService = async ({ template_name, template_type, assi
     throw new BadRequestError("Template already exists", "createTemplateService()");
   }
 
-  // Handle assigned_users (array) - preferred
+  // assigned_users: [{ user_id, status }]. Accepts [id] or [{ user_id, status? }] or [{ _id }]
   let assignedUsersArray = null;
   if (assigned_users && Array.isArray(assigned_users) && assigned_users.length > 0) {
-    // Validate all users exist
-    for (const userId of assigned_users) {
-      const user = await UserModel.findByPk(userId);
-      if (!user) {
-        throw new BadRequestError(`Assigned user ${userId} not found`, "createTemplateService()");
-      }
+    assignedUsersArray = toAssignedUsersArray(assigned_users);
+    const ids = extractUserIds(assigned_users);
+    for (const uid of ids) {
+      const user = await UserModel.findByPk(uid);
+      if (!user) throw new BadRequestError(`Assigned user ${uid} not found`, "createTemplateService()");
     }
-    assignedUsersArray = assigned_users;
   } else if (assigned_user) {
-    // Backward compatibility: handle single assigned_user
     const userId = String(assigned_user).trim();
     if (userId) {
       const user = await UserModel.findByPk(userId);
-      if (!user) {
-        throw new BadRequestError("Assigned user not found", "createTemplateService()");
-      }
-      assignedUsersArray = [userId];
+      if (!user) throw new BadRequestError("Assigned user not found", "createTemplateService()");
+      assignedUsersArray = [{ user_id: userId, status: "pending" }];
     }
   }
+
+  const firstUserId = assignedUsersArray && assignedUsersArray.length > 0 ? assignedUsersArray[0].user_id : null;
 
   const created = await TemplateMasterModel.create({
     template_name: name,
     template_type: template_type || null,
-    assigned_user: assignedUsersArray && assignedUsersArray.length > 0 ? assignedUsersArray[0] : null, // Keep first user for backward compatibility
+    assigned_user: firstUserId,
     assigned_users: assignedUsersArray,
   });
 
@@ -231,43 +254,48 @@ export const updateTemplateService = async (templateId, { template_name, templat
     throw new BadRequestError("Template already exists", "updateTemplateService()");
   }
 
-  // Handle assigned_users (array) - preferred
-  let assignedUsersArray = template.assigned_users || []; // Keep existing value by default
+  // assigned_users: [{ user_id, status }]. Accepts [id] or [{ user_id, status? }]. Merge with existing to preserve status when only ids sent.
+  let assignedUsersArray = template.assigned_users || [];
   if (assigned_users !== undefined) {
     if (assigned_users === null || (Array.isArray(assigned_users) && assigned_users.length === 0)) {
       assignedUsersArray = null;
     } else if (Array.isArray(assigned_users) && assigned_users.length > 0) {
-      // Validate all users exist
-      for (const userId of assigned_users) {
-        const user = await UserModel.findByPk(userId);
-        if (!user) {
-          throw new BadRequestError(`Assigned user ${userId} not found`, "updateTemplateService()");
+      let toSave = toAssignedUsersArray(assigned_users);
+      if (toSave) {
+        const existing = template.assigned_users || [];
+        for (const t of toSave) {
+          const e = existing.find((x) => x && x.user_id === t.user_id);
+          if (e && e.status && ASSIGNED_USER_STATUS_ENUM.includes(e.status)) t.status = e.status;
         }
+        const ids = toSave.map((o) => o.user_id);
+        for (const uid of ids) {
+          const user = await UserModel.findByPk(uid);
+          if (!user) throw new BadRequestError(`Assigned user ${uid} not found`, "updateTemplateService()");
+        }
+        assignedUsersArray = toSave;
       }
-      assignedUsersArray = assigned_users;
     }
   } else if (assigned_user !== undefined) {
-    // Backward compatibility: handle single assigned_user
     if (assigned_user === null || assigned_user === "") {
       assignedUsersArray = null;
     } else {
       const userId = String(assigned_user).trim();
       if (userId) {
         const user = await UserModel.findByPk(userId);
-        if (!user) {
-          throw new BadRequestError("Assigned user not found", "updateTemplateService()");
-        }
-        assignedUsersArray = [userId];
+        if (!user) throw new BadRequestError("Assigned user not found", "updateTemplateService()");
+        assignedUsersArray = [{ user_id: userId, status: "pending" }];
       } else {
         assignedUsersArray = null;
       }
     }
   }
 
+  const firstUserId = assignedUsersArray && assignedUsersArray.length > 0 ? assignedUsersArray[0].user_id : null;
+
   await template.update({
     template_name: name,
     template_type: template_type || null,
-    assigned_user: assignedUsersArray && assignedUsersArray.length > 0 ? assignedUsersArray[0] : null, // Keep first user for backward compatibility
+    assigned_user: firstUserId,
     assigned_users: assignedUsersArray,
   });
 
@@ -310,18 +338,11 @@ export const getAssignedTemplatesService = async (userId) => {
     }
   });
 
-  // Filter templates where user is assigned (either in assigned_user or assigned_users array)
+  // Filter templates where user is in assigned_user or in assigned_users[].user_id
   const assignedTemplates = allTemplates.filter((template) => {
-    // Check backward compatibility: single assigned_user
-    if (template.assigned_user === userId) {
-      return true;
-    }
-    // Check assigned_users array
-    const assignedUsers = template.assigned_users || [];
-    if (Array.isArray(assignedUsers) && assignedUsers.includes(userId)) {
-      return true;
-    }
-    return false;
+    if (template.assigned_user === userId) return true;
+    const list = template.assigned_users || [];
+    return list.some((a) => a && (a.user_id === userId || (typeof a === "string" && a === userId)));
   });
 
   return assignedTemplates;
@@ -350,11 +371,28 @@ export const assignWorkflowToTemplateService = async (templateId, workflowId) =>
   return template;
 };
 
-export const UpdateOnlyTemplateMaster = async (templateId,next,data) => {
+export const UpdateOnlyTemplateMaster = async (templateId, next, data) => {
   const result = await TemplateMasterModel.findByPk(templateId);
-  if(!result){
-   next(new NotFoundError("Data not found","UpdateOnlyTemplateMaster() method error"))
+  if (!result) {
+    next(new NotFoundError("Data not found", "UpdateOnlyTemplateMaster() method error"));
   }
   return await result.update(data);
-}
+};
+
+// Update status of one assigned user. Body: { user_id, status }
+export const updateAssignedUserStatusService = async (templateId, { user_id, status }) => {
+  const template = await TemplateMasterModel.findByPk(templateId);
+  if (!template) throw new NotFoundError("Template not found", "updateAssignedUserStatusService()");
+  const uid = (user_id || "").toString().trim();
+  if (!uid) throw new BadRequestError("user_id is required", "updateAssignedUserStatusService()");
+  const st = ASSIGNED_USER_STATUS_ENUM.includes(status) ? status : null;
+  if (!st) throw new BadRequestError(`status must be one of: ${ASSIGNED_USER_STATUS_ENUM.join(", ")}`, "updateAssignedUserStatusService()");
+
+  const list = (template.assigned_users || []).map((a) => ({ ...a }));
+  const i = list.findIndex((a) => a && a.user_id === uid);
+  if (i < 0) throw new NotFoundError("User is not assigned to this template", "updateAssignedUserStatusService()");
+  list[i].status = st;
+  await template.update({ assigned_users: list });
+  return template;
+};
 
