@@ -21,8 +21,8 @@ export const UpdateParts = AsyncHandler(async (req, res) => {
     const { id } = req.params;
     const data = req.body;
     const exist = await FindPartServiceByName(data)
-    if (exist) {
-        throw new BadRequestError("Part already exist", "CreateParts() method error")
+    if (!exist) {
+        throw new BadRequestError("Part not Found", "CreateParts() method error")
     };
     const result = await UpdatePartService(id, data);
     if (!result) {
