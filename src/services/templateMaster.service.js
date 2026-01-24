@@ -557,6 +557,7 @@ export const testing = async (hodId) => {
         "user_id",
         "template_id",
         "remarks",
+        "approved_by",
         "createdAt",
       ],
     });
@@ -590,6 +591,35 @@ export const testing = async (hodId) => {
               String(appr.template_id) === String(tpl._id)
           );
 
+          // Extract HOD user ID from workflow
+          let hodId = null;
+          const workflowData = tpl.workflow?.workflow || [];
+          if (Array.isArray(workflowData)) {
+            const hodStage = workflowData.find(
+              (stage) => stage.group === "HOD" && stage.user && stage.user.trim() !== ""
+            );
+            if (hodStage && hodStage.user) {
+              hodId = hodStage.user.trim();
+            }
+          }
+
+          // Add workflow object with hod_id
+          const workflowObj = tpl.workflow ? {
+            ...tpl.workflow.toJSON ? tpl.workflow.toJSON() : tpl.workflow,
+            hod_id: hodId
+          } : null;
+
+          // Add is_approved_by_hod field to workflow approvals based on approved_by
+          const enrichedApprovals = tplApprovals.map((appr) => {
+            const approvalData = appr.toJSON ? appr.toJSON() : appr;
+            return {
+              ...approvalData,
+              is_approved_by_hod: hodId && approvalData.approved_by 
+                ? String(approvalData.approved_by) === String(hodId) 
+                : false
+            };
+          });
+
           return {
             _id: tpl._id,
             template_name: tpl.template_name,
@@ -599,8 +629,8 @@ export const testing = async (hodId) => {
             assigned_status:
               assignedUsers.find((u) => u.user_id === userId)?.status ??
               "pending",
-            workflow_approvals: tplApprovals,
-            workflow:tpl.workflow
+            workflow_approvals: enrichedApprovals,
+            workflow: workflowObj
           };
         })
         .filter(Boolean);
