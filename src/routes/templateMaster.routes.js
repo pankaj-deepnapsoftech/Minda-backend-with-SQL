@@ -9,6 +9,7 @@ import {
   updateField,
   updateTemplate,
   getAssignedTemplates,
+  getTemplateStatusList,
   assignWorkflowToTemplate,
   updateAssignedUserStatus,
 } from "../controller/templateMaster.controller.js";
@@ -19,6 +20,7 @@ const router = Router();
 router.post("/templates", createTemplate);
 router.get("/templates", listTemplates);
 router.get("/assigned-templates", getAssignedTemplates);
+router.get("/template-status", getTemplateStatusList);
 
 // More specific routes (with parameters) - must come after less specific ones
 router.post("/templates/:id/fields", addFieldToTemplate);
