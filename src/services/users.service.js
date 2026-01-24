@@ -38,14 +38,14 @@ export const GetAllUsersService = async () => {
     return result;
 };
 
-export const SearchUsersService = async (is_hod,company, plant, search = "", skip, limit) => {
+export const SearchUsersService = async (is_hod, company, plant, search = "", skip, limit) => {
     const q = search || "";
     const where = {
-      is_admin: false,
-      [Op.or]: [{ email: { [Op.like]: `%${q}%` } }, { user_id: { [Op.like]: `%${q}%` } }],
-      ...(is_hod ? { is_hod } : {}),
-      ...(company ? { employee_company: company } : {}),
-      ...(plant ? { employee_plant: plant } : {}),
+        is_admin: false,
+        [Op.or]: [{ email: { [Op.like]: `%${q}%` } }, { user_id: { [Op.like]: `%${q}%` } }],
+        ...(is_hod ? { is_hod } : {}),
+        ...(company ? { employee_company: company } : {}),
+        ...(plant ? { employee_plant: plant } : {}),
     }
 
     const result = await UserModel.findAll({
@@ -124,11 +124,11 @@ export const GetAdmin = async () => {
 
 export const GetUsersByIdService = async (id) => {
     const result = await UserModel.findOne({
-        where:{
-            _id:id
+        where: {
+            _id: id
         },
-        attributes:[
-              "_id",
+        attributes: [
+            "_id",
             "full_name",
             "email",
             "desigination",
@@ -140,16 +140,38 @@ export const GetUsersByIdService = async (id) => {
 
 export const getAllHodsServicesData = async () => {
     const result = await UserModel.findAll({
-        attributes:["_id","full_name","email","user_id"],
-        where:{
-            is_hod:true
+        attributes: ["_id", "full_name", "email", "user_id"],
+        where: {
+            is_hod: true
         }
     });
     return result;
+};
+
+
+export const getAllUsersUnderHod = async (id) => {
+    const result = await UserModel.findAll({
+        where: {
+            hod_id: id
+        },
+        attributes: ["_id"]
+    });
+    return result.map((item) => item._id)
+};
+
+
+export const getAllReleseGroupUsers = async () => {
+        const result = await UserModel.findAll({
+            where: {
+                is_hod: false,
+                hod_id: null,
+                is_admin:false
+            },
+            attributes:["_id","user_id","email","full_name"]
+        });
+        return result;
+   
 }
-
-
-
 
 
 

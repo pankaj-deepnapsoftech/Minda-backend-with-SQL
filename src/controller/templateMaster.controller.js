@@ -13,7 +13,9 @@ import {
   getTemplateStatusListService,
   assignWorkflowToTemplateService,
   updateAssignedUserStatusService,
+  GetTemplateAssignModuleService,
 } from "../services/templateMaster.service.js";
+import { getAllUsersUnderHod} from "../services/users.service.js";
 
 export const createTemplate = AsyncHandler(async (req, res) => {
   const created = await createTemplateService(req.body);
@@ -114,7 +116,14 @@ export const updateAssignedUserStatus = AsyncHandler(async (req, res) => {
   });
 });
 
-// export const Temp
+export const getAseeignTempaleteWorkflow = AsyncHandler(async (req,res) =>{
+  const user = req.currentUser;
+  const newData =  await getAllUsersUnderHod(user._id)
+  const data = await GetTemplateAssignModuleService(newData);
+  res.status(StatusCodes.OK).json({
+    data
+  })
+});
 
 
 

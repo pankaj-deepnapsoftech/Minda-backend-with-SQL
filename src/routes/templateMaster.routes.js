@@ -12,6 +12,7 @@ import {
   getTemplateStatusList,
   assignWorkflowToTemplate,
   updateAssignedUserStatus,
+  getAseeignTempaleteWorkflow,
 } from "../controller/templateMaster.controller.js";
 
 const router = Router();
@@ -33,6 +34,8 @@ router.delete("/templates/:id", deleteTemplate);
 // Field routes
 router.put("/fields/:fieldId", updateField);
 router.delete("/fields/:fieldId", deleteField);
+
+router.get("/get-assign-template",getAseeignTempaleteWorkflow)
 
 export default router;
 

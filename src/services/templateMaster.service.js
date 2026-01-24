@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { Op } from "sequelize";
+import { Op, Sequelize } from "sequelize";
 import { TemplateMasterModel, ASSIGNED_USER_STATUS_ENUM } from "../models/templateMaster.model.js";
 import { TemplateFieldModel } from "../models/templateField.model.js";
 import { UserModel } from "../models/user.modal.js";
@@ -392,11 +392,23 @@ export const getTemplateStatusListService = async () => {
   if (uniqueIds.length > 0) {
     const users = await UserModel.findAll({
       where: { _id: { [Op.in]: uniqueIds } },
-      attributes: ["_id", "full_name"],
+      attributes: ["_id", "full_name", "user_id", "email"],
     });
-    const nameMap = Object.fromEntries(users.map((u) => [u._id, u.full_name || u._id]));
+    const userDataMap = Object.fromEntries(
+      users.map((u) => [
+        u._id,
+        {
+          full_name: u.full_name || u._id,
+          employee_user_id: u.user_id || null,
+          email: u.email || null,
+        },
+      ])
+    );
     for (const r of rows) {
-      r.user_name = nameMap[r.user_id] || r.user_id;
+      const u = userDataMap[r.user_id];
+      r.user_name = u?.full_name ?? r.user_id;
+      r.employee_user_id = u?.employee_user_id ?? null;
+      r.email = u?.email ?? null;
     }
   }
   return rows;
@@ -425,13 +437,7 @@ export const assignWorkflowToTemplateService = async (templateId, workflowId) =>
   return template;
 };
 
-export const UpdateOnlyTemplateMaster = async (templateId, next, data) => {
-  const result = await TemplateMasterModel.findByPk(templateId);
-  if (!result) {
-    next(new NotFoundError("Data not found", "UpdateOnlyTemplateMaster() method error"));
-  }
-  return await result.update(data);
-};
+
 
 // Update status of one assigned user. Body: { user_id, status }
 export const updateAssignedUserStatusService = async (templateId, { user_id, status }) => {
@@ -448,5 +454,56 @@ export const updateAssignedUserStatusService = async (templateId, { user_id, sta
   list[i].status = st;
   await template.update({ assigned_users: list });
   return template;
+};
+
+
+
+export const GetTemplateAssignModuleService = async (userIds) => {
+  const templates = await TemplateMasterModel.findAll({
+    where: Sequelize.literal(`
+      EXISTS (
+        SELECT 1
+        FROM OPENJSON(assigned_users)
+        WITH (
+          user_id NVARCHAR(100) '$.user_id'
+        ) AS users
+        WHERE users.user_id IN (${userIds.map(id => `'${id}'`).join(",")})
+      )
+    `),
+    include: [{ model: WorkflowModel, as: "workflow" }]
+  });
+
+  const result = {};
+
+  userIds.forEach(userId => {
+    result[userId] = [];
+  });
+
+  templates.forEach(template => {
+    userIds.forEach(userId => {
+      const matchedUser = template.assigned_users.find(
+        u => u.user_id === userId
+      );
+
+      if (matchedUser) {
+        result[userId].push({
+          ...template.toJSON(),
+
+          // ✅ ONLY ONE USER IN assigned_users
+          assigned_users: [
+            {
+              user_id: matchedUser.user_id,
+              status: matchedUser.status
+            }
+          ],
+
+          // optional shortcut
+          user_status: matchedUser.status
+        });
+      }
+    });
+  });
+
+  return result;
 };
 

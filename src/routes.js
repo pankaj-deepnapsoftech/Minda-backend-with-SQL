@@ -21,6 +21,7 @@ import TemplateMasterRoutes from "./routes/templateMaster.routes.js";
 import WorkflowRoutes from "./routes/workflow.routes.js";
 import TemplateSubmissionRoutes from "./routes/templateSubmission.routes.js";
 import PlcDataRoutes from "./routes/plcData.routes.js";
+import StatusHistourRoutes from "./routes/statusHistory.routes.js"
 
 
 
@@ -46,6 +47,7 @@ routes.use("/template-master",    Authorization, TemplateMasterRoutes);
 routes.use("/workflow",            Authorization, WorkflowRoutes);
 routes.use("/template-submission", Authorization, TemplateSubmissionRoutes);
 routes.use("/plc-data",            Authorization, PlcDataRoutes);
+routes.use("/status-history",      Authorization,StatusHistourRoutes)
 
 
 
