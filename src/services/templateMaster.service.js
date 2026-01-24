@@ -486,6 +486,7 @@ export const GetTemplateAssignModuleService = async (userIds) => {
     ],
   });
 
+  // ✅ USER → TEMPLATES map
   const result = {};
 
   userIds.forEach(userId => {
@@ -494,32 +495,31 @@ export const GetTemplateAssignModuleService = async (userIds) => {
 
   templates.forEach(template => {
     const json = template.toJSON();
-    // workflow approval/reject status data - latest first
-    const statusData = (json.workflowApprovals || []).slice();
-    statusData.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+    // ---- workflow approval status (latest first)
+    const statusData = (json.workflowApprovals || [])
+      .slice()
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
     delete json.workflowApprovals;
 
-    userIds.forEach(userId => {
-      const matchedUser = template.assigned_users.find(
-        u => u.user_id === userId
-      );
+    // ---- assign template to EACH matched user
+    template.assigned_users.forEach(assignedUser => {
+      const userId = assignedUser.user_id;
 
-      if (matchedUser) {
+      if (result[userId]) {
         result[userId].push({
           ...json,
 
-          // ✅ ONLY ONE USER IN assigned_users
+          // 🔥 sirf wahi user
           assigned_users: [
             {
-              user_id: matchedUser.user_id,
-              status: matchedUser.status
-            }
+              user_id: assignedUser.user_id,
+              status: assignedUser.status,
+            },
           ],
 
-          // optional shortcut
-          user_status: matchedUser.status,
-
-          // workflow approval/reject status (current_stage, reassign_stage, status, remarks, user, etc.)
+          user_status: assignedUser.status,
           status_data: statusData,
         });
       }
@@ -529,3 +529,94 @@ export const GetTemplateAssignModuleService = async (userIds) => {
   return result;
 };
 
+
+export const testing = async (hodId) => {
+  try {
+    // 1️⃣ Get all users under HOD
+    const users = await UserModel.findAll({
+      where: { hod_id: hodId },
+      attributes: ["_id", "email", "user_id", "full_name"],
+    });
+
+    if (!users.length) return [];
+
+    // 2️⃣ Get all active templates
+    const templates = await TemplateMasterModel.findAll({
+      where: { is_active: true },
+      include:[ { model: WorkflowModel, as: "workflow" }]
+    });
+
+    // 3️⃣ Get all workflow approvals (only required fields)
+    const approvals = await WorkflowApprovalModel.findAll({
+      attributes: [
+        "_id",
+        "status",
+        "current_stage",
+        "reassign_stage",
+        "workflow_id",
+        "user_id",
+        "template_id",
+        "remarks",
+        "createdAt",
+      ],
+    });
+
+    // 4️⃣ Mapping
+    const response = users.map((user) => {
+      const userId = String(user._id);
+
+      const userTemplates = templates
+        .map((tpl) => {
+          // check if user is assigned to this template
+          let isAssigned = false;
+
+          // old single-user support
+          if (tpl.assigned_user && String(tpl.assigned_user) === userId) {
+            isAssigned = true;
+          }
+
+          // new multi-user support
+          const assignedUsers = tpl.assigned_users || [];
+          if (assignedUsers.some((u) => u.user_id === userId)) {
+            isAssigned = true;
+          }
+
+          if (!isAssigned) return null;
+
+          // workflow approvals for this user + template
+          const tplApprovals = approvals.filter(
+            (appr) =>
+              String(appr.user_id) === userId &&
+              String(appr.template_id) === String(tpl._id)
+          );
+
+          return {
+            _id: tpl._id,
+            template_name: tpl.template_name,
+            template_type: tpl.template_type,
+            workflow_id: tpl.workflow_id,
+            is_active: tpl.is_active,
+            assigned_status:
+              assignedUsers.find((u) => u.user_id === userId)?.status ??
+              "pending",
+            workflow_approvals: tplApprovals,
+            workflow:tpl.workflow
+          };
+        })
+        .filter(Boolean);
+
+      return {
+        _id: user._id,
+        full_name: user.full_name,
+        email: user.email,
+        user_id: user.user_id,
+        template_masters: userTemplates,
+      };
+    });
+
+    return response;
+  } catch (error) {
+    console.error("Testing API error:", error);
+    throw error;
+  }
+};

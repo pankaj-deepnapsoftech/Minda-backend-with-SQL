@@ -14,6 +14,7 @@ import {
   assignWorkflowToTemplateService,
   updateAssignedUserStatusService,
   GetTemplateAssignModuleService,
+  testing,
 } from "../services/templateMaster.service.js";
 import { getAllUsersUnderHod} from "../services/users.service.js";
 
@@ -118,8 +119,9 @@ export const updateAssignedUserStatus = AsyncHandler(async (req, res) => {
 
 export const getAseeignTempaleteWorkflow = AsyncHandler(async (req,res) =>{
   const user = req.currentUser;
-  const newData =  await getAllUsersUnderHod(user._id)
-  const data = await GetTemplateAssignModuleService(newData);
+  const data = await testing(user._id)
+  // const newData =  await getAllUsersUnderHod(user._id)
+  // const data = await GetTemplateAssignModuleService(newData);
   res.status(StatusCodes.OK).json({
     data
   })
