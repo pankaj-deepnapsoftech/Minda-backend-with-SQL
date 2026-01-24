@@ -29,7 +29,7 @@ export const getProcessServiceList = async (skip, limit) => {
         order: [["createdAt", "ASC"]],
         include:[
             {model:CompanyModel,as:"company",attributes:["_id","company_name","company_address"]},
-            {model:PlantModel,as:"plant",attributes:["_id","plant_name","plant_address"]},
+            {model:PlantModel,as:"plant",attributes:["_id","plant_name","plant_address","plant_code"]},
         ],
         offset: skip,
         limit,

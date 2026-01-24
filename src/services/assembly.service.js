@@ -12,7 +12,7 @@ import { ItemCheckTimeModel } from "../models/itemCheckTime.model.js";
 
 const baseAssemblyIncludes = [
     { model: CompanyModel, as: "company", attributes: ["_id", "company_name", "company_address", "description"] },
-    { model: PlantModel, as: "plant", attributes: ["_id", "plant_name", "plant_address", "description"] },
+    { model: PlantModel, as: "plant", attributes: ["_id", "plant_name", "plant_address", "plant_code","description"] },
     { model: UserModel, as: "responsibleUser", attributes: ["_id", "full_name", "email", "user_id", "desigination"] },
     { model: ProcessModel, as: "processes", attributes: ["_id", "process_name", "process_no"], through: { attributes: [] } },
     // { model: PartModal, as: "part", attributes: ["_id", "part_number", "part_name"] },
@@ -58,7 +58,7 @@ export const getAllAssemblyService = async (IsAdmin, userId, skip, limit) => {
         limit,
         include: baseAssemblyIncludes,
     });
-
+    
     const resultWithParts = Promise.all(result.map(async (item) => {
         const ides = JSON.parse(item.part_id) || [];
         const parts = await PartModal.findAll({

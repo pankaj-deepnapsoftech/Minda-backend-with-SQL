@@ -60,7 +60,7 @@ export const plantSearchService = async (query = "", company, skip, limit) => {
 export const AllPlantDataService = async (companyId) => {
     const result = await PlantModel.findAll({
         where: { company_id: companyId },
-        attributes: ["_id", "plant_name"],
+        attributes: ["_id", "plant_name","plant_code"],
         order: [["createdAt", "ASC"]],
     });
     return result;
