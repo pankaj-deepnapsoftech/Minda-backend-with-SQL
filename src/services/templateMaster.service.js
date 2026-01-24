@@ -392,11 +392,23 @@ export const getTemplateStatusListService = async () => {
   if (uniqueIds.length > 0) {
     const users = await UserModel.findAll({
       where: { _id: { [Op.in]: uniqueIds } },
-      attributes: ["_id", "full_name"],
+      attributes: ["_id", "full_name", "user_id", "email"],
     });
-    const nameMap = Object.fromEntries(users.map((u) => [u._id, u.full_name || u._id]));
+    const userDataMap = Object.fromEntries(
+      users.map((u) => [
+        u._id,
+        {
+          full_name: u.full_name || u._id,
+          employee_user_id: u.user_id || null,
+          email: u.email || null,
+        },
+      ])
+    );
     for (const r of rows) {
-      r.user_name = nameMap[r.user_id] || r.user_id;
+      const u = userDataMap[r.user_id];
+      r.user_name = u?.full_name ?? r.user_id;
+      r.employee_user_id = u?.employee_user_id ?? null;
+      r.email = u?.email ?? null;
     }
   }
   return rows;
