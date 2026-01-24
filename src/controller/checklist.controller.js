@@ -20,9 +20,9 @@ export const CreateChecklistData = AsyncHandler(async (req, res) => {
     const data = req.body;
     const file = req.file;
 
-    if (!file) {
-        throw new NotFoundError("file is required", "CreateChecklistData() method error");
-    }
+    // if (!file) {
+    //     throw new NotFoundError("file is required", "CreateChecklistData() method error");
+    // }
 
     const file_path = file ? `${config.NODE_ENV !== "development" ? config.SERVER_URL : config.LOCAL_SERVER_URL}/files/${file.filename}` : null;
     const parsTime = data?.time && Array.isArray(data?.time) ? data?.time : [data?.time];
