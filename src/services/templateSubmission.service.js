@@ -2,7 +2,6 @@ import { TemplateSubmissionModel } from "../models/templateSubmission.model.js";
 import { TemplateMasterModel } from "../models/templateMaster.model.js";
 import { UserModel } from "../models/user.modal.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
-import { Op } from "sequelize";
 
 export const createTemplateSubmissionService = async (data) => {
   const { template_id, user_id, form_data, status } = data;

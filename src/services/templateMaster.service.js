@@ -350,3 +350,11 @@ export const assignWorkflowToTemplateService = async (templateId, workflowId) =>
   return template;
 };
 
+export const UpdateOnlyTemplateMaster = async (templateId,next,data) => {
+  const result = await TemplateMasterModel.findByPk(templateId);
+  if(!result){
+   next(new NotFoundError("Data not found","UpdateOnlyTemplateMaster() method error"))
+  }
+  return await result.update(data);
+}
+
