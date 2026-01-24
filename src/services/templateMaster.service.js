@@ -4,6 +4,7 @@ import { TemplateMasterModel, ASSIGNED_USER_STATUS_ENUM } from "../models/templa
 import { TemplateFieldModel } from "../models/templateField.model.js";
 import { UserModel } from "../models/user.modal.js";
 import { WorkflowModel } from "../models/workflow.modal.js";
+import { WorkflowApprovalModel } from "../models/workflowApproval.model.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 
 // Normalize to [{ user_id, status }]. Accepts: [id], [{ user_id, status? }], [{ _id }]
@@ -458,6 +459,15 @@ export const updateAssignedUserStatusService = async (templateId, { user_id, sta
 
 
 
+const workflowApprovalsInclude = {
+  model: WorkflowApprovalModel,
+  as: "workflowApprovals",
+  required: false,
+  include: [
+    { model: UserModel, as: "user", attributes: ["_id", "full_name", "email", "user_id"], required: false },
+  ],
+};
+
 export const GetTemplateAssignModuleService = async (userIds) => {
   const templates = await TemplateMasterModel.findAll({
     where: Sequelize.literal(`
@@ -470,7 +480,10 @@ export const GetTemplateAssignModuleService = async (userIds) => {
         WHERE users.user_id IN (${userIds.map(id => `'${id}'`).join(",")})
       )
     `),
-    include: [{ model: WorkflowModel, as: "workflow" }]
+    include: [
+      { model: WorkflowModel, as: "workflow" },
+      workflowApprovalsInclude,
+    ],
   });
 
   const result = {};
@@ -480,6 +493,12 @@ export const GetTemplateAssignModuleService = async (userIds) => {
   });
 
   templates.forEach(template => {
+    const json = template.toJSON();
+    // workflow approval/reject status data - latest first
+    const statusData = (json.workflowApprovals || []).slice();
+    statusData.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+    delete json.workflowApprovals;
+
     userIds.forEach(userId => {
       const matchedUser = template.assigned_users.find(
         u => u.user_id === userId
@@ -487,7 +506,7 @@ export const GetTemplateAssignModuleService = async (userIds) => {
 
       if (matchedUser) {
         result[userId].push({
-          ...template.toJSON(),
+          ...json,
 
           // ✅ ONLY ONE USER IN assigned_users
           assigned_users: [
@@ -498,7 +517,10 @@ export const GetTemplateAssignModuleService = async (userIds) => {
           ],
 
           // optional shortcut
-          user_status: matchedUser.status
+          user_status: matchedUser.status,
+
+          // workflow approval/reject status (current_stage, reassign_stage, status, remarks, user, etc.)
+          status_data: statusData,
         });
       }
     });
