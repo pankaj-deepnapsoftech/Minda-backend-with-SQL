@@ -82,16 +82,17 @@ export const listTemplatesService = async () => {
 export const getTemplateByIdService = async (id) => {
   const result = await TemplateMasterModel.findByPk(id, {
     include: [
-      {
-        ...templateFieldsInclude,
-        order: [["sort_order", "ASC"]],
-      },
+      templateFieldsInclude,
       assignedUserInclude,
       workflowInclude,
     ],
   });
   if (!result) {
     throw new NotFoundError("Template not found", "getTemplateByIdService()");
+  }
+  // Sequelize 'order' inside include does not reliably sort hasMany; sort in-memory
+  if (result.fields && Array.isArray(result.fields)) {
+    result.fields.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
   }
   return result;
 };
@@ -296,13 +297,17 @@ export const getAssignedTemplatesService = async (userId) => {
       is_active: true,
     },
     include: [
-      {
-        ...templateFieldsInclude,
-        order: [["sort_order", "ASC"]],
-      },
+      templateFieldsInclude,
       assignedUserInclude,
     ],
     order: [["createdAt", "DESC"]],
+  });
+
+  // Sequelize 'order' inside include does not reliably sort hasMany; sort in-memory
+  allTemplates.forEach((t) => {
+    if (t.fields && Array.isArray(t.fields)) {
+      t.fields.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+    }
   });
 
   // Filter templates where user is assigned (either in assigned_user or assigned_users array)
