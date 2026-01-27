@@ -6,7 +6,6 @@ import { Op } from "sequelize";
 import { DepartmentModel } from "../models/department.modal.js";
 import { TemplateMasterModel } from "../models/templateMaster.model.js";
 import { WorkflowModel } from "../models/workflow.modal.js";
-import { ReleseGroupModel } from "../models/ReleseGroup.modal.js";
 import { GroupUsersModel } from "../models/groupUsers.model.js";
 import { TemplateFieldModel } from "../models/templateField.model.js";
 import { TemplateSubmissionModel } from "../models/templateSubmission.model.js";
