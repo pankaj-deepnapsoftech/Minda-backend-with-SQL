@@ -459,11 +459,11 @@ export const updateAssignedUserStatusService = async (templateId, { user_id, sta
 
 
 
-export const updateTemplateMasterWithWorkflow = async (id) => {
+export const updateTemplateMasterWithWorkflow = async (id,data) => {
   const templates = await TemplateMasterModel.findByPk(id);
   if (!templates) {
     throw new NotFoundError("Template not found", "updateTemplateMasterWithWorkflow()");
   }
-  await templates.update({is_active:false});
-}
+  await templates.update(data);
+};
 
