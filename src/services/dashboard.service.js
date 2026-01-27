@@ -334,7 +334,7 @@ export const GetDailyAssemblyStatus = async (admin, user, date = new Date()) => 
         where: admin ? {} : { responsibility: user },
         include: [
             { model: CompanyModel, as: "company", attributes: ["_id", "company_name", "company_address"] },
-            { model: PlantModel, as: "plant", attributes: ["_id", "plant_name", "plant_address"] },
+            { model: PlantModel, as: "plant", attributes: ["_id", "plant_name", "plant_code","plant_address"] },
             { model: PartModal, as: "part", attributes: ["_id", "part_name", "part_number"] },
             { model: UserModel, as: "responsibleUser", attributes: ["_id", "full_name", "email", "user_id"] },
             {

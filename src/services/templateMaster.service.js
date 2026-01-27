@@ -437,13 +437,7 @@ export const assignWorkflowToTemplateService = async (templateId, workflowId) =>
   return template;
 };
 
-export const UpdateOnlyTemplateMaster = async (templateId, next, data) => {
-  const result = await TemplateMasterModel.findByPk(templateId);
-  if (!result) {
-    next(new NotFoundError("Data not found", "UpdateOnlyTemplateMaster() method error"));
-  }
-  return await result.update(data);
-};
+
 
 // Update status of one assigned user. Body: { user_id, status }
 export const updateAssignedUserStatusService = async (templateId, { user_id, status }) => {
@@ -461,4 +455,8 @@ export const updateAssignedUserStatusService = async (templateId, { user_id, sta
   await template.update({ assigned_users: list });
   return template;
 };
+
+
+
+
 

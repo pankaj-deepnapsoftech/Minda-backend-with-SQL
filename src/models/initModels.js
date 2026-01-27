@@ -17,6 +17,7 @@ import { TemplateMasterModel } from "./templateMaster.model.js";
 import { TemplateFieldModel } from "./templateField.model.js";
 import { TemplateSubmissionModel } from "./templateSubmission.model.js";
 import { WorkflowModel } from "./workflow.modal.js";
+import { WorkflowApprovalModel } from "./workflowApproval.model.js";
 
 let modelsInitialized = false;
 
@@ -123,6 +124,15 @@ export const initModels = () => {
 
     UserModel.hasMany(TemplateSubmissionModel, {foreignKey: "user_id",as: "templateSubmissions",constraints: false});
     TemplateSubmissionModel.belongsTo(UserModel, {foreignKey: "user_id",as: "user",constraints: false});
+
+    WorkflowModel.hasMany(WorkflowApprovalModel, { foreignKey: "workflow_id", as: "approvals", constraints: false });
+    WorkflowApprovalModel.belongsTo(WorkflowModel, { foreignKey: "workflow_id", as: "workflow", constraints: false });
+
+    TemplateMasterModel.hasMany(WorkflowApprovalModel, { foreignKey: "template_id", as: "workflowApprovals", constraints: false });
+    WorkflowApprovalModel.belongsTo(TemplateMasterModel, { foreignKey: "template_id", as: "template", constraints: false });
+
+    UserModel.hasMany(WorkflowApprovalModel, { foreignKey: "user_id", as: "workflowApprovals", constraints: false });
+    WorkflowApprovalModel.belongsTo(UserModel, { foreignKey: "user_id", as: "user", constraints: false });
 
     CheckListModal.hasMany(ItemCheckTimeModel, {foreignKey: "item_id",as: "time"});
     ItemCheckTimeModel.belongsTo(CheckListModal, {foreignKey: "item_id",as: "checklistItem"});
