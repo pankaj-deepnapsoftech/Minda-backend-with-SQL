@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { Op, Sequelize } from "sequelize";
+import { Op } from "sequelize";
 import { TemplateMasterModel, ASSIGNED_USER_STATUS_ENUM } from "../models/templateMaster.model.js";
 import { TemplateFieldModel } from "../models/templateField.model.js";
 import { UserModel } from "../models/user.modal.js";
@@ -480,13 +480,9 @@ export const GetTemplateAssignModuleService = async (userIds) => {
         WHERE users.user_id IN (${userIds.map(id => `'${id}'`).join(",")})
       )
     `),
-    include: [
-      { model: WorkflowModel, as: "workflow" },
-      workflowApprovalsInclude,
-    ],
+    include: [{ model: WorkflowModel, as: "workflow" }]
   });
 
-  // ✅ USER → TEMPLATES map
   const result = {};
 
   userIds.forEach(userId => {
@@ -494,33 +490,25 @@ export const GetTemplateAssignModuleService = async (userIds) => {
   });
 
   templates.forEach(template => {
-    const json = template.toJSON();
+    userIds.forEach(userId => {
+      const matchedUser = template.assigned_users.find(
+        u => u.user_id === userId
+      );
 
-    // ---- workflow approval status (latest first)
-    const statusData = (json.workflowApprovals || [])
-      .slice()
-      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-
-    delete json.workflowApprovals;
-
-    // ---- assign template to EACH matched user
-    template.assigned_users.forEach(assignedUser => {
-      const userId = assignedUser.user_id;
-
-      if (result[userId]) {
+      if (matchedUser) {
         result[userId].push({
-          ...json,
+          ...template.toJSON(),
 
-          // 🔥 sirf wahi user
+          // ✅ ONLY ONE USER IN assigned_users
           assigned_users: [
             {
-              user_id: assignedUser.user_id,
-              status: assignedUser.status,
-            },
+              user_id: matchedUser.user_id,
+              status: matchedUser.status
+            }
           ],
 
-          user_status: assignedUser.status,
-          status_data: statusData,
+          // optional shortcut
+          user_status: matchedUser.status
         });
       }
     });

@@ -4,6 +4,13 @@ import { PlantModel } from "../models/plant.modal.js";
 import { RoleModel } from "../models/role.modal.js";
 import { Op } from "sequelize";
 import { DepartmentModel } from "../models/department.modal.js";
+import { TemplateMasterModel } from "../models/templateMaster.model.js";
+import { WorkflowModel } from "../models/workflow.modal.js";
+import { ReleseGroupModel } from "../models/ReleseGroup.modal.js";
+import { GroupUsersModel } from "../models/groupUsers.model.js";
+import { TemplateFieldModel } from "../models/templateField.model.js";
+import { TemplateSubmissionModel } from "../models/templateSubmission.model.js";
+import { WorkflowApprovalModel } from "../models/workflowApproval.model.js";
 
 
 
@@ -38,14 +45,14 @@ export const GetAllUsersService = async () => {
     return result;
 };
 
-export const SearchUsersService = async (is_hod,company, plant, search = "", skip, limit) => {
+export const SearchUsersService = async (is_hod, company, plant, search = "", skip, limit) => {
     const q = search || "";
     const where = {
-      is_admin: false,
-      [Op.or]: [{ email: { [Op.like]: `%${q}%` } }, { user_id: { [Op.like]: `%${q}%` } }],
-      ...(is_hod ? { is_hod } : {}),
-      ...(company ? { employee_company: company } : {}),
-      ...(plant ? { employee_plant: plant } : {}),
+        is_admin: false,
+        [Op.or]: [{ email: { [Op.like]: `%${q}%` } }, { user_id: { [Op.like]: `%${q}%` } }],
+        ...(is_hod ? { is_hod } : {}),
+        ...(company ? { employee_company: company } : {}),
+        ...(plant ? { employee_plant: plant } : {}),
     }
 
     const result = await UserModel.findAll({
@@ -124,11 +131,11 @@ export const GetAdmin = async () => {
 
 export const GetUsersByIdService = async (id) => {
     const result = await UserModel.findOne({
-        where:{
-            _id:id
+        where: {
+            _id: id
         },
-        attributes:[
-              "_id",
+        attributes: [
+            "_id",
             "full_name",
             "email",
             "desigination",
@@ -140,9 +147,9 @@ export const GetUsersByIdService = async (id) => {
 
 export const getAllHodsServicesData = async () => {
     const result = await UserModel.findAll({
-        attributes:["_id","full_name","email","user_id"],
-        where:{
-            is_hod:true
+        attributes: ["_id", "full_name", "email", "user_id"],
+        where: {
+            is_hod: true
         }
     });
     return result;
@@ -151,20 +158,321 @@ export const getAllHodsServicesData = async () => {
 
 export const getAllUsersUnderHod = async (id) => {
     const result = await UserModel.findAll({
-        where:{
-            hod_id:id
+        where: {
+            hod_id: id
         },
-        attributes:["_id"]
+        attributes: ["_id"]
     });
-    return result.map((item)=>item._id)
+    return result.map((item) => item._id)
 };
 
 
+export const getAllReleseGroupUsers = async () => {
+    const result = await UserModel.findAll({
+        where: {
+            is_hod: false,
+            hod_id: null,
+            is_admin: false
+        },
+        attributes: ["_id", "user_id", "email", "full_name"]
+    });
+    return result;
+
+};
+
+export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
+    // Get the filter user details first
+    const filterUser = await UserModel.findOne({
+        where: { _id: filterUserId },
+        raw: true
+    });
+
+    if (!filterUser) {
+        throw new Error('Filter user not found');
+    }
 
 
+    // Get all non-admin users with HOD
+    const allUsers = await UserModel.findAll({
+        where: {
+            is_admin: false,
+            hod_id: { [Op.not]: null }
+        },
+        raw: true
+    });
 
+    // Get all active templates
+    const templates = await TemplateMasterModel.findAll({
+        where: {
+            is_active: true
+        },
+        raw: false
+    });
 
+    // Get all template IDs
+    const templateIds = templates.map(t => t._id);
 
+    // Get all user IDs
+    const userIds = allUsers.map(u => u._id);
+
+    // Fetch all template fields for field_id to field_name mapping only
+    const templateFields = await TemplateFieldModel.findAll({
+        where: {
+            template_id: { [Op.in]: templateIds }
+        },
+        raw: true
+    });
+
+    // Create a map of field_id to field_name (for form_data conversion)
+    const fieldIdToNameMap = new Map();
+    templateFields.forEach(field => {
+        fieldIdToNameMap.set(field._id, field.field_name);
+    });
+
+    // Fetch only SUBMITTED template submissions
+    const templateSubmissions = await TemplateSubmissionModel.findAll({
+        where: {
+            template_id: { [Op.in]: templateIds },
+            user_id: { [Op.in]: userIds },
+            status: "SUBMITTED" // Only get submitted submissions
+        },
+        raw: false
+    });
+
+    // Create a map of template_id + user_id to submission
+    const submissionsMap = new Map();
+    templateSubmissions.forEach(submission => {
+        const key = `${submission.template_id}_${submission.user_id}`;
+        
+        // Convert form_data from field_id to field_name
+        const originalFormData = submission.form_data || {};
+        const convertedFormData = {};
+        
+        Object.keys(originalFormData).forEach(fieldId => {
+            const fieldName = fieldIdToNameMap.get(fieldId);
+            if (fieldName) {
+                convertedFormData[fieldName] = originalFormData[fieldId];
+            } else {
+                convertedFormData[fieldId] = originalFormData[fieldId];
+            }
+        });
+        
+        submissionsMap.set(key, {
+            submission_id: submission._id,
+            status: submission.status,
+            form_data: convertedFormData,
+            submitted_at: submission.createdAt,
+            updated_at: submission.updatedAt
+        });
+    });
+
+    // Get all unique workflow IDs from templates
+    const workflowIds = [...new Set(
+        templates
+            .map(t => t.workflow_id)
+            .filter(Boolean)
+    )];
+
+    // Fetch all workflow approvals
+    const workflowApprovals = await WorkflowApprovalModel.findAll({
+        where: {
+            template_id: { [Op.in]: templateIds },
+            user_id: { [Op.in]: userIds }
+        },
+        order: [['current_stage', 'ASC']],
+        raw: true
+    });
+
+    // Create a map of template_id + user_id to approvals array
+    const approvalsMap = new Map();
+    workflowApprovals.forEach(approval => {
+        const key = `${approval.template_id}_${approval.user_id}`;
+        if (!approvalsMap.has(key)) {
+            approvalsMap.set(key, []);
+        }
+        approvalsMap.get(key).push({
+            approval_id: approval._id,
+            current_stage: approval.current_stage,
+            reassign_stage: approval.reassign_stage,
+            workflow_id: approval.workflow_id,
+            status: approval.status,
+            remarks: approval.remarks,
+            approved_by: approval.user_id,
+            approved_at: approval.createdAt,
+            updated_at: approval.updatedAt
+        });
+    });
+
+    // Fetch all workflows at once
+    const workflows = await WorkflowModel.findAll({
+        where: {
+            _id: { [Op.in]: workflowIds }
+        },
+        raw: false
+    });
+
+    // Extract all unique release group IDs from all workflows
+    const releaseGroupIds = new Set();
+    workflows.forEach(workflow => {
+        const workflowSteps = workflow.workflow || [];
+        workflowSteps.forEach(step => {
+            if (step.group && step.group !== "HOD" && step.group.trim() !== "") {
+                releaseGroupIds.add(step.group);
+            }
+        });
+    });
+
+    // Fetch all group users for these release groups
+    const groupUsers = await GroupUsersModel.findAll({
+        where: {
+            relese_group_id: { [Op.in]: Array.from(releaseGroupIds) }
+        },
+        raw: true
+    });
+
+    // Create a map of release_group_id to array of group users
+    const groupUsersMap = new Map();
+    groupUsers.forEach(gu => {
+        if (!groupUsersMap.has(gu.relese_group_id)) {
+            groupUsersMap.set(gu.relese_group_id, []);
+        }
+        groupUsersMap.get(gu.relese_group_id).push(gu);
+    });
+
+    // Process workflows and attach group users data
+    const workflowMap = new Map(
+        workflows.map(w => {
+            const workflowSteps = (w.workflow || []).map(step => {
+                if (step.group && step.group !== "HOD" && step.group.trim() !== "") {
+                    const groupUsersList = groupUsersMap.get(step.group) || [];
+
+                    const allGroupUsers = groupUsersList.map(gu => ({
+                        user_id: gu.user_id,
+                        plants_id: gu.plants_id
+                    }));
+
+                    return {
+                        group: step.group,
+                        group_users: allGroupUsers
+                    };
+                } else if (step.group === "HOD") {
+                    return {
+                        group: "HOD",
+                        group_users: []
+                    };
+                }
+
+                return {
+                    group: step.group || "",
+                    group_users: []
+                };
+            });
+
+            return [
+                w._id,
+                {
+                    workflow_id: w._id,
+                    workflow_name: w.name,
+                    workflow: workflowSteps
+                }
+            ];
+        })
+    );
+
+    // Function to check if user should be included
+    const shouldIncludeUser = (user) => {
+        // STEP 1: Check if filterUserId is the HOD of this user
+        if (user.hod_id === filterUserId) {
+            return true;
+        }
+
+        // STEP 2: Check in workflow groups
+        const userTemplates = templates.filter(template => {
+            const assignedUsers = template.assigned_users;
+            return assignedUsers.some(au => (au.user_id || au._id) === user._id);
+        });
+
+        for (const template of userTemplates) {
+            const workflow = template.workflow_id ? workflowMap.get(template.workflow_id) : null;
+            if (!workflow) continue;
+
+            const workflowSteps = workflow.workflow || [];
+            
+            for (const step of workflowSteps) {
+                if (step.group === "HOD") continue;
+                if (!step.group_users || step.group_users.length === 0) continue;
+
+                for (const groupUser of step.group_users) {
+                    try {
+                        const plantsArray = JSON.parse(groupUser.plants_id);
+                        const plantMatches = plantsArray.includes(user.employee_plant);
+                        const userIdMatches = groupUser.user_id === filterUserId;
+                        
+                        if (plantMatches && userIdMatches) {
+                            return true;
+                        }
+                    } catch (error) {
+                        continue;
+                    }
+                }
+            }
+        }
+
+        return false;
+    };
+
+    // Filter users based on the logic
+    const filteredUsers = allUsers.filter(user => shouldIncludeUser(user));
+
+    // Map filtered users to result
+    const result = filteredUsers
+        .map(user => {
+            const assignedTemplates = templates
+                .filter(template => {
+                    const assignedUsers = template.assigned_users;
+                    return assignedUsers.some(au => 
+                        (au.user_id || au._id) === user._id
+                    );
+                })
+                .map(template => {
+                    const workflow = template.workflow_id 
+                        ? workflowMap.get(template.workflow_id) 
+                        : null;
+
+                    // Get submission data for this template and user
+                    const submissionKey = `${template._id}_${user._id}`;
+                    const submission = submissionsMap.get(submissionKey) || null;
+
+                    // Get workflow approvals for this template and user
+                    const approvalsKey = `${template._id}_${user._id}`;
+                    const approvals = approvalsMap.get(approvalsKey) || [];
+
+                    return {
+                        template_id: template._id,
+                        template_name: template.template_name,
+                        template_type: template.template_type,
+                        workflow: workflow,
+                        submission: submission,
+                        approvals: approvals,
+                        has_submission: submission !== null // Helper flag
+                    };
+                })
+                .filter(template => template.has_submission); // Only include templates with SUBMITTED status
+
+            return {
+                user_id: user._id,
+                full_name: user.full_name,
+                email: user.email,
+                employee_plant: user.employee_plant,
+                department_id: user.department_id,
+                hod_id: user.hod_id,
+                assigned_templates: assignedTemplates
+            };
+        })
+        .filter(user => user.assigned_templates.length > 0); // Only include users with submitted templates
+
+    return result;
+};
 
 
 
