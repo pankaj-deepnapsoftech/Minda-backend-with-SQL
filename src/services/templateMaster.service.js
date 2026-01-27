@@ -517,6 +517,13 @@ export const GetTemplateAssignModuleService = async (userIds) => {
   return result;
 };
 
+export const updateTemplateMasterWithWorkflow = async (id,data) => {
+  const templates = await TemplateMasterModel.findByPk(id);
+  if (!templates) {
+    throw new NotFoundError("Template not found", "updateTemplateMasterWithWorkflow()");
+  }
+  await templates.update(data);
+};
 
 export const testing = async (hodId) => {
   try {
