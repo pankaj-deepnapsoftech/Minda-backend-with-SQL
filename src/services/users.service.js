@@ -460,7 +460,7 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
                 .filter(template => template.has_submission); // Only include templates with SUBMITTED status
 
             return {
-                user_id: user._id,
+                user_id: user.user_id,
                 full_name: user.full_name,
                 email: user.email,
                 employee_plant: user.employee_plant,
