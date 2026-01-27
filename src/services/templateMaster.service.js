@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { Op, Sequelize } from "sequelize";
+import { Op } from "sequelize";
 import { TemplateMasterModel, ASSIGNED_USER_STATUS_ENUM } from "../models/templateMaster.model.js";
 import { TemplateFieldModel } from "../models/templateField.model.js";
 import { UserModel } from "../models/user.modal.js";
@@ -458,52 +458,5 @@ export const updateAssignedUserStatusService = async (templateId, { user_id, sta
 
 
 
-export const GetTemplateAssignModuleService = async (userIds) => {
-  const templates = await TemplateMasterModel.findAll({
-    where: Sequelize.literal(`
-      EXISTS (
-        SELECT 1
-        FROM OPENJSON(assigned_users)
-        WITH (
-          user_id NVARCHAR(100) '$.user_id'
-        ) AS users
-        WHERE users.user_id IN (${userIds.map(id => `'${id}'`).join(",")})
-      )
-    `),
-    include: [{ model: WorkflowModel, as: "workflow" }]
-  });
 
-  const result = {};
-
-  userIds.forEach(userId => {
-    result[userId] = [];
-  });
-
-  templates.forEach(template => {
-    userIds.forEach(userId => {
-      const matchedUser = template.assigned_users.find(
-        u => u.user_id === userId
-      );
-
-      if (matchedUser) {
-        result[userId].push({
-          ...template.toJSON(),
-
-          // ✅ ONLY ONE USER IN assigned_users
-          assigned_users: [
-            {
-              user_id: matchedUser.user_id,
-              status: matchedUser.status
-            }
-          ],
-
-          // optional shortcut
-          user_status: matchedUser.status
-        });
-      }
-    });
-  });
-
-  return result;
-};
 

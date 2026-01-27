@@ -5,7 +5,7 @@ import path from "path";
 
 // ---------------------------- local imports  -------------------------
 import { AsyncHandler } from "../utils/asyncHandler.js";
-import { createUserService, FindUserByEmail, FindUserByEmailOrUserId, FindUserById, getAllHodsServicesData, getAllReleseGroupUsers, GetAllUsersService, GetUsersService, SearchUsersService, UpdateUsersService } from "../services/users.service.js";
+import { createUserService, FindUserByEmail, FindUserByEmailOrUserId, FindUserById, getAllHodsServicesData, getAllReleseGroupUsers, GetAllUsersService, GetTemplateAssignModuleServiceByUser, GetUsersService, SearchUsersService, UpdateUsersService } from "../services/users.service.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 import { StatusCodes } from "http-status-codes";
 import { config } from "../config.js";
@@ -262,6 +262,13 @@ export const getWithoutHod = AsyncHandler(async (req,res) => {
 })
 
 
+export const  getAssignedTemplates = AsyncHandler(async (req,res) => {
+    const user = req.currentUser;
+    const result = await GetTemplateAssignModuleServiceByUser(user._id);
 
+    res.status(StatusCodes.OK).json({
+        data:result
+    });
+});
 
 
