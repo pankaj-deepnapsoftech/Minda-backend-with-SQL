@@ -105,6 +105,8 @@ export const FindUserById = async (id) => {
             "role",
             "is_admin",
             "terminate",
+            "is_hod",
+            "hod_id",
         ],
         include: [
             { model: PlantModel, as: "plant" },
@@ -177,6 +179,18 @@ export const getAllReleseGroupUsers = async () => {
     });
     return result;
 
+};
+
+
+export const getEmployeesOnlyHaveHod = async () => {
+    const result = await UserModel.findAll({
+        where:{
+            is_admin:false,
+            [Op.or]:[{is_hod:true},{hod_id:{[Op.not]:null}}]
+        },
+        attributes:["_id","user_id","email","full_name","is_hod","hod_id"]
+    });
+    return result;
 };
 
 export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
