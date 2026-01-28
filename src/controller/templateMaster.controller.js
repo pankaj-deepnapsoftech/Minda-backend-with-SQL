@@ -87,8 +87,12 @@ export const getAssignedTemplates = AsyncHandler(async (req, res) => {
   });
 });
 
-export const getTemplateStatusList = AsyncHandler(async (_req, res) => {
-  const result = await getTemplateStatusListService();
+export const getTemplateStatusList = AsyncHandler(async (req, res) => {
+  let {page,limit} = req.query;
+  page = parseInt(page) || 1;
+  limit = parseInt(limit) || 5;
+  const skip = (page - 1) * limit;
+  const result = await getTemplateStatusListService(skip, limit);
   res.status(StatusCodes.OK).json({
     message: "Template status list fetched successfully",
     data: result,
