@@ -7,8 +7,6 @@ import { WorkflowModel } from "../models/workflow.modal.js";
 import { WorkflowApprovalModel } from "../models/workflowApproval.model.js";
 import { GroupUsersModel } from "../models/groupUsers.model.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
-import { GroupUsersModel } from "../models/groupUsers.model.js";
-import { WorkflowApprovalModel } from "../models/workflowApproval.model.js";
 import { ReleseGroupModel } from "../models/ReleseGroup.modal.js";
 
 // Normalize to [{ user_id, status }]. Accepts: [id], [{ user_id, status? }], [{ _id }]
