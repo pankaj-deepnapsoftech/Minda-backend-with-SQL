@@ -156,7 +156,6 @@ export const getAllHodsServicesData = async () => {
     return result;
 };
 
-
 export const getAllUsersUnderHod = async (id) => {
     const result = await UserModel.findAll({
         where: {
@@ -166,7 +165,6 @@ export const getAllUsersUnderHod = async (id) => {
     });
     return result.map((item) => item._id)
 };
-
 
 export const getAllReleseGroupUsers = async () => {
     const result = await UserModel.findAll({
@@ -180,7 +178,6 @@ export const getAllReleseGroupUsers = async () => {
     return result;
 
 };
-
 
 export const getEmployeesOnlyHaveHod = async () => {
     const result = await UserModel.findAll({
