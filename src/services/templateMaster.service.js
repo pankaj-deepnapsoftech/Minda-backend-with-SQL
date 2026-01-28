@@ -7,6 +7,7 @@ import { WorkflowModel } from "../models/workflow.modal.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 import { GroupUsersModel } from "../models/groupUsers.model.js";
 import { WorkflowApprovalModel } from "../models/workflowApproval.model.js";
+import { ReleseGroupModel } from "../models/ReleseGroup.modal.js";
 
 // Normalize to [{ user_id, status }]. Accepts: [id], [{ user_id, status? }], [{ _id }]
 function toAssignedUsersArray(raw) {
@@ -351,7 +352,10 @@ export const getAssignedTemplatesService = async (userId) => {
 };
 
 // assigned_users ke andar wale status: har (template, user) ke liye ek row, assigned_user fallback
-export const getTemplateStatusListService = async (skip,limit) => {
+export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
+  // First, get total count of all templates (before pagination)
+  const totalTemplates = await TemplateMasterModel.count();
+
   const templates = await TemplateMasterModel.findAll({
     include: [{
       model: WorkflowModel,
@@ -398,13 +402,21 @@ export const getTemplateStatusListService = async (skip,limit) => {
     }
   });
 
+  // Fetch release group names
+  const releaseGroups = await ReleseGroupModel.findAll({
+    where: {
+      _id: Array.from(allGroupIds)
+    },
+    attributes: ['_id', 'group_name', 'group_department']
+  });
+
   // Fetch all workflow approvals for all templates
   const templateIds = templates.map(t => t._id);
   const workflowApprovals = await WorkflowApprovalModel.findAll({
     where: {
       template_id: templateIds
     },
-    order: [["current_stage", "ASC"], ["createdAt", "DESC"]]
+    order: [["current_stage", "ASC"], ["createdAt", "ASC"]]
   });
 
   // Get all unique HOD IDs
@@ -443,6 +455,7 @@ export const getTemplateStatusListService = async (skip,limit) => {
   const userMap = new Map(users.map(u => [u._id, u.toJSON()]));
   const hodUserMap = new Map(hodUsers.map(u => [u._id, u.toJSON()]));
   const groupUserMap = new Map(groupUsers.map(u => [u._id, u.toJSON()]));
+  const releaseGroupMap = new Map(releaseGroups.map(rg => [rg._id, rg.toJSON()]));
 
   // Group by relese_group_id
   const groupMap = new Map();
@@ -454,14 +467,18 @@ export const getTemplateStatusListService = async (skip,limit) => {
     groupMap.get(groupJson.relese_group_id).push(groupJson);
   });
 
-  // Create approval map: template_id -> array of approvals
+  // Create approval map: template_id -> current_stage -> array of approvals
   const approvalMap = new Map();
   workflowApprovals.forEach(approval => {
     const approvalJson = approval.toJSON();
     if (!approvalMap.has(approvalJson.template_id)) {
-      approvalMap.set(approvalJson.template_id, []);
+      approvalMap.set(approvalJson.template_id, new Map());
     }
-    approvalMap.get(approvalJson.template_id).push(approvalJson);
+    const templateApprovalMap = approvalMap.get(approvalJson.template_id);
+    if (!templateApprovalMap.has(approvalJson.current_stage)) {
+      templateApprovalMap.set(approvalJson.current_stage, []);
+    }
+    templateApprovalMap.get(approvalJson.current_stage).push(approvalJson);
   });
 
   // Flatten: har user ke liye template ka object
@@ -476,16 +493,18 @@ export const getTemplateStatusListService = async (skip,limit) => {
       
       // Workflow details ko enhance karo
       if (templateJson.workflow && templateJson.workflow.workflow) {
-        const templateApprovals = approvalMap.get(templateJson._id) || [];
+        const templateApprovalMap = approvalMap.get(templateJson._id) || new Map();
         
         templateJson.workflow.workflow = templateJson.workflow.workflow.map((wf, index) => {
-          let groupDetails = [];
+          let groupDetail = null;
+          let groupInfo = null;
           
           if (wf.group === "HOD") {
             // HOD ke liye hod_id se user detail lao
-            groupDetails = currentUser && currentUser.hod_id 
-              ? [hodUserMap.get(currentUser.hod_id)] 
-              : [];
+            groupDetail = currentUser && currentUser.hod_id 
+              ? hodUserMap.get(currentUser.hod_id) || null
+              : null;
+            groupInfo = { group_name: "HOD", group_department: null };
           } else {
             // Baaki groups ke liye plant match karo
             const groupDetailsArray = groupMap.get(wf.group) || [];
@@ -498,18 +517,19 @@ export const getTemplateStatusListService = async (skip,limit) => {
               }
             });
 
-            groupDetails = matchedUser ? [groupUserMap.get(matchedUser.user_id)] : [];
+            groupDetail = matchedUser ? groupUserMap.get(matchedUser.user_id) || null : null;
+            groupInfo = releaseGroupMap.get(wf.group) || null;
           }
 
-          // Find approval for this stage (index = current_stage)
-          const stageApproval = templateApprovals.find(
-            approval => approval.current_stage === index
-          );
+          // Get all approvals for this stage
+          const stageApprovals = templateApprovalMap.get(index) || [];
 
           return {
             ...wf,
-            groupDetails: groupDetails.filter(Boolean),
-            approval: stageApproval || null
+            group_name: groupInfo?.group_name || null,
+            group_department: groupInfo?.group_department || null,
+            groupDetail: groupDetail,
+            approvals: stageApprovals // Ab array hai jisme multiple approvals ho sakte hain
           };
         });
       }
@@ -532,7 +552,24 @@ export const getTemplateStatusListService = async (skip,limit) => {
     });
   });
 
-  return result;
+  // Calculate pagination metadata
+  const totalResults = result.length;
+  const currentPage = Math.floor(skip / limit) + 1;
+  const totalPages = Math.ceil(totalTemplates / limit);
+
+  return {
+    data: result,
+    pagination: {
+      total: totalTemplates,
+      totalResults: totalResults,
+      currentPage: currentPage,
+      totalPages: totalPages,
+      limit: limit,
+      skip: skip,
+      hasNextPage: currentPage < totalPages,
+      hasPrevPage: currentPage > 1
+    }
+  };
 };
 
 export const assignWorkflowToTemplateService = async (templateId, workflowId) => {
