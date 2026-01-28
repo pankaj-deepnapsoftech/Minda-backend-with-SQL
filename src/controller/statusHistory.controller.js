@@ -24,5 +24,13 @@ export const createStatusHistory = AsyncHandler(async (req, res) => {
         await updateAssignedUserStatusService(check?.template_id, { user_id: check?.user_id, status: "rejected" })
     }
 
-   
+    // const checkLatest = await getStatusHistoryById(result._id);
+
+    // if (checkLatest?.status === "approved" && checkLatest?.workflow?.workflow?.length - 1 !== checkLatest?.current_stage) {
+    //     if (checkLatest?.template?.assigned_users?.every((item) => item.status === "completed")) {
+    //         await updateTemplateMasterWithWorkflow(check?.template_id, { is_active: false });
+    //     }
+    // }
+
+    // console.log("Status History Created",check);
 });
