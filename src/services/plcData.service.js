@@ -3,38 +3,66 @@ import { NotFoundError, BadRequestError } from "../utils/errorHandler.js";
 import { Op } from "sequelize";
 
 export const createPlcDataService = async (data) => {
-  // Handle new nested payload structure
-  let device_id, timestamp, model, latch_force, claw_force, safety_lever, claw_lever, stroke, production_count;
+  // New payload example:
+  // {
+  //   companyname, plantname, linenumber, device_id,
+  //   timestamp, Start_time, Stop_time,
+  //   machine: { model },
+  //   parameters: { LATCH_FORCE, ... }
+  // }
+
+  const company_name = data.companyname || null;
+  const plant_name = data.plantname || null;
+  const line_number = data.linenumber || null;
+
+  let device_id = null;
+  let timestamp = null;
+  let start_time = null;
+  let stop_time = null;
+  let model = null;
+  let latch_force = null;
+  let claw_force = null;
+  let safety_lever = null;
+  let claw_lever = null;
+  let stroke = null;
+  let production_count = null;
 
   if (data.device_id || data.machine || data.parameters) {
-    // New format: { device_id, timestamp, machine: { model }, parameters: { ... } }
+    // New nested format
     device_id = data.device_id || null;
     timestamp = data.timestamp ? new Date(data.timestamp) : null;
-    model = data.machine?.model || null;
-    
+    start_time = data.Start_time ? new Date(data.Start_time) : null;
+    stop_time = data.Stop_time ? new Date(data.Stop_time) : null;
+    model = data.machine && data.machine.model ? data.machine.model : null;
+
     const params = data.parameters || {};
-    latch_force = params.LATCH_FORCE || null;
-    claw_force = params.CLAW_FORCE || null;
-    safety_lever = params.SAFETY_LEVER || null;
-    claw_lever = params.CLAW_LEVER || null;
-    stroke = params.STROKE || null;
-    production_count = params.PRODUCTION_COUNT || params["PRODUCTION-COUNT"] || null;
+    latch_force = params.LATCH_FORCE ?? null;
+    claw_force = params.CLAW_FORCE ?? null;
+    safety_lever = params.SAFETY_LEVER ?? null;
+    claw_lever = params.CLAW_LEVER ?? null;
+    stroke = params.STROKE ?? null;
+    production_count = params.PRODUCTION_COUNT ?? params["PRODUCTION-COUNT"] ?? null;
   } else {
-    // Old format: { LATCH_FORCE, CLAW_FORCE, ..., MODEL, "PRODUCTION-COUNT" }
-    device_id = null;
-    timestamp = null;
-    model = data.MODEL || null;
-    latch_force = data.LATCH_FORCE || null;
-    claw_force = data.CLAW_FORCE || null;
-    safety_lever = data.SAFETY_LEVER || null;
-    claw_lever = data.CLAW_LEVER || null;
-    stroke = data.STROKE || null;
-    production_count = data["PRODUCTION-COUNT"] || data.PRODUCTION_COUNT || null;
+    // Support older flat format for backward compatibility
+    device_id = data.device_id || null;
+    timestamp = data.timestamp ? new Date(data.timestamp) : null;
+    model = data.MODEL || data.model || null;
+    latch_force = data.LATCH_FORCE ?? null;
+    claw_force = data.CLAW_FORCE ?? null;
+    safety_lever = data.SAFETY_LEVER ?? null;
+    claw_lever = data.CLAW_LEVER ?? null;
+    stroke = data.STROKE ?? null;
+    production_count = data["PRODUCTION-COUNT"] ?? data.PRODUCTION_COUNT ?? null;
   }
 
   const plcData = await PlcDataModel.create({
+    company_name,
+    plant_name,
+    line_number,
     device_id,
     timestamp,
+    start_time,
+    stop_time,
     latch_force,
     claw_force,
     safety_lever,
@@ -94,11 +122,17 @@ export const updatePlcDataService = async (id, data) => {
 
   const updateData = {};
 
+  if (data.companyname !== undefined) updateData.company_name = data.companyname;
+  if (data.plantname !== undefined) updateData.plant_name = data.plantname;
+  if (data.linenumber !== undefined) updateData.line_number = data.linenumber;
+
   // Handle new nested payload structure
   if (data.device_id !== undefined) updateData.device_id = data.device_id;
   if (data.timestamp !== undefined) updateData.timestamp = new Date(data.timestamp);
-  if (data.machine?.model !== undefined) updateData.model = data.machine.model;
-  
+  if (data.Start_time !== undefined) updateData.start_time = new Date(data.Start_time);
+  if (data.Stop_time !== undefined) updateData.stop_time = new Date(data.Stop_time);
+  if (data.machine && data.machine.model !== undefined) updateData.model = data.machine.model;
+
   if (data.parameters) {
     const params = data.parameters;
     if (params.LATCH_FORCE !== undefined) updateData.latch_force = params.LATCH_FORCE;
@@ -107,7 +141,8 @@ export const updatePlcDataService = async (id, data) => {
     if (params.CLAW_LEVER !== undefined) updateData.claw_lever = params.CLAW_LEVER;
     if (params.STROKE !== undefined) updateData.stroke = params.STROKE;
     if (params.PRODUCTION_COUNT !== undefined || params["PRODUCTION-COUNT"] !== undefined) {
-      updateData.production_count = params.PRODUCTION_COUNT !== undefined ? params.PRODUCTION_COUNT : params["PRODUCTION-COUNT"];
+      updateData.production_count =
+        params.PRODUCTION_COUNT !== undefined ? params.PRODUCTION_COUNT : params["PRODUCTION-COUNT"];
     }
   } else {
     // Handle old flat format
@@ -117,7 +152,8 @@ export const updatePlcDataService = async (id, data) => {
     if (data.CLAW_LEVER !== undefined) updateData.claw_lever = data.CLAW_LEVER;
     if (data.STROKE !== undefined) updateData.stroke = data.STROKE;
     if (data.PRODUCTION_COUNT !== undefined || data["PRODUCTION-COUNT"] !== undefined) {
-      updateData.production_count = data.PRODUCTION_COUNT !== undefined ? data.PRODUCTION_COUNT : data["PRODUCTION-COUNT"];
+      updateData.production_count =
+        data.PRODUCTION_COUNT !== undefined ? data.PRODUCTION_COUNT : data["PRODUCTION-COUNT"];
     }
     if (data.MODEL !== undefined) updateData.model = data.MODEL;
   }
