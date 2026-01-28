@@ -186,7 +186,8 @@ export const getEmployeesOnlyHaveHod = async () => {
     const result = await UserModel.findAll({
         where:{
             is_admin:false,
-            [Op.or]:[{is_hod:true},{hod_id:{[Op.not]:null}}]
+            is_hod:false,
+            hod_id:{[Op.not]:null}
         },
         attributes:["_id","user_id","email","full_name","is_hod","hod_id"]
     });
