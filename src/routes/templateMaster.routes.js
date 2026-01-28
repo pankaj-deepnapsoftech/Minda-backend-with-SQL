@@ -10,6 +10,7 @@ import {
   updateTemplate,
   getAssignedTemplates,
   getTemplateStatusList,
+  getTemplateWorkflowStatus,
   assignWorkflowToTemplate,
   updateAssignedUserStatus,
 } from "../controller/templateMaster.controller.js";
@@ -26,6 +27,7 @@ router.get("/template-status", getTemplateStatusList);
 router.post("/templates/:id/fields", addFieldToTemplate);
 router.post("/templates/:templateId/assign-workflow", assignWorkflowToTemplate);
 router.put("/templates/:id/assigned-users/status", updateAssignedUserStatus);
+router.get("/templates/:id/workflow-status", getTemplateWorkflowStatus);
 router.get("/templates/:id", getTemplateById);
 router.put("/templates/:id", updateTemplate);
 router.delete("/templates/:id", deleteTemplate);

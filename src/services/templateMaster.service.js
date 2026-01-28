@@ -5,6 +5,7 @@ import { TemplateFieldModel } from "../models/templateField.model.js";
 import { UserModel } from "../models/user.modal.js";
 import { WorkflowModel } from "../models/workflow.modal.js";
 import { WorkflowApprovalModel } from "../models/workflowApproval.model.js";
+import { GroupUsersModel } from "../models/groupUsers.model.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 
 // Normalize to [{ user_id, status }]. Accepts: [id], [{ user_id, status? }], [{ _id }]
@@ -438,7 +439,146 @@ export const assignWorkflowToTemplateService = async (templateId, workflowId) =>
   return template;
 };
 
+/**
+ * Returns workflow approval chain: HOD -> only the approver to whom approval goes.
+ * Approver is chosen by plant match: release group user whose plants_id matches assigned user's employee_plant.
+ */
+export const getTemplateWorkflowStatusService = async (templateId, assignedUserId = null) => {
+  const template = await TemplateMasterModel.findByPk(templateId, {
+    include: [
+      {
+        model: WorkflowModel,
+        as: "workflow",
+        required: false,
+        attributes: ["_id", "name", "workflow"],
+      },
+    ],
+  });
+  if (!template) {
+    throw new NotFoundError("Template not found", "getTemplateWorkflowStatusService()");
+  }
+  const w = template.workflow;
+  const workflowName = w != null && w.name != null ? w.name : null;
+  const workflowId = template.workflow_id != null ? template.workflow_id : null;
+  const steps = Array.isArray(w && w.workflow) ? w.workflow : [];
+  if (!steps.length) {
+    return {
+      template_id: template._id,
+      template_name: template.template_name,
+      workflow_id: workflowId,
+      workflow_name: workflowName || null,
+      chain: [],
+    };
+  }
 
+  let assignedUserPlantId = null;
+  if (assignedUserId) {
+    const assignedUser = await UserModel.findOne({
+      where: { _id: assignedUserId },
+      attributes: ["employee_plant"],
+      raw: true,
+    });
+    assignedUserPlantId = assignedUser && assignedUser.employee_plant != null ? assignedUser.employee_plant : null;
+  }
+
+  const chain = [];
+  let stageIndex = 0;
+  const releaseGroupIds = steps
+    .filter((s) => s.group && String(s.group) !== "HOD")
+    .map((s) => s.group);
+
+  const hodUserIds = steps
+    .filter((s) => s.group === "HOD" && s.user && String(s.user).trim())
+    .map((s) => String(s.user).trim());
+  const hodUsers =
+    hodUserIds.length > 0
+      ? await UserModel.findAll({
+          where: { _id: { [Op.in]: [...new Set(hodUserIds)] } },
+          attributes: ["_id", "full_name"],
+          raw: true,
+        })
+      : [];
+  const hodNameById = Object.fromEntries((hodUsers || []).map((u) => [u._id, u.full_name || "HOD"]));
+
+  let groupUsers = [];
+  if (releaseGroupIds.length) {
+    groupUsers = await GroupUsersModel.findAll({
+      where: { relese_group_id: { [Op.in]: releaseGroupIds } },
+      include: [{ model: UserModel, as: "user", attributes: ["_id", "full_name"], required: false }],
+      order: [["createdAt", "ASC"]],
+    });
+  }
+  const groupUsersByGroup = new Map();
+  for (const gu of groupUsers) {
+    const gid = gu.relese_group_id != null ? gu.relese_group_id : (gu.get && gu.get("relese_group_id"));
+    if (!groupUsersByGroup.has(gid)) groupUsersByGroup.set(gid, []);
+    groupUsersByGroup.get(gid).push(gu);
+  }
+
+  for (const step of steps) {
+    if (step.group === "HOD") {
+      const hodUserId = (step.user && String(step.user).trim()) || null;
+      const hodLabel = hodUserId && hodNameById[hodUserId] ? `${hodNameById[hodUserId]} (HOD)` : "HOD";
+      chain.push({ stage_index: stageIndex, type: "HOD", label: hodLabel, user_id: hodUserId });
+      stageIndex++;
+    } else if (step.group) {
+      const users = groupUsersByGroup.get(step.group) || [];
+      for (const gu of users) {
+        const u = gu.user != null ? gu.user : (gu.get && gu.get("user"));
+        const uName = u && (u.full_name != null ? u.full_name : (typeof u.get === "function" ? u.get("full_name") : null));
+        const label = uName || gu.user_id || "—";
+        const uid = gu.user_id != null ? gu.user_id : (gu.get && gu.get("user_id"));
+        chain.push({
+          stage_index: stageIndex,
+          type: "user",
+          label: String(label),
+          user_id: uid,
+        });
+        stageIndex++;
+      }
+    }
+  }
+
+  const isAssignedUser = (c) =>
+    assignedUserId && c.user_id && String(c.user_id) === String(assignedUserId);
+
+  const approvals = await WorkflowApprovalModel.findAll({
+    where: { template_id: templateId },
+    order: [["current_stage", "ASC"]],
+    attributes: ["current_stage", "status", "remarks", "approved_by", "createdAt"],
+  });
+  const approvalByStage = {};
+  for (const a of approvals) {
+    approvalByStage[a.current_stage] = a;
+  }
+
+  let chainWithStatus = chain.map((c) => {
+    const appr = approvalByStage[c.stage_index];
+    const row = appr && (appr.toJSON ? appr.toJSON() : appr);
+    return {
+      stage_index: c.stage_index,
+      type: c.type,
+      label: c.label,
+      user_id: c.user_id != null ? c.user_id : null,
+      status: row && row.status != null ? row.status : null,
+      approved_at: row && row.createdAt != null ? row.createdAt : null,
+      remarks: row && row.remarks != null ? row.remarks : null,
+      approved_by: row && row.approved_by != null ? row.approved_by : null,
+    };
+  });
+
+  if (assignedUserId) {
+    chainWithStatus = chainWithStatus.filter((c) => !isAssignedUser(c));
+  }
+
+  return {
+    template_id: template._id,
+    template_name: template.template_name,
+    workflow_id: workflowId,
+    workflow_name: workflowName,
+    chain: chainWithStatus,
+  };
+};
 
 // Update status of one assigned user. Body: { user_id, status }
 export const updateAssignedUserStatusService = async (templateId, { user_id, status }) => {
