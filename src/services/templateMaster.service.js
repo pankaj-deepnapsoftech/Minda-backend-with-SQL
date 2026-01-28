@@ -482,7 +482,7 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
     }
     
     // Key with user_id (user_id = jo approve karna chahiye tha)
-    const key = `${approvalJson.template_id}-${approvalJson.workflow_id}-${approvalJson.user_id}-${approvalJson.current_stage}`;
+    const key = `${approvalJson.template_id}-${approvalJson.workflow_id}-${approvalJson.approved_by}`;
     
     if (!approvalMap.has(key)) {
       approvalMap.set(key, []);
@@ -491,6 +491,8 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
   });
 
   const result = [];
+
+  // console.log(approvalMap)
 
   templates.forEach(template => {
     const templateJson = template.toJSON();
@@ -501,7 +503,7 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
       
       if (templateJson.workflow && templateJson.workflow.workflow) {
         
-        templateJson.workflow.workflow = templateJson.workflow.workflow.map((wf, index) => {
+        templateJson.workflow.workflow = templateJson.workflow.workflow.map((wf) => {
           let groupDetail = null;
           let groupInfo = null;
           let expectedApproverUserId = null; // Who should approve (user_id in approval table)
@@ -529,8 +531,11 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
           }
 
           // Get approvals where user_id matches expected approver
-          const approvalKey = `${templateJson._id}-${templateJson.workflow_id}-${expectedApproverUserId}-${index}`;
+          // console.log(expectedApproverUserId)
+          const approvalKey = `${templateJson._id}-${templateJson.workflow_id}-${expectedApproverUserId}`;
           const stageApprovals = approvalMap.get(approvalKey) || [];
+
+          
 
           return {
             ...wf,
@@ -540,6 +545,7 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
             approvals: stageApprovals // Each approval has approved_by_user
           };
         });
+
       }
 
       result.push({
