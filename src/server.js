@@ -60,9 +60,9 @@ function errorHandler(app) {
     app.use((err, _req, res, next) => {
         if (err instanceof Customerror) {
             logger.error(`error coming from ${err?.comingfrom} with message: ${err.message} and status code: ${err.statusCode}`);
-            res.status(err.statusCode).json(err.seriyalizeErrors());
-        };
-        next();
+            return res.status(err.statusCode).json(err.seriyalizeErrors());
+        }
+        next(err);
     });
 }
 

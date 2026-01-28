@@ -11,6 +11,7 @@ const router = Router();
 
 router.post("/", createPlcData);
 router.get("/", getAllPlcData);
+router.get("", getAllPlcData);
 router.get("/:id", getPlcDataById);
 router.put("/:id", updatePlcData);
 router.delete("/:id", deletePlcData);
