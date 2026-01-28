@@ -1,7 +1,7 @@
 import { AsyncHandler } from "../utils/asyncHandler.js";
 import { CreateStatusHistoryService, getStatusHistoryById } from "../services/statusHistory.service.js"
 import { StatusCodes } from "http-status-codes";
-import { updateAssignedUserStatusService, updateTemplateMasterWithWorkflow } from "../services/templateMaster.service.js";
+import { updateAssignedUserStatusService } from "../services/templateMaster.service.js";
 
 
 export const createStatusHistory = AsyncHandler(async (req, res) => {
@@ -20,7 +20,7 @@ export const createStatusHistory = AsyncHandler(async (req, res) => {
     }
 
     if (check?.status === "rejected") {
-        await updateTemplateMasterWithWorkflow(check?.template_id, { is_active: false });
+        // await updateTemplateMasterWithWorkflow(check?.template_id, { is_active: false });
         await updateAssignedUserStatusService(check?.template_id, { user_id: check?.user_id, status: "rejected" })
     }
 
