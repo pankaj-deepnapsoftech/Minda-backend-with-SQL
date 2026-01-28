@@ -5,6 +5,8 @@ import { TemplateFieldModel } from "../models/templateField.model.js";
 import { UserModel } from "../models/user.modal.js";
 import { WorkflowModel } from "../models/workflow.modal.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
+import { GroupUsersModel } from "../models/groupUsers.model.js";
+import { WorkflowApprovalModel } from "../models/workflowApproval.model.js";
 
 // Normalize to [{ user_id, status }]. Accepts: [id], [{ user_id, status? }], [{ _id }]
 function toAssignedUsersArray(raw) {
@@ -349,69 +351,188 @@ export const getAssignedTemplatesService = async (userId) => {
 };
 
 // assigned_users ke andar wale status: har (template, user) ke liye ek row, assigned_user fallback
-export const getTemplateStatusListService = async () => {
+export const getTemplateStatusListService = async (skip,limit) => {
   const templates = await TemplateMasterModel.findAll({
-    include: [workflowInclude],
-    order: [["createdAt", "DESC"]],
+    include: [{
+      model: WorkflowModel,
+      as: "workflow",
+      required: false,
+    }],
+    order: [["createdAt", "ASC"]],
+    offset: skip,
+    limit
   });
-  const allUserIds = [];
-  const rows = [];
-  for (const t of templates) {
-    const list = t.assigned_users || [];
-    const seen = new Set();
-    for (const au of list) {
-      if (au && au.user_id) {
-        seen.add(au.user_id);
-        allUserIds.push(au.user_id);
-        rows.push({
-          template_id: t._id,
-          template_name: t.template_name,
-          template_type: t.template_type || null,
-          workflow_name: t.workflow?.name || null,
-          user_id: au.user_id,
-          user_name: null,
-          status: au.status || "pending",
-        });
-      }
-    }
-    const legacyId = t.assigned_user;
-    if (legacyId && !seen.has(legacyId)) {
-      allUserIds.push(legacyId);
-      rows.push({
-        template_id: t._id,
-        template_name: t.template_name,
-        template_type: t.template_type || null,
-        workflow_name: t.workflow?.name || null,
-        user_id: legacyId,
-        user_name: null,
-        status: "pending",
+
+  // Get all unique user IDs from all templates
+  const allUserIds = new Set();
+  templates.forEach(template => {
+    const assignedUsers = template.assigned_users || [];
+    assignedUsers.forEach(au => allUserIds.add(au.user_id));
+  });
+
+  // Get all unique group IDs from all workflows
+  const allGroupIds = new Set();
+  templates.forEach(template => {
+    if (template.workflow && template.workflow.workflow) {
+      template.workflow.workflow.forEach(wf => {
+        if (wf.group && wf.group !== "HOD") {
+          allGroupIds.add(wf.group);
+        }
       });
     }
-  }
-  const uniqueIds = [...new Set(allUserIds)];
-  if (uniqueIds.length > 0) {
-    const users = await UserModel.findAll({
-      where: { _id: { [Op.in]: uniqueIds } },
-      attributes: ["_id", "full_name", "user_id", "email"],
-    });
-    const userDataMap = Object.fromEntries(
-      users.map((u) => [
-        u._id,
-        {
-          full_name: u.full_name || u._id,
-          employee_user_id: u.user_id || null,
-          email: u.email || null,
-        },
-      ])
-    );
-    for (const r of rows) {
-      const u = userDataMap[r.user_id];
-      r.user_name = u?.full_name ?? r.user_id;
-      r.employee_user_id = u?.employee_user_id ?? null;
-      r.email = u?.email ?? null;
+  });
+
+  // Fetch all users at once
+  const users = await UserModel.findAll({
+    where: {
+      _id: Array.from(allUserIds)
+    },
+    attributes: ['_id', 'full_name', 'email', 'desigination', 'user_id',
+      'is_hod', 'employee_plant', "hod_id"]
+  });
+
+  // Fetch all group details at once
+  const groups = await GroupUsersModel.findAll({
+    where: {
+      relese_group_id: Array.from(allGroupIds)
     }
-  }
-  return rows;
+  });
+
+  // Fetch all workflow approvals for all templates
+  const templateIds = templates.map(t => t._id);
+  const workflowApprovals = await WorkflowApprovalModel.findAll({
+    where: {
+      template_id: templateIds
+    },
+    order: [["current_stage", "ASC"], ["createdAt", "DESC"]]
+  });
+
+  // Get all unique HOD IDs
+  const allHodIds = new Set();
+  users.forEach(user => {
+    if (user.hod_id) {
+      allHodIds.add(user.hod_id);
+    }
+  });
+
+  // Get all unique user IDs from groups
+  const allGroupUserIds = new Set();
+  groups.forEach(g => {
+    allGroupUserIds.add(g.user_id);
+  });
+
+  // Fetch HOD users
+  const hodUsers = await UserModel.findAll({
+    where: {
+      _id: Array.from(allHodIds)
+    },
+    attributes: ['_id', 'full_name', 'email', 'desigination', 'user_id',
+      'is_hod', 'employee_plant']
+  });
+
+  // Fetch group users
+  const groupUsers = await UserModel.findAll({
+    where: {
+      _id: Array.from(allGroupUserIds)
+    },
+    attributes: ['_id', 'full_name', 'email', 'desigination', 'user_id',
+      'is_hod', 'employee_plant']
+  });
+
+  // Create maps for quick lookup
+  const userMap = new Map(users.map(u => [u._id, u.toJSON()]));
+  const hodUserMap = new Map(hodUsers.map(u => [u._id, u.toJSON()]));
+  const groupUserMap = new Map(groupUsers.map(u => [u._id, u.toJSON()]));
+
+  // Group by relese_group_id
+  const groupMap = new Map();
+  groups.forEach(g => {
+    const groupJson = g.toJSON();
+    if (!groupMap.has(groupJson.relese_group_id)) {
+      groupMap.set(groupJson.relese_group_id, []);
+    }
+    groupMap.get(groupJson.relese_group_id).push(groupJson);
+  });
+
+  // Create approval map: template_id -> array of approvals
+  const approvalMap = new Map();
+  workflowApprovals.forEach(approval => {
+    const approvalJson = approval.toJSON();
+    if (!approvalMap.has(approvalJson.template_id)) {
+      approvalMap.set(approvalJson.template_id, []);
+    }
+    approvalMap.get(approvalJson.template_id).push(approvalJson);
+  });
+
+  // Flatten: har user ke liye template ka object
+  const result = [];
+
+  templates.forEach(template => {
+    const templateJson = template.toJSON();
+    const assignedUsers = templateJson.assigned_users || [];
+
+    assignedUsers.forEach(au => {
+      const currentUser = userMap.get(au.user_id);
+      
+      // Workflow details ko enhance karo
+      if (templateJson.workflow && templateJson.workflow.workflow) {
+        const templateApprovals = approvalMap.get(templateJson._id) || [];
+        
+        templateJson.workflow.workflow = templateJson.workflow.workflow.map((wf, index) => {
+          let groupDetails = [];
+          
+          if (wf.group === "HOD") {
+            // HOD ke liye hod_id se user detail lao
+            groupDetails = currentUser && currentUser.hod_id 
+              ? [hodUserMap.get(currentUser.hod_id)] 
+              : [];
+          } else {
+            // Baaki groups ke liye plant match karo
+            const groupDetailsArray = groupMap.get(wf.group) || [];
+            const matchedUser = groupDetailsArray.find(gd => {
+              try {
+                const plantsArray = JSON.parse(gd.plants_id);
+                return currentUser && plantsArray.includes(currentUser.employee_plant);
+              } catch {
+                return false;
+              }
+            });
+
+            groupDetails = matchedUser ? [groupUserMap.get(matchedUser.user_id)] : [];
+          }
+
+          // Find approval for this stage (index = current_stage)
+          const stageApproval = templateApprovals.find(
+            approval => approval.current_stage === index
+          );
+
+          return {
+            ...wf,
+            groupDetails: groupDetails.filter(Boolean),
+            approval: stageApproval || null
+          };
+        });
+      }
+
+      result.push({
+        user_id: au.user_id,
+        status: au.status,
+        userDetail: currentUser || null,
+        template_data: {
+          _id: templateJson._id,
+          template_name: templateJson.template_name,
+          template_type: templateJson.template_type,
+          is_active: templateJson.is_active,
+          workflow_id: templateJson.workflow_id,
+          createdAt: templateJson.createdAt,
+          updatedAt: templateJson.updatedAt,
+          workflow: templateJson.workflow
+        }
+      });
+    });
+  });
+
+  return result;
 };
 
 export const assignWorkflowToTemplateService = async (templateId, workflowId) => {
@@ -459,7 +580,7 @@ export const updateAssignedUserStatusService = async (templateId, { user_id, sta
 
 
 
-export const updateTemplateMasterWithWorkflow = async (id,data) => {
+export const updateTemplateMasterWithWorkflow = async (id, data) => {
   const templates = await TemplateMasterModel.findByPk(id);
   if (!templates) {
     throw new NotFoundError("Template not found", "updateTemplateMasterWithWorkflow()");
