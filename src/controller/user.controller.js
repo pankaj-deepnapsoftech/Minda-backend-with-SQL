@@ -5,7 +5,7 @@ import path from "path";
 
 // ---------------------------- local imports  -------------------------
 import { AsyncHandler } from "../utils/asyncHandler.js";
-import { createUserService, FindUserByEmail, FindUserByEmailOrUserId, FindUserById, getAllHodsServicesData, getAllReleseGroupUsers, GetAllUsersService, GetTemplateAssignModuleServiceByUser, GetUsersService, SearchUsersService, UpdateUsersService } from "../services/users.service.js";
+import { createUserService, FindUserByEmail, FindUserByEmailOrUserId, FindUserById, getAllHodsServicesData, getAllReleseGroupUsers, GetAllUsersService, getEmployeesOnlyHaveHod, GetTemplateAssignModuleServiceByUser, GetUsersService, SearchUsersService, UpdateUsersService } from "../services/users.service.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 import { StatusCodes } from "http-status-codes";
 import { config } from "../config.js";
@@ -152,11 +152,11 @@ export const GetAllemployees = AsyncHandler(async (req, res) => {
 });
 
 export const SearchEmployees = AsyncHandler(async (req, res) => {
-    let {is_hod,company,plant, search, limit, page } = req.query;
+    let { is_hod, company, plant, search, limit, page } = req.query;
     limit = parseInt(limit) || 10;
     page = parseInt(page) || 1;
     const skip = (page - 1) * limit;
-    const result = await SearchUsersService(is_hod,company,plant,search, skip, limit);
+    const result = await SearchUsersService(is_hod, company, plant, search, skip, limit);
     res.status(StatusCodes.OK).json({
         data: result
     });
@@ -244,30 +244,38 @@ export const GetAllEmployees = AsyncHandler(async (req, res) => {
 });
 
 
-export const GetAllHodData = AsyncHandler(async (req,res) => {
+export const GetAllHodData = AsyncHandler(async (req, res) => {
     const result = await getAllHodsServicesData();
     res.status(StatusCodes.OK).json({
-        data:result,
-        success:true
+        data: result,
+        success: true
     })
 });
 
 
-export const getWithoutHod = AsyncHandler(async (req,res) => {
+export const getWithoutHod = AsyncHandler(async (req, res) => {
     const result = await getAllReleseGroupUsers();
 
     res.status(StatusCodes.OK).json({
-        data:result
+        data: result
     })
 })
 
+export const getUserWithHod = AsyncHandler(async (req, res) => {
+    const result = await getEmployeesOnlyHaveHod();
 
-export const  getAssignedTemplates = AsyncHandler(async (req,res) => {
+    res.status(StatusCodes.OK).json({
+        data: result
+    });
+});
+
+
+export const getAssignedTemplates = AsyncHandler(async (req, res) => {
     const user = req.currentUser;
     const result = await GetTemplateAssignModuleServiceByUser(user._id);
 
     res.status(StatusCodes.OK).json({
-        data:result
+        data: result
     });
 });
 
