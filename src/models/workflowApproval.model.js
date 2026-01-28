@@ -52,6 +52,14 @@ export const WorkflowApprovalModel = sequelize.define(
         key: "_id",
       },
     },
+    approved_by: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: "users",
+        key: "_id",
+      },
+    }
   },
   {
     timestamps: true,

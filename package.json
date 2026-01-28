@@ -9,7 +9,7 @@
     "dev": "nodemon  src/index.js",
     "production:migration": " npx sequelize-cli db:migrate && pm2 start src/index.js --name minda-checklist",
     "production": "pm2 start src/index.js --name minda-checklist",
-    "stop": "pm2 stop index.js",
+    "stop": "pm2 stop src/index.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier . --write",
