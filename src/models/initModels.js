@@ -131,10 +131,10 @@ export const initModels = () => {
     TemplateMasterModel.hasMany(WorkflowApprovalModel, { foreignKey: "template_id", as: "workflowApprovals", constraints: false });
     WorkflowApprovalModel.belongsTo(TemplateMasterModel, { foreignKey: "template_id", as: "template", constraints: false });
 
-    UserModel.hasMany(WorkflowApprovalModel, { foreignKey: "user_id", as: "workflowApprovals", constraints: false });
+    UserModel.hasMany(WorkflowApprovalModel, { foreignKey: "user_id", as: "userWorkflowApprovals", constraints: false });
     WorkflowApprovalModel.belongsTo(UserModel, { foreignKey: "user_id", as: "user", constraints: false });
 
-    UserModel.hasMany(WorkflowApprovalModel, { foreignKey: "approved_by", as: "workflowApprovals", constraints: false });
+    UserModel.hasMany(WorkflowApprovalModel, { foreignKey: "approved_by", as: "approvedByWorkflowApprovals", constraints: false });
     WorkflowApprovalModel.belongsTo(UserModel, { foreignKey: "approved_by", as: "approvedBy", constraints: false });
 
     CheckListModal.hasMany(ItemCheckTimeModel, { foreignKey: "item_id", as: "time" });
