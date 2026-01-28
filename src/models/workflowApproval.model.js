@@ -59,7 +59,7 @@ export const WorkflowApprovalModel = sequelize.define(
         model: "users",
         key: "_id",
       },
-    },
+    }
   },
   {
     timestamps: true,

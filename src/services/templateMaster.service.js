@@ -351,9 +351,7 @@ export const getAssignedTemplatesService = async (userId) => {
   return assignedTemplates;
 };
 
-// assigned_users ke andar wale status: har (template, user) ke liye ek row, assigned_user fallback
 export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
-  // First, get total count of all templates (before pagination)
   const totalTemplates = await TemplateMasterModel.count();
 
   const templates = await TemplateMasterModel.findAll({
@@ -367,14 +365,12 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
     limit
   });
 
-  // Get all unique user IDs from all templates
   const allUserIds = new Set();
   templates.forEach(template => {
     const assignedUsers = template.assigned_users || [];
     assignedUsers.forEach(au => allUserIds.add(au.user_id));
   });
 
-  // Get all unique group IDs from all workflows
   const allGroupIds = new Set();
   templates.forEach(template => {
     if (template.workflow && template.workflow.workflow) {
@@ -386,7 +382,6 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
     }
   });
 
-  // Fetch all users at once
   const users = await UserModel.findAll({
     where: {
       _id: Array.from(allUserIds)
@@ -395,14 +390,12 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
       'is_hod', 'employee_plant', "hod_id"]
   });
 
-  // Fetch all group details at once
   const groups = await GroupUsersModel.findAll({
     where: {
       relese_group_id: Array.from(allGroupIds)
     }
   });
 
-  // Fetch release group names
   const releaseGroups = await ReleseGroupModel.findAll({
     where: {
       _id: Array.from(allGroupIds)
@@ -410,16 +403,14 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
     attributes: ['_id', 'group_name', 'group_department']
   });
 
-  // Fetch all workflow approvals for all templates
   const templateIds = templates.map(t => t._id);
   const workflowApprovals = await WorkflowApprovalModel.findAll({
     where: {
-      template_id: templateIds
+      template_id: templateIds,
     },
     order: [["current_stage", "ASC"], ["createdAt", "ASC"]]
   });
 
-  // Get all unique HOD IDs
   const allHodIds = new Set();
   users.forEach(user => {
     if (user.hod_id) {
@@ -427,13 +418,19 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
     }
   });
 
-  // Get all unique user IDs from groups
   const allGroupUserIds = new Set();
   groups.forEach(g => {
     allGroupUserIds.add(g.user_id);
   });
 
-  // Fetch HOD users
+  // Collect all approved_by IDs from approvals
+  const allApprovedByIds = new Set();
+  workflowApprovals.forEach(approval => {
+    if (approval.approved_by) {
+      allApprovedByIds.add(approval.approved_by);
+    }
+  });
+
   const hodUsers = await UserModel.findAll({
     where: {
       _id: Array.from(allHodIds)
@@ -442,7 +439,6 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
       'is_hod', 'employee_plant']
   });
 
-  // Fetch group users
   const groupUsers = await UserModel.findAll({
     where: {
       _id: Array.from(allGroupUserIds)
@@ -451,13 +447,21 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
       'is_hod', 'employee_plant']
   });
 
-  // Create maps for quick lookup
+  // Fetch approved_by users
+  const approvedByUsers = await UserModel.findAll({
+    where: {
+      _id: Array.from(allApprovedByIds)
+    },
+    attributes: ['_id', 'full_name', 'email', 'desigination', 'user_id',
+      'is_hod', 'employee_plant']
+  });
+
   const userMap = new Map(users.map(u => [u._id, u.toJSON()]));
   const hodUserMap = new Map(hodUsers.map(u => [u._id, u.toJSON()]));
   const groupUserMap = new Map(groupUsers.map(u => [u._id, u.toJSON()]));
   const releaseGroupMap = new Map(releaseGroups.map(rg => [rg._id, rg.toJSON()]));
+  const approvedByUserMap = new Map(approvedByUsers.map(u => [u._id, u.toJSON()]));
 
-  // Group by relese_group_id
   const groupMap = new Map();
   groups.forEach(g => {
     const groupJson = g.toJSON();
@@ -467,21 +471,25 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
     groupMap.get(groupJson.relese_group_id).push(groupJson);
   });
 
-  // Create approval map: template_id -> current_stage -> array of approvals
+  // Create approval map with proper key: template_id-workflow_id-user_id-current_stage
   const approvalMap = new Map();
   workflowApprovals.forEach(approval => {
     const approvalJson = approval.toJSON();
-    if (!approvalMap.has(approvalJson.template_id)) {
-      approvalMap.set(approvalJson.template_id, new Map());
+    
+    // Add approved_by user details
+    if (approvalJson.approved_by) {
+      approvalJson.approved_by_user = approvedByUserMap.get(approvalJson.approved_by) || null;
     }
-    const templateApprovalMap = approvalMap.get(approvalJson.template_id);
-    if (!templateApprovalMap.has(approvalJson.current_stage)) {
-      templateApprovalMap.set(approvalJson.current_stage, []);
+    
+    // Key with user_id (user_id = jo approve karna chahiye tha)
+    const key = `${approvalJson.template_id}-${approvalJson.workflow_id}-${approvalJson.user_id}-${approvalJson.current_stage}`;
+    
+    if (!approvalMap.has(key)) {
+      approvalMap.set(key, []);
     }
-    templateApprovalMap.get(approvalJson.current_stage).push(approvalJson);
+    approvalMap.get(key).push(approvalJson);
   });
 
-  // Flatten: har user ke liye template ka object
   const result = [];
 
   templates.forEach(template => {
@@ -491,22 +499,20 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
     assignedUsers.forEach(au => {
       const currentUser = userMap.get(au.user_id);
       
-      // Workflow details ko enhance karo
       if (templateJson.workflow && templateJson.workflow.workflow) {
-        const templateApprovalMap = approvalMap.get(templateJson._id) || new Map();
         
         templateJson.workflow.workflow = templateJson.workflow.workflow.map((wf, index) => {
           let groupDetail = null;
           let groupInfo = null;
+          let expectedApproverUserId = null; // Who should approve (user_id in approval table)
           
           if (wf.group === "HOD") {
-            // HOD ke liye hod_id se user detail lao
             groupDetail = currentUser && currentUser.hod_id 
               ? hodUserMap.get(currentUser.hod_id) || null
               : null;
             groupInfo = { group_name: "HOD", group_department: null };
+            expectedApproverUserId = currentUser?.hod_id || null; // HOD ki ID
           } else {
-            // Baaki groups ke liye plant match karo
             const groupDetailsArray = groupMap.get(wf.group) || [];
             const matchedUser = groupDetailsArray.find(gd => {
               try {
@@ -519,17 +525,19 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
 
             groupDetail = matchedUser ? groupUserMap.get(matchedUser.user_id) || null : null;
             groupInfo = releaseGroupMap.get(wf.group) || null;
+            expectedApproverUserId = matchedUser?.user_id || null; // Group user ki ID
           }
 
-          // Get all approvals for this stage
-          const stageApprovals = templateApprovalMap.get(index) || [];
+          // Get approvals where user_id matches expected approver
+          const approvalKey = `${templateJson._id}-${templateJson.workflow_id}-${expectedApproverUserId}-${index}`;
+          const stageApprovals = approvalMap.get(approvalKey) || [];
 
           return {
             ...wf,
             group_name: groupInfo?.group_name || null,
             group_department: groupInfo?.group_department || null,
             groupDetail: groupDetail,
-            approvals: stageApprovals // Ab array hai jisme multiple approvals ho sakte hain
+            approvals: stageApprovals // Each approval has approved_by_user
           };
         });
       }
@@ -552,7 +560,6 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
     });
   });
 
-  // Calculate pagination metadata
   const totalResults = result.length;
   const currentPage = Math.floor(skip / limit) + 1;
   const totalPages = Math.ceil(totalTemplates / limit);
