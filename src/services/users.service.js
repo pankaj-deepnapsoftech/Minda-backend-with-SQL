@@ -304,16 +304,16 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
             approvalsMap.set(key, []);
         }
         approvalsMap.get(key).push({
-            approval_id: approval._id,
-            current_stage: approval.current_stage,
-            reassign_stage: approval.reassign_stage,
-            workflow_id: approval.workflow_id,
-            status: approval.status,
-            remarks: approval.remarks,
-            approved_by: approval.user_id,
-            approved_at: approval.createdAt,
-            updated_at: approval.updatedAt
-        });
+          approval_id: approval._id,
+          current_stage: approval.current_stage,
+          reassign_stage: approval.reassign_stage,
+          workflow_id: approval.workflow_id,
+          status: approval.status,
+          remarks: approval.remarks,
+          approved_by: approval.approved_by,
+          approved_at: approval.createdAt,
+          updated_at: approval.updatedAt,
+        })
         // Agar HOD/approver ne reject kiya, next wale ko approval list mein mat dikhao
         const isRejected = (approval.status || "").toLowerCase() === "reject" || approval.status === "rejected";
         if (isRejected) {
