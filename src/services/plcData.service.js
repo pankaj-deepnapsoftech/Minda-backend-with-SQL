@@ -6,7 +6,7 @@ export const createPlcDataService = async (data) => {
   // New payload example:
   // {
   //   companyname, plantname, linenumber, device_id,
-  //   timestamp, Start_time, Stop_time,
+  //   timestamp, Start_time, Stop_time, Status,
   //   machine: { model },
   //   parameters: { LATCH_FORCE, ... }
   // }
@@ -19,6 +19,7 @@ export const createPlcDataService = async (data) => {
   let timestamp = null;
   let start_time = null;
   let stop_time = null;
+  let status = null;
   let model = null;
   let latch_force = null;
   let claw_force = null;
@@ -33,6 +34,7 @@ export const createPlcDataService = async (data) => {
     timestamp = data.timestamp ? new Date(data.timestamp) : null;
     start_time = data.Start_time ? new Date(data.Start_time) : null;
     stop_time = data.Stop_time ? new Date(data.Stop_time) : null;
+    status = data.Status || null;
     model = data.machine && data.machine.model ? data.machine.model : null;
 
     const params = data.parameters || {};
@@ -42,10 +44,27 @@ export const createPlcDataService = async (data) => {
     claw_lever = params.CLAW_LEVER ?? null;
     stroke = params.STROKE ?? null;
     production_count = params.PRODUCTION_COUNT ?? params["PRODUCTION-COUNT"] ?? null;
+
+    // Jab stop_time aaye: pehle wali row (jisme start_time thi, stop_time null) update karo — naya row mat bnao
+    if (stop_time && device_id) {
+      const openRow = await PlcDataModel.findOne({
+        where: { device_id, stop_time: null },
+        order: [["start_time", "DESC"]],
+      });
+      if (openRow) {
+        await openRow.update({
+          stop_time,
+          ...(status != null && { status }),
+          ...(timestamp != null && { timestamp }),
+        });
+        return openRow;
+      }
+    }
   } else {
     // Support older flat format for backward compatibility
     device_id = data.device_id || null;
     timestamp = data.timestamp ? new Date(data.timestamp) : null;
+    status = data.Status || null;
     model = data.MODEL || data.model || null;
     latch_force = data.LATCH_FORCE ?? null;
     claw_force = data.CLAW_FORCE ?? null;
@@ -63,6 +82,7 @@ export const createPlcDataService = async (data) => {
     timestamp,
     start_time,
     stop_time,
+    status,
     latch_force,
     claw_force,
     safety_lever,
@@ -84,6 +104,10 @@ export const getAllPlcDataService = async (filters = {}) => {
 
   if (filters.model) {
     where.model = { [Op.like]: `%${filters.model}%` };
+  }
+
+  if (filters.status) {
+    where.status = { [Op.like]: `%${filters.status}%` };
   }
 
   if (filters.startDate && filters.endDate) {
@@ -131,6 +155,7 @@ export const updatePlcDataService = async (id, data) => {
   if (data.timestamp !== undefined) updateData.timestamp = new Date(data.timestamp);
   if (data.Start_time !== undefined) updateData.start_time = new Date(data.Start_time);
   if (data.Stop_time !== undefined) updateData.stop_time = new Date(data.Stop_time);
+  if (data.Status !== undefined) updateData.status = data.Status;
   if (data.machine && data.machine.model !== undefined) updateData.model = data.machine.model;
 
   if (data.parameters) {
@@ -156,6 +181,7 @@ export const updatePlcDataService = async (id, data) => {
         data.PRODUCTION_COUNT !== undefined ? data.PRODUCTION_COUNT : data["PRODUCTION-COUNT"];
     }
     if (data.MODEL !== undefined) updateData.model = data.MODEL;
+    if (data.Status !== undefined) updateData.status = data.Status;
   }
 
   await plcData.update(updateData);

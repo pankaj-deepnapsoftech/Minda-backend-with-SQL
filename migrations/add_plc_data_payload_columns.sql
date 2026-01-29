@@ -1,4 +1,4 @@
--- Migration: Add company_name, plant_name, line_number, start_time, stop_time to plc_data
+-- Migration: Add company_name, plant_name, line_number, start_time, stop_time, status to plc_data
 -- Run this against your DB so GET /api/v1/plc-data and POST work with the new payload.
 
 -- company_name
@@ -29,4 +29,10 @@ END
 IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.plc_data') AND name = 'stop_time')
 BEGIN
     ALTER TABLE dbo.plc_data ADD stop_time DATETIME2 NULL;
+END
+
+-- status (e.g. Running, Stopped)
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID(N'dbo.plc_data') AND name = 'status')
+BEGIN
+    ALTER TABLE dbo.plc_data ADD status NVARCHAR(255) NULL;
 END
