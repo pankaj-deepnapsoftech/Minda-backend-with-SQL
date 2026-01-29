@@ -19,7 +19,7 @@ export const createStatusHistory = AsyncHandler(async (req, res) => {
         await updateAssignedUserStatusService(check?.template_id, { user_id: check?.user_id, status: "completed" })
     }
 
-    if (check?.status === "rejected") {
+    if (check?.status === "reject" || check?.status === "rejected") {
         // await updateTemplateMasterWithWorkflow(check?.template_id, { is_active: false });
         await updateAssignedUserStatusService(check?.template_id, { user_id: check?.user_id, status: "rejected" })
     }

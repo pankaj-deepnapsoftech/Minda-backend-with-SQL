@@ -17,11 +17,12 @@ export const createPlcData = AsyncHandler(async (req, res) => {
 });
 
 export const getAllPlcData = AsyncHandler(async (req, res) => {
-  const { device_id, model, startDate, endDate, timestampStart, timestampEnd } = req.query;
+  const { device_id, model, status, startDate, endDate, timestampStart, timestampEnd } = req.query;
   const filters = {};
   
   if (device_id) filters.device_id = device_id;
   if (model) filters.model = model;
+  if (status) filters.status = status;
   if (startDate) filters.startDate = startDate;
   if (endDate) filters.endDate = endDate;
   if (timestampStart) filters.timestampStart = timestampStart;

@@ -4,7 +4,12 @@ import { WorkflowModel } from "../models/workflow.modal.js";
 import {WorkflowApprovalModel} from "../models/workflowApproval.model.js"
 
 export const CreateStatusHistoryService = async (data) => {
-    const result = await WorkflowApprovalModel.create(data);
+    // Model accepts only "approved" | "reject". Normalize "rejected" -> "reject"
+    const payload = { ...data };
+    if (payload.status && (payload.status === "rejected" || payload.status.toLowerCase() === "rejected")) {
+        payload.status = "reject";
+    }
+    const result = await WorkflowApprovalModel.create(payload);
     return result;
 };
 

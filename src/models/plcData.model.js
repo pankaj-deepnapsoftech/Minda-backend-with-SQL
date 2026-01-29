@@ -16,6 +16,7 @@ export const PlcDataModel = sequelize.define(
     timestamp: { type: DataTypes.DATE, allowNull: true },
     start_time: { type: DataTypes.DATE, allowNull: true },
     stop_time: { type: DataTypes.DATE, allowNull: true },
+    status: { type: DataTypes.STRING(255), allowNull: true },
     latch_force: { type: DataTypes.INTEGER, allowNull: true },
     claw_force: { type: DataTypes.INTEGER, allowNull: true },
     safety_lever: { type: DataTypes.INTEGER, allowNull: true },

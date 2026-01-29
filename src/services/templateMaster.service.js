@@ -473,6 +473,8 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
 
   // Create approval map with proper key: template_id-workflow_id-user_id-current_stage
   const approvalMap = new Map();
+  // Map: template_id-user_id -> rejectionStage (stage index where reject happened). If rejected, further stages should not show.
+  const rejectionStageMap = new Map();
   workflowApprovals.forEach(approval => {
     const approvalJson = approval.toJSON();
     
@@ -481,8 +483,18 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
       approvalJson.approved_by_user = approvedByUserMap.get(approvalJson.approved_by) || null;
     }
     
+    // Track rejection: if HOD/approver rejected, aage approval nahi jana chahiye
+    const isRejected = (approvalJson.status || "").toLowerCase() === "reject" || approvalJson.status === "rejected";
+    if (isRejected) {
+      const rejectKey = `${approvalJson.template_id}-${approvalJson.user_id}`;
+      const existing = rejectionStageMap.get(rejectKey);
+      if (existing === undefined || approvalJson.current_stage < existing) {
+        rejectionStageMap.set(rejectKey, approvalJson.current_stage);
+      }
+    }
+    
     // Key with user_id (user_id = jo approve karna chahiye tha)
-    const key = `${approvalJson.template_id}-${approvalJson.workflow_id}-${approvalJson.user_id}-${approvalJson.current_stage}`;
+    const key = `${approvalJson.template_id}-${approvalJson.workflow_id}-${approvalJson.approved_by}-${approvalJson.user_id}`;
     
     if (!approvalMap.has(key)) {
       approvalMap.set(key, []);
@@ -492,16 +504,28 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
 
   const result = [];
 
+  // console.log(approvalMap)
+
   templates.forEach(template => {
     const templateJson = template.toJSON();
     const assignedUsers = templateJson.assigned_users || [];
 
     assignedUsers.forEach(au => {
       const currentUser = userMap.get(au.user_id);
-      
-      if (templateJson.workflow && templateJson.workflow.workflow) {
-        
-        templateJson.workflow.workflow = templateJson.workflow.workflow.map((wf, index) => {
+      // Deep copy workflow per user so each user gets their own approvals (fix shared reference bug)
+      const workflowForUser = templateJson.workflow
+        ? JSON.parse(JSON.stringify(templateJson.workflow))
+        : null;
+
+      if (workflowForUser && workflowForUser.workflow) {
+        // Agar HOD/approver ne reject kiya, to aage ke stages mat dikhao
+        const rejectKey = `${templateJson._id}-${au.user_id}`;
+        const rejectionStage = rejectionStageMap.get(rejectKey);
+        const workflowStages = rejectionStage != null
+          ? workflowForUser.workflow.filter((_, idx) => idx <= rejectionStage)
+          : workflowForUser.workflow;
+
+        workflowForUser.workflow = workflowStages.map((wf, stageIndex) => {
           let groupDetail = null;
           let groupInfo = null;
           let expectedApproverUserId = null; // Who should approve (user_id in approval table)
@@ -528,8 +552,8 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
             expectedApproverUserId = matchedUser?.user_id || null; // Group user ki ID
           }
 
-          // Get approvals where user_id matches expected approver
-          const approvalKey = `${templateJson._id}-${templateJson.workflow_id}-${expectedApproverUserId}-${index}`;
+          // approvalMap key: template_id-workflow_id-approved_by-user_id (user_id = assignee)
+          const approvalKey = `${templateJson._id}-${templateJson.workflow_id}-${expectedApproverUserId}-${au.user_id}`;
           const stageApprovals = approvalMap.get(approvalKey) || [];
 
           return {
@@ -554,7 +578,7 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
           workflow_id: templateJson.workflow_id,
           createdAt: templateJson.createdAt,
           updatedAt: templateJson.updatedAt,
-          workflow: templateJson.workflow
+          workflow: workflowForUser
         }
       });
     });

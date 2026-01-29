@@ -296,6 +296,8 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
 
     // Create a map of template_id + user_id to approvals array
     const approvalsMap = new Map();
+    // Rejected checklists: template_id_user_id - agar reject hua to next approver ko dikhana nahi
+    const rejectedKeys = new Set();
     workflowApprovals.forEach(approval => {
         const key = `${approval.template_id}_${approval.user_id}`;
         if (!approvalsMap.has(key)) {
@@ -312,6 +314,11 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
             approved_at: approval.createdAt,
             updated_at: approval.updatedAt
         });
+        // Agar HOD/approver ne reject kiya, next wale ko approval list mein mat dikhao
+        const isRejected = (approval.status || "").toLowerCase() === "reject" || approval.status === "rejected";
+        if (isRejected) {
+            rejectedKeys.add(key);
+        }
     });
 
     // Fetch all workflows at once
@@ -468,7 +475,8 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
                         has_submission: submission !== null // Helper flag
                     };
                 })
-                .filter(template => template.has_submission); // Only include templates with SUBMITTED status
+                .filter(template => template.has_submission) // Only include templates with SUBMITTED status
+                .filter(template => !rejectedKeys.has(`${template.template_id}_${user._id}`)); // Rejected wale next approver ko mat dikhao
 
             return {
                 _id: user._id,
