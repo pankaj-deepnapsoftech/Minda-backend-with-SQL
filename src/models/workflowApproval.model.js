@@ -29,7 +29,7 @@ export const WorkflowApprovalModel = sequelize.define(
       type: DataTypes.STRING(50),
       allowNull: false,
       validate: {
-        isIn: [["approved", "reject"]],
+        isIn: [["approved", "rejected"]],
       },
     },
     remarks: {
