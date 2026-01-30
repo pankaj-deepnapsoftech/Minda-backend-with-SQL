@@ -222,6 +222,7 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         raw: false
     });
 
+
     // Get all template IDs
     const templateIds = templates.map(t => t._id);
 
@@ -460,6 +461,41 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
     // Filter users based on the logic
     const filteredUsers = allUsers.filter(user => shouldIncludeUser(user));
 
+    // Helper function to filter group_users for a specific user's employee_plant
+    const filterGroupUsersForUser = (workflowSteps, employeePlant) => {
+        if (!workflowSteps || workflowSteps.length === 0) return workflowSteps;
+        
+        return workflowSteps.map((step, index) => {
+            // Skip index 0 (HOD step), only filter from index 1 onwards
+            if (index === 0 || step.group === "HOD") {
+                return step;
+            }
+            
+            if (!step.group_users || step.group_users.length === 0) {
+                return step;
+            }
+            
+            // Find the matching group_user
+            const matchingGroupUser = step.group_users.find(gu => {
+                try {
+                    const plantsArray = JSON.parse(gu.plants_id);
+                    const plantMatches = plantsArray.includes(employeePlant);
+                    const userIdMatches = gu.user_id === filterUserId;
+                    
+                    return plantMatches && userIdMatches;
+                } catch (error) {
+                    return false;
+                }
+            });
+            
+            // Return the step with only the matching user, or empty array if no match
+            return {
+                ...step,
+                group_users: matchingGroupUser ? [matchingGroupUser] : []
+            };
+        });
+    };
+
     // Map filtered users to result; only show template to user if they are the current approver (handles reassign)
     const result = await Promise.all(filteredUsers.map(async (user) => {
             const templatesForUser = templates.filter(template => {
@@ -506,6 +542,13 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
                 const workflow = template.workflow_id 
                     ? workflowMap.get(template.workflow_id) 
                     : null;
+                
+                // Filter workflow to show only matching group_user for this user's employee_plant
+                const filteredWorkflow = workflow ? {
+                    ...workflow,
+                    workflow: filterGroupUsersForUser(workflow.workflow, user.employee_plant)
+                } : null;
+                
                 const approvalsKey = `${template._id}_${user._id}`;
                 const rawApprovals = approvalsMap.get(approvalsKey) || [];
                 const approvals = rawApprovals.map(a => ({
@@ -524,7 +567,7 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
                     template_id: template._id,
                     template_name: template.template_name,
                     template_type: template.template_type,
-                    workflow: workflow,
+                    workflow: filteredWorkflow,  // Using filtered workflow
                     submission: submission,
                     approvals: approvals,
                     has_submission: true,
