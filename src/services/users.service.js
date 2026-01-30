@@ -141,6 +141,7 @@ export const GetUsersByIdService = async (id) => {
             "email",
             "desigination",
             "user_id",
+            "hod_id",
         ]
     });
     return result;

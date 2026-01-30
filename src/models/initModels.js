@@ -137,6 +137,9 @@ export const initModels = () => {
     UserModel.hasMany(WorkflowApprovalModel, { foreignKey: "approved_by", as: "approvedByWorkflowApprovals", constraints: false });
     WorkflowApprovalModel.belongsTo(UserModel, { foreignKey: "approved_by", as: "approvedBy", constraints: false });
 
+    UserModel.hasMany(WorkflowApprovalModel, { foreignKey: "reassign_user_id", as: "reassignUserWorkflowApprovals", constraints: false });
+    WorkflowApprovalModel.belongsTo(UserModel, { foreignKey: "reassign_user_id", as: "reassignUser", constraints: false });
+
     CheckListModal.hasMany(ItemCheckTimeModel, { foreignKey: "item_id", as: "time" });
     ItemCheckTimeModel.belongsTo(CheckListModal, { foreignKey: "item_id", as: "checklistItem" });
 

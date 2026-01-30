@@ -27,6 +27,7 @@ export const createPlcDataService = async (data) => {
   let claw_lever = null;
   let stroke = null;
   let production_count = null;
+  let alarm = null;
 
   if (data.device_id || data.machine || data.parameters) {
     // New nested format
@@ -44,6 +45,7 @@ export const createPlcDataService = async (data) => {
     claw_lever = params.CLAW_LEVER ?? null;
     stroke = params.STROKE ?? null;
     production_count = params.PRODUCTION_COUNT ?? params["PRODUCTION-COUNT"] ?? null;
+    alarm = params.ALARM ?? params.alarm ?? null;
 
     // Jab stop_time aaye: pehle wali row (jisme start_time thi, stop_time null) update karo — naya row mat bnao
     if (stop_time && device_id) {
@@ -90,6 +92,7 @@ export const createPlcDataService = async (data) => {
     stroke,
     production_count,
     model,
+    alarm,
   });
 
   return plcData;
