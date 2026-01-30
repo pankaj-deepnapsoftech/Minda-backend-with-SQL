@@ -4,6 +4,7 @@ import ejs from "ejs";
 
 // -------------------------- local import -----------------------
 import { transport } from "../config/MailTransporter.js";
+import { config } from "../config.js";
 import { logger } from "../utils/logger.js";
 
 // recreate __dirname
@@ -17,16 +18,46 @@ export const SendMail = async (templateName, templateData, ReceiverInfo) => {
     // Render EJS template
     const html = await ejs.renderFile(templatePath, templateData);
 
-    // Send mail
+    // Send mail (Gmail requires "from" to be the authenticated email)
+    const fromEmail = config.EMAIL_AUTH || "noreply@email.com";
     await transport.sendMail({
-      from: "noreply@email.com",
+      from: fromEmail,
       to: ReceiverInfo.email,
       subject: ReceiverInfo.subject,
       html,
     });
 
-    logger.info("Email sent successfully");
+    logger.info("Email sent successfully to", ReceiverInfo.email);
   } catch (error) {
     logger.error("SendMail error:", error);
+    throw error;
   }
+};
+
+/**
+ * Sends "template for approval" notification to a single recipient.
+ * @param {string} recipientEmail
+ * @param {string} recipientName
+ * @param {string} templateName
+ * @param {string} [submittedByName] - Name of user who submitted (optional)
+ */
+export const sendTemplateApprovalNotification = async (
+  recipientEmail,
+  recipientName,
+  templateName,
+  submittedByName = ""
+) => {
+  if (!recipientEmail || !templateName) return;
+  await SendMail(
+    "templateApprovalNotification",
+    {
+      recipientName: recipientName || "User",
+      templateName,
+      submittedByName: submittedByName || "",
+    },
+    {
+      email: recipientEmail,
+      subject: `Template Approval Required: ${templateName}`,
+    }
+  );
 };

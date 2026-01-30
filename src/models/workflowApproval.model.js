@@ -29,7 +29,7 @@ export const WorkflowApprovalModel = sequelize.define(
       type: DataTypes.STRING(50),
       allowNull: false,
       validate: {
-        isIn: [["approved", "rejected"]],
+        isIn: [["approved", "rejected", "reassigned"]],
       },
     },
     remarks: {
@@ -59,7 +59,20 @@ export const WorkflowApprovalModel = sequelize.define(
         model: "users",
         key: "_id",
       },
-    }
+    },
+    reassign_user_id: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      references: {
+        model: "users",
+        key: "_id",
+      },
+    },
+    reassign_status: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
   },
   {
     timestamps: true,

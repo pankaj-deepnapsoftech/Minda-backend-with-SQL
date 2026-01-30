@@ -16,12 +16,14 @@ export const CheckDbConnection = async () => {
             
             if (config.DB_SYNC === "true" || config.NODE_ENV === "development") {
                 logger.info("Starting database sync...");
-                
-                // Use sequelize.sync() - it should handle table creation order
-                // But for SQL Server, we need to ensure tables are created in the right order
-                // The issue is foreign keys being created inline
+                // SQL Server: drop all FKs first so template_masters (and other tables) can be dropped
+                await sequelize.query(`
+                    DECLARE @sql NVARCHAR(MAX) = '';
+                    SELECT @sql += 'ALTER TABLE ' + QUOTENAME(OBJECT_SCHEMA_NAME(parent_object_id)) + '.' + QUOTENAME(OBJECT_NAME(parent_object_id)) + ' DROP CONSTRAINT ' + QUOTENAME(name) + ';'
+                    FROM sys.foreign_keys;
+                    IF LEN(@sql) > 0 EXEC sp_executesql @sql;
+                `);
                 await sequelize.sync({ alter: false, force: false });
-                
                 logger.info("Database sync completed.");
             }
             

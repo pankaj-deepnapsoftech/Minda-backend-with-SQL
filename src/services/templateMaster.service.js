@@ -351,9 +351,7 @@ export const getAssignedTemplatesService = async (userId) => {
   return assignedTemplates;
 };
 
-export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
-  const totalTemplates = await TemplateMasterModel.count();
-
+export const getTemplateStatusListService = async (skip = 0, limit = 10, search = "", status = "") => {
   const templates = await TemplateMasterModel.findAll({
     include: [{
       model: WorkflowModel,
@@ -361,8 +359,6 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
       required: false,
     }],
     order: [["createdAt", "ASC"]],
-    offset: skip,
-    limit
   });
 
   const allUserIds = new Set();
@@ -584,22 +580,52 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
     });
   });
 
-  const totalResults = result.length;
+  let filtered = result;
+
+  if (status && String(status).trim()) {
+    const statusLower = String(status).trim().toLowerCase();
+    filtered = filtered.filter((row) => (row.status || "").toLowerCase() === statusLower);
+  }
+
+  if (search && String(search).trim()) {
+    const q = String(search).trim().toLowerCase();
+    filtered = filtered.filter((row) => {
+      const templateName = (row.template_data?.template_name || "").toLowerCase();
+      const templateType = (row.template_data?.template_type || "").toLowerCase();
+      const rowStatus = (row.status || "").toLowerCase();
+      const userName = (row.userDetail?.full_name || "").toLowerCase();
+      const userId = (row.userDetail?.user_id || "").toLowerCase();
+      const email = (row.userDetail?.email || "").toLowerCase();
+      const workflowName = (row.template_data?.workflow?.name || "").toLowerCase();
+      return (
+        templateName.includes(q) ||
+        templateType.includes(q) ||
+        rowStatus.includes(q) ||
+        userName.includes(q) ||
+        userId.includes(q) ||
+        email.includes(q) ||
+        workflowName.includes(q)
+      );
+    });
+  }
+
+  const totalFiltered = filtered.length;
   const currentPage = Math.floor(skip / limit) + 1;
-  const totalPages = Math.ceil(totalTemplates / limit);
+  const totalPages = Math.ceil(totalFiltered / limit) || 1;
+  const data = filtered.slice(skip, skip + limit);
 
   return {
-    data: result,
+    data,
     pagination: {
-      total: totalTemplates,
-      totalResults: totalResults,
-      currentPage: currentPage,
-      totalPages: totalPages,
-      limit: limit,
-      skip: skip,
+      total: totalFiltered,
+      totalResults: data.length,
+      currentPage,
+      totalPages,
+      limit,
+      skip,
       hasNextPage: currentPage < totalPages,
-      hasPrevPage: currentPage > 1
-    }
+      hasPrevPage: currentPage > 1,
+    },
   };
 };
 
@@ -629,8 +655,10 @@ export const assignWorkflowToTemplateService = async (templateId, workflowId) =>
 /**
  * Returns workflow approval chain: HOD -> only the approver to whom approval goes.
  * Approver is chosen by plant match: release group user whose plants_id matches assigned user's employee_plant.
+ * @param {object} options - { fullChain: true } to return full chain without filtering assignee (for current-approver computation).
  */
-export const getTemplateWorkflowStatusService = async (templateId, assignedUserId = null) => {
+export const getTemplateWorkflowStatusService = async (templateId, assignedUserId = null, options = {}) => {
+  const { fullChain = false } = options;
   const template = await TemplateMasterModel.findByPk(templateId, {
     include: [
       {
@@ -659,13 +687,15 @@ export const getTemplateWorkflowStatusService = async (templateId, assignedUserI
   }
 
   let assignedUserPlantId = null;
+  let assignedUserHodId = null;
   if (assignedUserId) {
     const assignedUser = await UserModel.findOne({
       where: { _id: assignedUserId },
-      attributes: ["employee_plant"],
+      attributes: ["employee_plant", "hod_id"],
       raw: true,
     });
     assignedUserPlantId = assignedUser && assignedUser.employee_plant != null ? assignedUser.employee_plant : null;
+    assignedUserHodId = assignedUser && assignedUser.hod_id != null ? String(assignedUser.hod_id) : null;
   }
 
   const chain = [];
@@ -674,13 +704,14 @@ export const getTemplateWorkflowStatusService = async (templateId, assignedUserI
     .filter((s) => s.group && String(s.group) !== "HOD")
     .map((s) => s.group);
 
-  const hodUserIds = steps
+  const hodUserIdsFromSteps = steps
     .filter((s) => s.group === "HOD" && s.user && String(s.user).trim())
     .map((s) => String(s.user).trim());
+  const hodUserIds = [...new Set([...hodUserIdsFromSteps, ...(assignedUserHodId ? [assignedUserHodId] : [])])];
   const hodUsers =
     hodUserIds.length > 0
       ? await UserModel.findAll({
-          where: { _id: { [Op.in]: [...new Set(hodUserIds)] } },
+          where: { _id: { [Op.in]: hodUserIds } },
           attributes: ["_id", "full_name"],
           raw: true,
         })
@@ -704,7 +735,11 @@ export const getTemplateWorkflowStatusService = async (templateId, assignedUserI
 
   for (const step of steps) {
     if (step.group === "HOD") {
-      const hodUserId = (step.user && String(step.user).trim()) || null;
+      // Use assignee's HOD when available, so "pending for HOD" shows on correct HOD's queue
+      const hodUserId =
+        assignedUserHodId ||
+        (step.user && String(step.user).trim()) ||
+        null;
       const hodLabel = hodUserId && hodNameById[hodUserId] ? `${hodNameById[hodUserId]} (HOD)` : "HOD";
       chain.push({ stage_index: stageIndex, type: "HOD", label: hodLabel, user_id: hodUserId });
       stageIndex++;
@@ -729,10 +764,14 @@ export const getTemplateWorkflowStatusService = async (templateId, assignedUserI
   const isAssignedUser = (c) =>
     assignedUserId && c.user_id && String(c.user_id) === String(assignedUserId);
 
+  const approvalWhere = { template_id: templateId };
+  if (assignedUserId) {
+    approvalWhere.user_id = assignedUserId;
+  }
   const approvals = await WorkflowApprovalModel.findAll({
-    where: { template_id: templateId },
-    order: [["current_stage", "ASC"]],
-    attributes: ["current_stage", "status", "remarks", "approved_by", "createdAt"],
+    where: approvalWhere,
+    order: [["createdAt", "ASC"]],
+    attributes: ["current_stage", "status", "remarks", "approved_by", "reassign_user_id", "createdAt"],
   });
   const approvalByStage = {};
   for (const a of approvals) {
@@ -754,7 +793,7 @@ export const getTemplateWorkflowStatusService = async (templateId, assignedUserI
     };
   });
 
-  if (assignedUserId) {
+  if (assignedUserId && !fullChain) {
     chainWithStatus = chainWithStatus.filter((c) => !isAssignedUser(c));
   }
 
@@ -765,6 +804,57 @@ export const getTemplateWorkflowStatusService = async (templateId, assignedUserI
     workflow_name: workflowName,
     chain: chainWithStatus,
   };
+};
+
+/**
+ * Returns who currently has this template in their approval queue (for template + assignee).
+ * Used to filter "pending for me" list: show template only to currentApproverUserId.
+ * Handles reassign: if last action is reassigned, current approver = reassign_user_id.
+ */
+export const getCurrentApproverForTemplateAssignee = async (templateId, assigneeUserId) => {
+  const status = await getTemplateWorkflowStatusService(templateId, assigneeUserId, { fullChain: true });
+  const chain = status.chain || [];
+  if (!chain.length) return { currentApproverUserId: null, currentStage: null, isRejected: false, isCompleted: true, allowedReassignUserIds: [] };
+
+  const approvals = await WorkflowApprovalModel.findAll({
+    where: { template_id: templateId, user_id: assigneeUserId },
+    order: [["createdAt", "ASC"]],
+    attributes: ["current_stage", "status", "reassign_user_id"],
+    raw: true,
+  });
+
+  const userToStage = new Map(chain.map((c) => [String(c.user_id), c.stage_index]));
+  let nextStage = 0;
+  let currentApproverUserId = chain[0] && chain[0].user_id ? String(chain[0].user_id) : null;
+
+  for (const approval of approvals) {
+    if (approval.current_stage !== nextStage) continue;
+    const statusLower = (approval.status || "").toLowerCase();
+    if (statusLower === "rejected" || statusLower === "reject") {
+      return { currentApproverUserId: null, currentStage: null, isRejected: true, isCompleted: false, allowedReassignUserIds: [] };
+    }
+    if (statusLower === "reassigned" || statusLower === "reassign") {
+      currentApproverUserId = approval.reassign_user_id ? String(approval.reassign_user_id) : null;
+      const stage = approval.reassign_user_id ? userToStage.get(String(approval.reassign_user_id)) : undefined;
+      if (stage !== undefined) nextStage = stage;
+      continue;
+    }
+    if (statusLower === "approved" || statusLower === "approve") {
+      nextStage++;
+      if (nextStage >= chain.length) {
+        return { currentApproverUserId: null, currentStage: null, isRejected: false, isCompleted: true, allowedReassignUserIds: [] };
+      }
+      currentApproverUserId = chain[nextStage] && chain[nextStage].user_id ? String(chain[nextStage].user_id) : null;
+    }
+  }
+
+  // Reassign only to previous approvers (stages 0..nextStage-1). HOD (stage 0) cannot reassign.
+  const allowedReassignUserIds =
+    nextStage > 0
+      ? [...new Set(chain.slice(0, nextStage).map((c) => c.user_id).filter(Boolean).map(String))]
+      : [];
+
+  return { currentApproverUserId, currentStage: nextStage, isRejected: false, isCompleted: false, allowedReassignUserIds };
 };
 
 // Update status of one assigned user. Body: { user_id, status }

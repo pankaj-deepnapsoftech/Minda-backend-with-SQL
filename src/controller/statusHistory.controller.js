@@ -1,7 +1,13 @@
 import { AsyncHandler } from "../utils/asyncHandler.js";
 import { CreateStatusHistoryService, getStatusHistoryById } from "../services/statusHistory.service.js"
 import { StatusCodes } from "http-status-codes";
-import { updateAssignedUserStatusService } from "../services/templateMaster.service.js";
+import { getTemplateWorkflowStatusService, updateAssignedUserStatusService } from "../services/templateMaster.service.js";
+import { GetAdmin, GetUsersByIdService } from "../services/users.service.js";
+import { sendTemplateApprovalNotification } from "../helper/SendEmail.js";
+import { CreateTemplateApprovalNotification, singleNotification } from "../services/notification.service.js";
+import { sendNewNotification } from "../socket/notification.socket.js";
+import { logger } from "../utils/logger.js";
+import { WorkflowApprovalModel } from "../models/workflowApproval.model.js";
 
 
 export const createStatusHistory = AsyncHandler(async (req, res) => {
@@ -19,18 +25,84 @@ export const createStatusHistory = AsyncHandler(async (req, res) => {
         await updateAssignedUserStatusService(check?.template_id, { user_id: check?.user_id, status: "completed" })
     }
 
+    if (check?.status === "approved" && check?.template_id && check?.user_id && check?.approved_by) {
+        const updated = await WorkflowApprovalModel.update(
+            { reassign_status: true },
+            {
+                where: {
+                    template_id: check.template_id,
+                    user_id: check.user_id,
+                    status: "reassigned",
+                    reassign_user_id: check.approved_by,
+                    reassign_status: false,
+                },
+            }
+        );
+        if (updated[0] > 0) {
+            logger.info("Reassign approved: updated reassign_status to true for template", check.template_id);
+        }
+    }
+
     if (check?.status === "reject" || check?.status === "rejected") {
-        // await updateTemplateMasterWithWorkflow(check?.template_id, { is_active: false });
         await updateAssignedUserStatusService(check?.template_id, { user_id: check?.user_id, status: "rejected" })
     }
 
-    // const checkLatest = await getStatusHistoryById(result._id);
+    if (check?.status === "reassigned" && check?.template_id && check?.user_id) {
+        await updateAssignedUserStatusService(check.template_id, { user_id: check.user_id, status: "re-assign" });
+    }
 
-    // if (checkLatest?.status === "approved" && checkLatest?.workflow?.workflow?.length - 1 !== checkLatest?.current_stage) {
-    //     if (checkLatest?.template?.assigned_users?.every((item) => item.status === "completed")) {
-    //         await updateTemplateMasterWithWorkflow(check?.template_id, { is_active: false });
-    //     }
-    // }
+    // Notify admin + next approver / reassign user (email + in-app notification)
+    try {
+        const templateName = check?.template?.template_name || "Template";
+        const templateId = check?.template_id || null;
+        const assignee = check?.user_id ? await GetUsersByIdService(check.user_id) : null;
+        const submittedByName = assignee?.full_name || "";
+        const approverId = check?.approved_by || null;
+        const admin = await GetAdmin();
 
-    // console.log("Status History Created",check);
+        const notifyRecipient = async (recipientId, recipientEmail, recipientName) => {
+            if (!recipientId) return;
+            await sendTemplateApprovalNotification(recipientEmail, recipientName, templateName, submittedByName);
+            try {
+                const notif = await CreateTemplateApprovalNotification({
+                    reciverId: recipientId,
+                    senderId: approverId,
+                    templateName,
+                    templateId,
+                    submittedByName,
+                });
+                const full = await singleNotification(notif._id);
+                if (full) sendNewNotification(full);
+            } catch (e) {
+                logger.error("CreateTemplateApprovalNotification error:", e);
+            }
+        };
+
+        if (admin?._id) await notifyRecipient(admin._id, admin.email, admin.full_name);
+
+        if (check?.status === "reassigned" && check?.reassign_user_id) {
+            const reassignToUser = await GetUsersByIdService(check.reassign_user_id);
+            if (reassignToUser?._id && reassignToUser?.email) {
+                await notifyRecipient(reassignToUser._id, reassignToUser.email, reassignToUser.full_name);
+            }
+        }
+
+        const steps = check?.workflow?.workflow || [];
+        const nextStageIndex = check?.current_stage != null ? check.current_stage + 1 : null;
+        const hasNextStage = steps.length > 0 && nextStageIndex != null && nextStageIndex < steps.length;
+        if (check?.status === "approved" && hasNextStage && check?.template_id && check?.user_id) {
+            const workflowStatus = await getTemplateWorkflowStatusService(check.template_id, check.user_id);
+            const chain = workflowStatus?.chain || [];
+            const nextApproverEntry = chain.find((c) => c.stage_index === nextStageIndex);
+            const nextApproverUserId = nextApproverEntry?.user_id;
+            if (nextApproverUserId) {
+                const nextApprover = await GetUsersByIdService(nextApproverUserId);
+                if (nextApprover?._id && nextApprover?.email) {
+                    await notifyRecipient(nextApprover._id, nextApprover.email, nextApprover.full_name);
+                }
+            }
+        }
+    } catch (err) {
+        logger.error("Approval notification error:", err);
+    }
 });
