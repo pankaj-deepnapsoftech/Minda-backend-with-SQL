@@ -5,6 +5,7 @@ import { getTemplateWorkflowStatusService, updateAssignedUserStatusService } fro
 import { GetAdmin, GetUsersByIdService } from "../services/users.service.js";
 import { sendTemplateApprovalNotification } from "../helper/SendEmail.js";
 import { logger } from "../utils/logger.js";
+import { WorkflowApprovalModel } from "../models/workflowApproval.model.js";
 
 
 export const createStatusHistory = AsyncHandler(async (req, res) => {
@@ -22,12 +23,33 @@ export const createStatusHistory = AsyncHandler(async (req, res) => {
         await updateAssignedUserStatusService(check?.template_id, { user_id: check?.user_id, status: "completed" })
     }
 
+    if (check?.status === "approved" && check?.template_id && check?.user_id && check?.approved_by) {
+        const updated = await WorkflowApprovalModel.update(
+            { reassign_status: true },
+            {
+                where: {
+                    template_id: check.template_id,
+                    user_id: check.user_id,
+                    status: "reassigned",
+                    reassign_user_id: check.approved_by,
+                    reassign_status: false,
+                },
+            }
+        );
+        if (updated[0] > 0) {
+            logger.info("Reassign approved: updated reassign_status to true for template", check.template_id);
+        }
+    }
+
     if (check?.status === "reject" || check?.status === "rejected") {
-        // await updateTemplateMasterWithWorkflow(check?.template_id, { is_active: false });
         await updateAssignedUserStatusService(check?.template_id, { user_id: check?.user_id, status: "rejected" })
     }
 
-    // Notify admin every time; if approved, notify next approver too
+    if (check?.status === "reassigned" && check?.template_id && check?.user_id) {
+        await updateAssignedUserStatusService(check.template_id, { user_id: check.user_id, status: "re-assign" });
+    }
+
+    // Notify admin every time; if approved, notify next approver; if reassigned, notify reassign_user_id
     try {
         const templateName = check?.template?.template_name || "Template";
         const assignee = check?.user_id ? await GetUsersByIdService(check.user_id) : null;
@@ -41,6 +63,19 @@ export const createStatusHistory = AsyncHandler(async (req, res) => {
                 templateName,
                 submittedByName
             );
+        }
+
+        if (check?.status === "reassigned" && check?.reassign_user_id) {
+            const reassignToUser = await GetUsersByIdService(check.reassign_user_id);
+            if (reassignToUser?.email) {
+                await sendTemplateApprovalNotification(
+                    reassignToUser.email,
+                    reassignToUser.full_name,
+                    templateName,
+                    submittedByName
+                );
+                logger.info("Reassign notification sent to:", reassignToUser.email);
+            }
         }
 
         const steps = check?.workflow?.workflow || [];

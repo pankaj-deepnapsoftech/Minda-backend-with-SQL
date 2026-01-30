@@ -3,23 +3,11 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    const tableDescription = await queryInterface.describeTable('workflow_approvals');
-    if (!tableDescription.approved_by) {
-      await queryInterface.addColumn('workflow_approvals', 'approved_by', {
-        type: Sequelize.UUID,
-        allowNull: true,
-        references: {
-          model: 'users',
-          key: '_id',
-        },
-      });
-    }
+    // approved_by is already added by 20260124130000-add-approved-by-to-workflow-approvals.
+    // This migration is a no-op to avoid "Column name 'approved_by' specified more than once".
   },
 
   async down(queryInterface) {
-    const tableDescription = await queryInterface.describeTable('workflow_approvals');
-    if (tableDescription.approved_by) {
-      await queryInterface.removeColumn('workflow_approvals', 'approved_by');
-    }
+    // No-op: approved_by is owned by 20260124130000.
   },
 };
