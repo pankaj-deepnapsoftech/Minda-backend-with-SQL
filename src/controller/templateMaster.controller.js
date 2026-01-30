@@ -88,11 +88,13 @@ export const getAssignedTemplates = AsyncHandler(async (req, res) => {
 });
 
 export const getTemplateStatusList = AsyncHandler(async (req, res) => {
-  let {page,limit} = req.query;
+  let { page, limit, search, status } = req.query;
   page = parseInt(page) || 1;
-  limit = parseInt(limit) || 5;
+  limit = parseInt(limit) || 10;
   const skip = (page - 1) * limit;
-  const result = await getTemplateStatusListService(skip, limit);
+  search = typeof search === "string" ? search.trim() : "";
+  status = typeof status === "string" ? status.trim() : "";
+  const result = await getTemplateStatusListService(skip, limit, search, status);
   res.status(StatusCodes.OK).json({
     message: "Template status list fetched successfully",
     data: result,

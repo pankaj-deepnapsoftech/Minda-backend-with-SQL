@@ -4,6 +4,8 @@ import { StatusCodes } from "http-status-codes";
 import { getTemplateWorkflowStatusService, updateAssignedUserStatusService } from "../services/templateMaster.service.js";
 import { GetAdmin, GetUsersByIdService } from "../services/users.service.js";
 import { sendTemplateApprovalNotification } from "../helper/SendEmail.js";
+import { CreateTemplateApprovalNotification, singleNotification } from "../services/notification.service.js";
+import { sendNewNotification } from "../socket/notification.socket.js";
 import { logger } from "../utils/logger.js";
 import { WorkflowApprovalModel } from "../models/workflowApproval.model.js";
 
@@ -49,32 +51,39 @@ export const createStatusHistory = AsyncHandler(async (req, res) => {
         await updateAssignedUserStatusService(check.template_id, { user_id: check.user_id, status: "re-assign" });
     }
 
-    // Notify admin every time; if approved, notify next approver; if reassigned, notify reassign_user_id
+    // Notify admin + next approver / reassign user (email + in-app notification)
     try {
         const templateName = check?.template?.template_name || "Template";
+        const templateId = check?.template_id || null;
         const assignee = check?.user_id ? await GetUsersByIdService(check.user_id) : null;
         const submittedByName = assignee?.full_name || "";
+        const approverId = check?.approved_by || null;
         const admin = await GetAdmin();
 
-        if (admin?.email) {
-            await sendTemplateApprovalNotification(
-                admin.email,
-                admin.full_name,
-                templateName,
-                submittedByName
-            );
-        }
+        const notifyRecipient = async (recipientId, recipientEmail, recipientName) => {
+            if (!recipientId) return;
+            await sendTemplateApprovalNotification(recipientEmail, recipientName, templateName, submittedByName);
+            try {
+                const notif = await CreateTemplateApprovalNotification({
+                    reciverId: recipientId,
+                    senderId: approverId,
+                    templateName,
+                    templateId,
+                    submittedByName,
+                });
+                const full = await singleNotification(notif._id);
+                if (full) sendNewNotification(full);
+            } catch (e) {
+                logger.error("CreateTemplateApprovalNotification error:", e);
+            }
+        };
+
+        if (admin?._id) await notifyRecipient(admin._id, admin.email, admin.full_name);
 
         if (check?.status === "reassigned" && check?.reassign_user_id) {
             const reassignToUser = await GetUsersByIdService(check.reassign_user_id);
-            if (reassignToUser?.email) {
-                await sendTemplateApprovalNotification(
-                    reassignToUser.email,
-                    reassignToUser.full_name,
-                    templateName,
-                    submittedByName
-                );
-                logger.info("Reassign notification sent to:", reassignToUser.email);
+            if (reassignToUser?._id && reassignToUser?.email) {
+                await notifyRecipient(reassignToUser._id, reassignToUser.email, reassignToUser.full_name);
             }
         }
 
@@ -88,17 +97,12 @@ export const createStatusHistory = AsyncHandler(async (req, res) => {
             const nextApproverUserId = nextApproverEntry?.user_id;
             if (nextApproverUserId) {
                 const nextApprover = await GetUsersByIdService(nextApproverUserId);
-                if (nextApprover?.email) {
-                    await sendTemplateApprovalNotification(
-                        nextApprover.email,
-                        nextApprover.full_name,
-                        templateName,
-                        submittedByName
-                    );
+                if (nextApprover?._id && nextApprover?.email) {
+                    await notifyRecipient(nextApprover._id, nextApprover.email, nextApprover.full_name);
                 }
             }
         }
     } catch (err) {
-        logger.error("Approval notification email error:", err);
+        logger.error("Approval notification error:", err);
     }
 });

@@ -11,6 +11,8 @@ import {
 import { getTemplateWorkflowStatusService, updateAssignedUserStatusService } from "../services/templateMaster.service.js";
 import { GetAdmin, GetUsersByIdService } from "../services/users.service.js";
 import { sendTemplateApprovalNotification } from "../helper/SendEmail.js";
+import { CreateTemplateApprovalNotification, singleNotification } from "../services/notification.service.js";
+import { sendNewNotification } from "../socket/notification.socket.js";
 import { logger } from "../utils/logger.js";
 
 export const createTemplateSubmission = AsyncHandler(async (req, res) => {
@@ -106,50 +108,48 @@ export const submitTemplateSubmission = AsyncHandler(async (req, res) => {
     const submittedByName = submitter?.full_name || "";
     const admin = await GetAdmin();
 
-    // Always send to admin when template is submitted
-    if (admin?.email) {
-      await sendTemplateApprovalNotification(
-        admin.email,
-        admin.full_name,
-        templateName,
-        submittedByName
-      );
-      logger.info("Submit notification sent to admin:", admin.email);
+    const notifyRecipient = async (recipientId, recipientEmail, recipientName) => {
+      if (!recipientId) return;
+      await sendTemplateApprovalNotification(recipientEmail, recipientName, templateName, submittedByName);
+      try {
+        const notif = await CreateTemplateApprovalNotification({
+          reciverId: recipientId,
+          senderId: userId,
+          templateName,
+          templateId,
+          submittedByName,
+        });
+        const full = await singleNotification(notif._id);
+        if (full) sendNewNotification(full);
+      } catch (e) {
+        logger.error("CreateTemplateApprovalNotification error:", e);
+      }
+    };
+
+    // Admin
+    if (admin?._id) {
+      await notifyRecipient(admin._id, admin.email, admin.full_name);
     } else {
-      logger.warn("Submit notification: no admin user found (is_admin: true)");
+      logger.warn("Submit notification: no admin user found");
     }
 
-    // Send to submitter's HOD (user ka jo HOD hai uski mail pe bhejo)
+    // HOD
     const hodId = submitter?.hod_id ?? submitter?.get?.("hod_id");
     if (hodId) {
       const hodUser = await GetUsersByIdService(hodId);
-      if (hodUser?.email) {
-        await sendTemplateApprovalNotification(
-          hodUser.email,
-          hodUser.full_name,
-          templateName,
-          submittedByName
-        );
-        logger.info("Submit notification sent to HOD:", hodUser.email);
+      if (hodUser?._id && hodUser?.email) {
+        await notifyRecipient(hodUser._id, hodUser.email, hodUser.full_name);
       }
-    } else {
-      logger.warn("Submit notification: submitter has no hod_id, skipping HOD email");
     }
 
-    // Also send to first approver from workflow if different from HOD (e.g. workflow step 0)
+    // First approver (if different from HOD)
     if (chain.length > 0) {
       const firstApproverUserId = chain[0].user_id;
       const isSameAsHod = hodId && String(firstApproverUserId) === String(hodId);
       if (!isSameAsHod) {
         const firstApprover = firstApproverUserId ? await GetUsersByIdService(firstApproverUserId) : null;
-        if (firstApprover?.email) {
-          await sendTemplateApprovalNotification(
-            firstApprover.email,
-            firstApprover.full_name,
-            templateName,
-            submittedByName
-          );
-          logger.info("Submit notification sent to first approver:", firstApprover.email);
+        if (firstApprover?._id && firstApprover?.email) {
+          await notifyRecipient(firstApprover._id, firstApprover.email, firstApprover.full_name);
         }
       }
     }
