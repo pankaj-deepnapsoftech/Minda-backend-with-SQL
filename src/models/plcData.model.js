@@ -24,6 +24,7 @@ export const PlcDataModel = sequelize.define(
     stroke: { type: DataTypes.INTEGER, allowNull: true },
     production_count: { type: DataTypes.INTEGER, allowNull: true },
     model: { type: DataTypes.STRING(255), allowNull: true },
+    alarm: { type: DataTypes.STRING(255), allowNull: true },
   },
   {
     timestamps: true,
