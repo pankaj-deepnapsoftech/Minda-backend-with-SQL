@@ -204,7 +204,6 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         throw new Error('Filter user not found');
     }
 
-
     // Get all non-admin users with HOD
     const allUsers = await UserModel.findAll({
         where: {
@@ -247,7 +246,7 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         where: {
             template_id: { [Op.in]: templateIds },
             user_id: { [Op.in]: userIds },
-            status: "SUBMITTED" // Only get submitted submissions
+            status: "SUBMITTED"
         },
         raw: false
     });
@@ -298,7 +297,6 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
 
     // Create a map of template_id + user_id to approvals array
     const approvalsMap = new Map();
-    // Rejected checklists: template_id_user_id - agar reject hua to next approver ko dikhana nahi
     const rejectedKeys = new Set();
     workflowApprovals.forEach(approval => {
         const key = `${approval.template_id}_${approval.user_id}`;
@@ -318,7 +316,7 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
           approved_at: approval.createdAt,
           updated_at: approval.updatedAt,
         })
-        // Agar HOD/approver ne reject kiya, next wale ko approval list mein mat dikhao
+        
         const isRejected = (approval.status || "").toLowerCase() === "reject" || approval.status === "rejected";
         if (isRejected) {
             rejectedKeys.add(key);
@@ -351,6 +349,28 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         },
         raw: true
     });
+
+    // Get all unique plant IDs from group users
+    const allPlantIds = new Set();
+    groupUsers.forEach(gu => {
+        try {
+            const plantsArray = JSON.parse(gu.plants_id);
+            plantsArray.forEach(plantId => allPlantIds.add(plantId));
+        } catch (error) {
+            // Ignore parsing errors
+        }
+    });
+
+    // Fetch all plant details
+    const plants = await PlantModel.findAll({
+        where: {
+            _id: { [Op.in]: Array.from(allPlantIds) }
+        },
+        raw: true
+    });
+
+    // Create plant map
+    const plantMap = new Map(plants.map(p => [p._id, p]));
 
     // Create a map of release_group_id to array of group users
     const groupUsersMap = new Map();
@@ -417,12 +437,10 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
 
     // Function to check if user should be included
     const shouldIncludeUser = (user) => {
-        // STEP 1: Check if filterUserId is the HOD of this user
         if (user.hod_id === filterUserId) {
             return true;
         }
 
-        // STEP 2: Check in workflow groups
         const userTemplates = templates.filter(template => {
             const assignedUsers = template.assigned_users;
             return assignedUsers.some(au => (au.user_id || au._id) === user._id);
@@ -460,7 +478,7 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
     // Filter users based on the logic
     const filteredUsers = allUsers.filter(user => shouldIncludeUser(user));
 
-    // Map filtered users to result; only show template to user if they are the current approver (handles reassign)
+    // Map filtered users to result
     const result = await Promise.all(filteredUsers.map(async (user) => {
             const templatesForUser = templates.filter(template => {
                 const assignedUsers = template.assigned_users;
@@ -503,9 +521,56 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
                 const currentApprover = templateApproversMap.get(String(template._id));
                 if (!currentApprover || String(currentApprover.currentApproverUserId) !== String(filterUserId)) continue;
 
-                const workflow = template.workflow_id 
+                // Get workflow and filter group_users based on current user's plant
+                let workflow = template.workflow_id 
                     ? workflowMap.get(template.workflow_id) 
                     : null;
+                
+                // Filter group_users and get matching plant details
+                if (workflow) {
+                    workflow = {
+                        ...workflow,
+                        workflow: workflow.workflow.map(step => {
+                            if (step.group === "HOD" || !step.group_users || step.group_users.length === 0) {
+                                return step;
+                            }
+                            
+                            // Filter and transform group users
+                            const filteredGroupUsers = step.group_users
+                                .map(gu => {
+                                    try {
+                                        const plantsArray = JSON.parse(gu.plants_id);
+                                        
+                                        // Check if user's plant exists in this group user's plants
+                                        if (plantsArray.includes(user.employee_plant)) {
+                                            // Get the matching plant details
+                                            const matchingPlant = plantMap.get(user.employee_plant);
+                                            
+                                            return {
+                                                user_id: gu.user_id,
+                                                plant: matchingPlant ? {
+                                                    plant_id: matchingPlant._id,
+                                                    plant_name: matchingPlant.plant_name,
+                                                    plant_code: matchingPlant.plant_code,
+                                                    // Add any other plant fields you need
+                                                } : null
+                                            };
+                                        }
+                                        return null;
+                                    } catch (error) {
+                                        return null;
+                                    }
+                                })
+                                .filter(Boolean); // Remove null values
+                            
+                            return {
+                                ...step,
+                                group_users: filteredGroupUsers
+                            };
+                        })
+                    };
+                }
+                
                 const approvalsKey = `${template._id}_${user._id}`;
                 const rawApprovals = approvalsMap.get(approvalsKey) || [];
                 const approvals = rawApprovals.map(a => ({
@@ -549,7 +614,6 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
 
     return result;
 };
-
 
 
 
