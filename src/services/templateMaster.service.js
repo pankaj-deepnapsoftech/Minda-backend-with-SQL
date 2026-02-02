@@ -46,7 +46,7 @@ const workflowInclude = {
   model: WorkflowModel,
   as: "workflow",
   required: false,
-  attributes: ["_id", "name"],
+  attributes: ["_id", "name"],  
 };
 
 const templateFieldsInclude = {
@@ -830,13 +830,15 @@ export const getCurrentApproverForTemplateAssignee = async (templateId, assignee
   const approvals = await WorkflowApprovalModel.findAll({
     where: { template_id: templateId, user_id: assigneeUserId },
     order: [["createdAt", "ASC"]],
-    attributes: ["current_stage", "status", "reassign_user_id"],
+    attributes: ["current_stage", "status", "reassign_user_id", "approved_by"],
     raw: true,
   });
 
   const userToStage = new Map(chain.map((c) => [String(c.user_id), c.stage_index]));
   let nextStage = 0;
   let currentApproverUserId = chain[0] && chain[0].user_id ? String(chain[0].user_id) : null;
+  // When reassign happens: A2 reassigns to HOD. When HOD approves, go back to A2 (reassigner), skip A1.
+  let reassignerToReturnTo = null;
 
   for (const approval of approvals) {
     if (approval.current_stage !== nextStage) continue;
@@ -848,14 +850,22 @@ export const getCurrentApproverForTemplateAssignee = async (templateId, assignee
       currentApproverUserId = approval.reassign_user_id ? String(approval.reassign_user_id) : null;
       const stage = approval.reassign_user_id ? userToStage.get(String(approval.reassign_user_id)) : undefined;
       if (stage !== undefined) nextStage = stage;
+      reassignerToReturnTo = approval.approved_by ? String(approval.approved_by) : null;
       continue;
     }
     if (statusLower === "approved" || statusLower === "approve") {
-      nextStage++;
-      if (nextStage >= chain.length) {
-        return { currentApproverUserId: null, currentStage: null, isRejected: false, isCompleted: true, allowedReassignUserIds: [] };
+      if (reassignerToReturnTo) {
+        currentApproverUserId = reassignerToReturnTo;
+        const stage = userToStage.get(reassignerToReturnTo);
+        nextStage = stage !== undefined ? stage : nextStage + 1;
+        reassignerToReturnTo = null;
+      } else {
+        nextStage++;
+        if (nextStage >= chain.length) {
+          return { currentApproverUserId: null, currentStage: null, isRejected: false, isCompleted: true, allowedReassignUserIds: [] };
+        }
+        currentApproverUserId = chain[nextStage] && chain[nextStage].user_id ? String(chain[nextStage].user_id) : null;
       }
-      currentApproverUserId = chain[nextStage] && chain[nextStage].user_id ? String(chain[nextStage].user_id) : null;
     }
   }
 
