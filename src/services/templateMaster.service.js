@@ -351,9 +351,7 @@ export const getAssignedTemplatesService = async (userId) => {
   return assignedTemplates;
 };
 
-export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
-  const totalTemplates = await TemplateMasterModel.count();
-
+export const getTemplateStatusListService = async (skip = 0, limit = 10, search = "", status = "") => {
   const templates = await TemplateMasterModel.findAll({
     include: [{
       model: WorkflowModel,
@@ -361,8 +359,6 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
       required: false,
     }],
     order: [["createdAt", "ASC"]],
-    offset: skip,
-    limit
   });
 
   const allUserIds = new Set();
@@ -584,22 +580,52 @@ export const getTemplateStatusListService = async (skip = 0, limit = 5) => {
     });
   });
 
-  const totalResults = result.length;
+  let filtered = result;
+
+  if (status && String(status).trim()) {
+    const statusLower = String(status).trim().toLowerCase();
+    filtered = filtered.filter((row) => (row.status || "").toLowerCase() === statusLower);
+  }
+
+  if (search && String(search).trim()) {
+    const q = String(search).trim().toLowerCase();
+    filtered = filtered.filter((row) => {
+      const templateName = (row.template_data?.template_name || "").toLowerCase();
+      const templateType = (row.template_data?.template_type || "").toLowerCase();
+      const rowStatus = (row.status || "").toLowerCase();
+      const userName = (row.userDetail?.full_name || "").toLowerCase();
+      const userId = (row.userDetail?.user_id || "").toLowerCase();
+      const email = (row.userDetail?.email || "").toLowerCase();
+      const workflowName = (row.template_data?.workflow?.name || "").toLowerCase();
+      return (
+        templateName.includes(q) ||
+        templateType.includes(q) ||
+        rowStatus.includes(q) ||
+        userName.includes(q) ||
+        userId.includes(q) ||
+        email.includes(q) ||
+        workflowName.includes(q)
+      );
+    });
+  }
+
+  const totalFiltered = filtered.length;
   const currentPage = Math.floor(skip / limit) + 1;
-  const totalPages = Math.ceil(totalTemplates / limit);
+  const totalPages = Math.ceil(totalFiltered / limit) || 1;
+  const data = filtered.slice(skip, skip + limit);
 
   return {
-    data: result,
+    data,
     pagination: {
-      total: totalTemplates,
-      totalResults: totalResults,
-      currentPage: currentPage,
-      totalPages: totalPages,
-      limit: limit,
-      skip: skip,
+      total: totalFiltered,
+      totalResults: data.length,
+      currentPage,
+      totalPages,
+      limit,
+      skip,
       hasNextPage: currentPage < totalPages,
-      hasPrevPage: currentPage > 1
-    }
+      hasPrevPage: currentPage > 1,
+    },
   };
 };
 
@@ -719,11 +745,22 @@ export const getTemplateWorkflowStatusService = async (templateId, assignedUserI
       stageIndex++;
     } else if (step.group) {
       const users = groupUsersByGroup.get(step.group) || [];
-      for (const gu of users) {
-        const u = gu.user != null ? gu.user : (gu.get && gu.get("user"));
+      // Workflow order: only add the user whose plant matches assigned user's plant (same logic as getAssignedTemplatesService)
+      const matchedUser = assignedUserPlantId != null
+        ? users.find((gu) => {
+            try {
+              const plantsArray = JSON.parse(gu.plants_id || "[]");
+              return plantsArray.includes(assignedUserPlantId);
+            } catch {
+              return false;
+            }
+          })
+        : users[0] || null; // If no assigned user/plant, fallback to first user
+      if (matchedUser) {
+        const u = matchedUser.user != null ? matchedUser.user : (matchedUser.get && matchedUser.get("user"));
         const uName = u && (u.full_name != null ? u.full_name : (typeof u.get === "function" ? u.get("full_name") : null));
-        const label = uName || gu.user_id || "—";
-        const uid = gu.user_id != null ? gu.user_id : (gu.get && gu.get("user_id"));
+        const label = uName || matchedUser.user_id || "—";
+        const uid = matchedUser.user_id != null ? matchedUser.user_id : (matchedUser.get && matchedUser.get("user_id"));
         chain.push({
           stage_index: stageIndex,
           type: "user",

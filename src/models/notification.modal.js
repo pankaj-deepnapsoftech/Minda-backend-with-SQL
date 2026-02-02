@@ -21,9 +21,19 @@ export const NotificationModal = sequelize.define(
                 isIn: [["send", "recived", "view"]],
             },
         },
-        assembly: { type: DataTypes.UUID, allowNull: false },
-        process_id: { type: DataTypes.UUID, allowNull: false },
-        checkList: { type: DataTypes.UUID, allowNull: false },
+        type: {
+            type: DataTypes.STRING(20),
+            allowNull: false,
+            defaultValue: "checklist_error",
+            validate: {
+                isIn: [["checklist_error", "template_approval"]],
+            },
+        },
+        template_id: { type: DataTypes.UUID, allowNull: true },
+        template_name: { type: DataTypes.STRING(255), allowNull: true },
+        assembly: { type: DataTypes.UUID, allowNull: true },
+        process_id: { type: DataTypes.UUID, allowNull: true },
+        checkList: { type: DataTypes.UUID, allowNull: true },
     },
     {
         tableName: "notifications",
