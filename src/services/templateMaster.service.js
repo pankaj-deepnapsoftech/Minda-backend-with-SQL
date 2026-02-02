@@ -745,11 +745,22 @@ export const getTemplateWorkflowStatusService = async (templateId, assignedUserI
       stageIndex++;
     } else if (step.group) {
       const users = groupUsersByGroup.get(step.group) || [];
-      for (const gu of users) {
-        const u = gu.user != null ? gu.user : (gu.get && gu.get("user"));
+      // Workflow order: only add the user whose plant matches assigned user's plant (same logic as getAssignedTemplatesService)
+      const matchedUser = assignedUserPlantId != null
+        ? users.find((gu) => {
+            try {
+              const plantsArray = JSON.parse(gu.plants_id || "[]");
+              return plantsArray.includes(assignedUserPlantId);
+            } catch {
+              return false;
+            }
+          })
+        : users[0] || null; // If no assigned user/plant, fallback to first user
+      if (matchedUser) {
+        const u = matchedUser.user != null ? matchedUser.user : (matchedUser.get && matchedUser.get("user"));
         const uName = u && (u.full_name != null ? u.full_name : (typeof u.get === "function" ? u.get("full_name") : null));
-        const label = uName || gu.user_id || "—";
-        const uid = gu.user_id != null ? gu.user_id : (gu.get && gu.get("user_id"));
+        const label = uName || matchedUser.user_id || "—";
+        const uid = matchedUser.user_id != null ? matchedUser.user_id : (matchedUser.get && matchedUser.get("user_id"));
         chain.push({
           stage_index: stageIndex,
           type: "user",

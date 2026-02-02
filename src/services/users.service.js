@@ -350,6 +350,7 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         where: {
             relese_group_id: { [Op.in]: Array.from(releaseGroupIds) }
         },
+        order: [['createdAt', 'ASC']],
         raw: true
     });
 
