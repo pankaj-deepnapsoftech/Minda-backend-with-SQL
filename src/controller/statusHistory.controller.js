@@ -91,10 +91,26 @@ export const createStatusHistory = AsyncHandler(async (req, res) => {
         const nextStageIndex = check?.current_stage != null ? check.current_stage + 1 : null;
         const hasNextStage = steps.length > 0 && nextStageIndex != null && nextStageIndex < steps.length;
         if (check?.status === "approved" && hasNextStage && check?.template_id && check?.user_id) {
-            const workflowStatus = await getTemplateWorkflowStatusService(check.template_id, check.user_id);
-            const chain = workflowStatus?.chain || [];
-            const nextApproverEntry = chain.find((c) => c.stage_index === nextStageIndex);
-            const nextApproverUserId = nextApproverEntry?.user_id;
+            let nextApproverUserId = null;
+            const reassignRecord = await WorkflowApprovalModel.findOne({
+                where: {
+                    template_id: check.template_id,
+                    user_id: check.user_id,
+                    status: "reassigned",
+                    reassign_user_id: check.approved_by,
+                },
+                order: [["createdAt", "DESC"]],
+                attributes: ["approved_by"],
+                raw: true,
+            });
+            if (reassignRecord?.approved_by) {
+                nextApproverUserId = reassignRecord.approved_by;
+            } else {
+                const workflowStatus = await getTemplateWorkflowStatusService(check.template_id, check.user_id);
+                const chain = workflowStatus?.chain || [];
+                const nextApproverEntry = chain.find((c) => c.stage_index === nextStageIndex);
+                nextApproverUserId = nextApproverEntry?.user_id;
+            }
             if (nextApproverUserId) {
                 const nextApprover = await GetUsersByIdService(nextApproverUserId);
                 if (nextApprover?._id && nextApprover?.email) {
