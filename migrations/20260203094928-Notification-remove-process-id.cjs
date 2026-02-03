@@ -10,19 +10,22 @@ module.exports = {
      * await queryInterface.createTable('users', { id: Sequelize.INTEGER });
      */
 
-    await queryInterface.addColumn("template_submissions","edit_count",{
-      type:Sequelize.INTEGER,
-      allowNull:true,
-      defaultValue:0
-    })
+    await queryInterface.changeColumn('Notifications', 'process_id', {
+      type: Sequelize.INTEGER,
+      allowNull: true,
+    });
   },
 
-  async down (queryInterface) {
+  async down (queryInterface, Sequelize) {
     /**
      * Add reverting commands here.
+     *
      * Example:
      * await queryInterface.dropTable('users');
      */
-    await queryInterface.removeColumn("template_submissions","edit_count")
+    await queryInterface.changeColumn('Notifications', 'process_id', {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+    });
   }
 };

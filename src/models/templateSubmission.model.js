@@ -46,7 +46,7 @@ export const TemplateSubmissionModel = sequelize.define(
       defaultValue: "DRAFT", // DRAFT, SUBMITTED
     },
     edit_count:{
-      type:DataTypes.NUMBER,
+      type:DataTypes.INTEGER,
       allowNull:true,
       defaultValue:0
     }
