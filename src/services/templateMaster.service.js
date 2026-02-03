@@ -434,7 +434,8 @@ export const getTemplateStatusListService = async (
       ['current_stage', 'ASC'],
       ['createdAt', 'ASC'],
     ],
-  })
+  });
+
 
   const allHodIds = new Set()
   users.forEach((user) => {
@@ -454,7 +455,8 @@ export const getTemplateStatusListService = async (
     if (approval.approved_by) {
       allApprovedByIds.add(approval.approved_by)
     }
-  })
+  });
+
 
   const hodUsers = await UserModel.findAll({
     where: {
@@ -603,6 +605,8 @@ export const getTemplateStatusListService = async (
           const approvalKey = `${templateJson._id}-${templateJson.workflow_id}-${expectedApproverUserId}-${au.user_id}`
           const stageApprovals = approvalMap.get(approvalKey) || []
 
+          
+
           return {
             ...wf,
             group_name: groupInfo?.group_name || null,
@@ -613,10 +617,20 @@ export const getTemplateStatusListService = async (
         })
       }
 
+
+
+      const filterWorkflowApproval = workflowApprovals.filter(
+        (item) =>
+          item?.dataValues?.user_id === currentUser._id &&
+          item?.dataValues?.workflow_id === templateJson?.workflow_id && 
+          item?.dataValues?.template_id === templateJson?._id
+      )
+
       result.push({
         user_id: au.user_id,
         status: au.status,
         userDetail: currentUser || null,
+        filterWorkflowApproval,
         template_data: {
           _id: templateJson._id,
           template_name: templateJson.template_name,
