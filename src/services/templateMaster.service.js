@@ -615,7 +615,7 @@ export const getTemplateStatusListService = async (
             group_name: groupInfo?.group_name || null,
             group_department: groupInfo?.group_department || null,
             groupDetail: groupDetail,
-            approvals: stageApprovals, // Each approval has approved_by_user
+            approvals: stageApprovals, 
           }
         })
       }
