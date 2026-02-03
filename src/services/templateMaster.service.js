@@ -920,55 +920,11 @@ export const getCurrentApproverForTemplateAssignee = async (templateId, assignee
 
   const approvals = await WorkflowApprovalModel.findAll({
     where: { template_id: templateId, user_id: assigneeUserId },
-<<<<<<< HEAD
-    order: [['createdAt', 'ASC']],
-    attributes: ['current_stage', 'status', 'reassign_user_id'],
-=======
     order: [["createdAt", "ASC"]],
     attributes: ["current_stage", "status", "reassign_user_id", "approved_by"],
->>>>>>> e18a3faebc990e1c293df7c0ddaca68c543dba51
     raw: true,
   })
 
-<<<<<<< HEAD
-  const userToStage = new Map(chain.map((c) => [String(c.user_id), c.stage_index]))
-  let nextStage = 0
-  let currentApproverUserId = chain[0] && chain[0].user_id ? String(chain[0].user_id) : null
-
-  for (const approval of approvals) {
-    if (approval.current_stage !== nextStage) continue
-    const statusLower = (approval.status || '').toLowerCase()
-    if (statusLower === 'rejected' || statusLower === 'reject') {
-      return {
-        currentApproverUserId: null,
-        currentStage: null,
-        isRejected: true,
-        isCompleted: false,
-        allowedReassignUserIds: [],
-      }
-    }
-    if (statusLower === 'reassigned' || statusLower === 'reassign') {
-      currentApproverUserId = approval.reassign_user_id ? String(approval.reassign_user_id) : null
-      const stage = approval.reassign_user_id
-        ? userToStage.get(String(approval.reassign_user_id))
-        : undefined
-      if (stage !== undefined) nextStage = stage
-      continue
-    }
-    if (statusLower === 'approved' || statusLower === 'approve') {
-      nextStage++
-      if (nextStage >= chain.length) {
-        return {
-          currentApproverUserId: null,
-          currentStage: null,
-          isRejected: false,
-          isCompleted: true,
-          allowedReassignUserIds: [],
-        }
-      }
-      currentApproverUserId =
-        chain[nextStage] && chain[nextStage].user_id ? String(chain[nextStage].user_id) : null
-=======
   const userToStage = new Map(chain.map((c) => [String(c.user_id), c.stage_index]));
   let nextStage = 0;
   let currentApproverUserId = chain[0] && chain[0].user_id ? String(chain[0].user_id) : null;
@@ -1001,7 +957,6 @@ export const getCurrentApproverForTemplateAssignee = async (templateId, assignee
         }
         currentApproverUserId = chain[nextStage] && chain[nextStage].user_id ? String(chain[nextStage].user_id) : null;
       }
->>>>>>> e18a3faebc990e1c293df7c0ddaca68c543dba51
     }
   }
 
