@@ -2,7 +2,7 @@
   "development": {
     "username": "sa",
     "password": "admin@123",
-    "database": "Test",
+    "database": "test",
     "host": "localhost",
     "dialect": "mssql"
   },

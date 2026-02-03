@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { Op } from 'sequelize'
+import { Op, Sequelize } from 'sequelize'
 import { TemplateMasterModel, ASSIGNED_USER_STATUS_ENUM } from '../models/templateMaster.model.js'
 import { TemplateFieldModel } from '../models/templateField.model.js'
 import { UserModel } from '../models/user.modal.js'
@@ -44,8 +44,8 @@ const workflowInclude = {
   model: WorkflowModel,
   as: 'workflow',
   required: false,
-  attributes: ["_id", "name"],  
-};
+  attributes: ['_id', 'name'],
+}
 
 const templateFieldsInclude = {
   model: TemplateFieldModel,
@@ -434,7 +434,8 @@ export const getTemplateStatusListService = async (
       ['current_stage', 'ASC'],
       ['createdAt', 'ASC'],
     ],
-  })
+  });
+
 
   const allHodIds = new Set()
   users.forEach((user) => {
@@ -454,7 +455,8 @@ export const getTemplateStatusListService = async (
     if (approval.approved_by) {
       allApprovedByIds.add(approval.approved_by)
     }
-  })
+  });
+
 
   const hodUsers = await UserModel.findAll({
     where: {
@@ -603,20 +605,32 @@ export const getTemplateStatusListService = async (
           const approvalKey = `${templateJson._id}-${templateJson.workflow_id}-${expectedApproverUserId}-${au.user_id}`
           const stageApprovals = approvalMap.get(approvalKey) || []
 
+          
+
           return {
             ...wf,
             group_name: groupInfo?.group_name || null,
             group_department: groupInfo?.group_department || null,
             groupDetail: groupDetail,
-            approvals: stageApprovals, // Each approval has approved_by_user
+            approvals: stageApprovals, 
           }
         })
       }
+
+
+
+      const filterWorkflowApproval = workflowApprovals.filter(
+        (item) =>
+          item?.dataValues?.user_id === currentUser._id &&
+          item?.dataValues?.workflow_id === templateJson?.workflow_id && 
+          item?.dataValues?.template_id === templateJson?._id
+      )
 
       result.push({
         user_id: au.user_id,
         status: au.status,
         userDetail: currentUser || null,
+        filterWorkflowApproval,
         template_data: {
           _id: templateJson._id,
           template_name: templateJson.template_name,
