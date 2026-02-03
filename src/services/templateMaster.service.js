@@ -430,12 +430,18 @@ export const getTemplateStatusListService = async (
     where: {
       template_id: templateIds,
     },
+    include: [
+      {
+        model: UserModel,
+        as: 'reassignUser',
+        attributes: ['full_name', 'email', 'desigination', 'user_id'],
+      },
+    ],
     order: [
       ['current_stage', 'ASC'],
       ['createdAt', 'ASC'],
     ],
-  });
-
+  })
 
   const allHodIds = new Set()
   users.forEach((user) => {
@@ -455,8 +461,7 @@ export const getTemplateStatusListService = async (
     if (approval.approved_by) {
       allApprovedByIds.add(approval.approved_by)
     }
-  });
-
+  })
 
   const hodUsers = await UserModel.findAll({
     where: {
@@ -605,8 +610,6 @@ export const getTemplateStatusListService = async (
           const approvalKey = `${templateJson._id}-${templateJson.workflow_id}-${expectedApproverUserId}-${au.user_id}`
           const stageApprovals = approvalMap.get(approvalKey) || []
 
-          
-
           return {
             ...wf,
             group_name: groupInfo?.group_name || null,
@@ -617,20 +620,25 @@ export const getTemplateStatusListService = async (
         })
       }
 
-
-
       const filterWorkflowApproval = workflowApprovals.filter(
         (item) =>
           item?.dataValues?.user_id === currentUser._id &&
-          item?.dataValues?.workflow_id === templateJson?.workflow_id && 
-          item?.dataValues?.template_id === templateJson?._id
+          item?.dataValues?.workflow_id === templateJson?.workflow_id &&
+          item?.dataValues?.template_id === templateJson?._id,
       )
+
+      const mapWorkFlowApproval = filterWorkflowApproval.map((item) => {
+        const workflowObj = workflowForUser?.workflow[item?.dataValues?.current_stage]
+        const { approvals, ...workflowWithoutApprovals } = Object(workflowObj || {})
+
+        return { ...item.dataValues, workflowWithoutApprovals }
+      })
 
       result.push({
         user_id: au.user_id,
         status: au.status,
         userDetail: currentUser || null,
-        filterWorkflowApproval,
+        mapWorkFlowApproval,
         template_data: {
           _id: templateJson._id,
           template_name: templateJson.template_name,
@@ -934,42 +942,57 @@ export const getCurrentApproverForTemplateAssignee = async (templateId, assignee
 
   const approvals = await WorkflowApprovalModel.findAll({
     where: { template_id: templateId, user_id: assigneeUserId },
-    order: [["createdAt", "ASC"]],
-    attributes: ["current_stage", "status", "reassign_user_id", "approved_by"],
+    order: [['createdAt', 'ASC']],
+    attributes: ['current_stage', 'status', 'reassign_user_id', 'approved_by'],
     raw: true,
   })
 
-  const userToStage = new Map(chain.map((c) => [String(c.user_id), c.stage_index]));
-  let nextStage = 0;
-  let currentApproverUserId = chain[0] && chain[0].user_id ? String(chain[0].user_id) : null;
+  const userToStage = new Map(chain.map((c) => [String(c.user_id), c.stage_index]))
+  let nextStage = 0
+  let currentApproverUserId = chain[0] && chain[0].user_id ? String(chain[0].user_id) : null
   // When reassign happens: A2 reassigns to HOD. When HOD approves, go back to A2 (reassigner), skip A1.
-  let reassignerToReturnTo = null;
+  let reassignerToReturnTo = null
 
   for (const approval of approvals) {
-    if (approval.current_stage !== nextStage) continue;
-    const statusLower = (approval.status || "").toLowerCase();
-    if (statusLower === "rejected" || statusLower === "reject") {
-      return { currentApproverUserId: null, currentStage: null, isRejected: true, isCompleted: false, allowedReassignUserIds: [] };
+    if (approval.current_stage !== nextStage) continue
+    const statusLower = (approval.status || '').toLowerCase()
+    if (statusLower === 'rejected' || statusLower === 'reject') {
+      return {
+        currentApproverUserId: null,
+        currentStage: null,
+        isRejected: true,
+        isCompleted: false,
+        allowedReassignUserIds: [],
+      }
     }
-    if (statusLower === "reassigned" || statusLower === "reassign") {
-      currentApproverUserId = approval.reassign_user_id ? String(approval.reassign_user_id) : null;
-      const stage = approval.reassign_user_id ? userToStage.get(String(approval.reassign_user_id)) : undefined;
-      if (stage !== undefined) nextStage = stage;
-      reassignerToReturnTo = approval.approved_by ? String(approval.approved_by) : null;
-      continue;
+    if (statusLower === 'reassigned' || statusLower === 'reassign') {
+      currentApproverUserId = approval.reassign_user_id ? String(approval.reassign_user_id) : null
+      const stage = approval.reassign_user_id
+        ? userToStage.get(String(approval.reassign_user_id))
+        : undefined
+      if (stage !== undefined) nextStage = stage
+      reassignerToReturnTo = approval.approved_by ? String(approval.approved_by) : null
+      continue
     }
-    if (statusLower === "approved" || statusLower === "approve") {
+    if (statusLower === 'approved' || statusLower === 'approve') {
       if (reassignerToReturnTo) {
-        currentApproverUserId = reassignerToReturnTo;
-        const stage = userToStage.get(reassignerToReturnTo);
-        nextStage = stage !== undefined ? stage : nextStage + 1;
-        reassignerToReturnTo = null;
+        currentApproverUserId = reassignerToReturnTo
+        const stage = userToStage.get(reassignerToReturnTo)
+        nextStage = stage !== undefined ? stage : nextStage + 1
+        reassignerToReturnTo = null
       } else {
-        nextStage++;
+        nextStage++
         if (nextStage >= chain.length) {
-          return { currentApproverUserId: null, currentStage: null, isRejected: false, isCompleted: true, allowedReassignUserIds: [] };
+          return {
+            currentApproverUserId: null,
+            currentStage: null,
+            isRejected: false,
+            isCompleted: true,
+            allowedReassignUserIds: [],
+          }
         }
-        currentApproverUserId = chain[nextStage] && chain[nextStage].user_id ? String(chain[nextStage].user_id) : null;
+        currentApproverUserId =
+          chain[nextStage] && chain[nextStage].user_id ? String(chain[nextStage].user_id) : null
       }
     }
   }
