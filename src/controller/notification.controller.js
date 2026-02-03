@@ -12,7 +12,7 @@ export const getNotificationData = AsyncHandler(async (req, res) => {
     const skip = (page - 1) * limit;
     const totalData = await NotificationModal.count({ where: { reciverId: req.currentUser?._id } });
     const result = await GetNotification(req.currentUser?._id, skip, limit);
-    result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    // console.log(result)
     res.status(StatusCodes.OK).json({
         data: result,
         totalPages: Math.ceil(totalData / limit),
