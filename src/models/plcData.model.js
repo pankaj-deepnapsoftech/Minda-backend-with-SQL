@@ -58,11 +58,14 @@ PlcDataModel.prototype.toJSON = function () {
   }
 
   const parameters = { ...extra };
+  delete parameters.product; // product top-level pe, parameters m nahi
   for (const [dbCol, paramKey] of Object.entries(PARAMS_MAP)) {
     if (values[dbCol] !== undefined && values[dbCol] !== null) {
       parameters[paramKey] = values[dbCol];
     }
   }
+
+  const product = values.product ?? extra.product ?? null;
 
   return {
     _id: values._id,
@@ -74,6 +77,7 @@ PlcDataModel.prototype.toJSON = function () {
     Start_time: values.start_time,
     Stop_time: values.stop_time,
     Status: values.status,
+    product,
     machine: values.model ? { model: values.model } : {},
     parameters,
     created_at: values.created_at,
