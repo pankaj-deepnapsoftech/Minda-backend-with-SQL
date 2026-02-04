@@ -50,5 +50,10 @@ export const getReleaseGroupByNames = async (group_department,group_name) => {
     return result;
 }
 
+export const getAllReleaseGroups = async () => {
+    const result = await ReleseGroupModel.findAll();
+    return result;
+};
+
 
 
