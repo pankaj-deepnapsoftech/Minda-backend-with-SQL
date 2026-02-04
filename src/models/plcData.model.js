@@ -42,7 +42,6 @@ const PARAMS_MAP = {
   safety_lever: "SAFETY_LEVER",
   claw_lever: "CLAW_LEVER",
   stroke: "STROKE",
-  production_count: "PRODUCTION_COUNT",
   alarm: "ALARM",
 };
 
@@ -59,6 +58,7 @@ PlcDataModel.prototype.toJSON = function () {
 
   const parameters = { ...extra };
   delete parameters.product; // product top-level pe, parameters m nahi
+  delete parameters.PRODUCTION_COUNT; // production_count product ke neeche, parameters m nahi
   for (const [dbCol, paramKey] of Object.entries(PARAMS_MAP)) {
     if (values[dbCol] !== undefined && values[dbCol] !== null) {
       parameters[paramKey] = values[dbCol];
@@ -78,6 +78,7 @@ PlcDataModel.prototype.toJSON = function () {
     Stop_time: values.stop_time,
     Status: values.status,
     product,
+    production_count: values.production_count ?? extra.PRODUCTION_COUNT ?? null,
     machine: values.model ? { model: values.model } : {},
     parameters,
     created_at: values.created_at,
