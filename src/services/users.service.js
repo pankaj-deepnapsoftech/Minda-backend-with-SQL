@@ -200,6 +200,10 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         raw: true
     });
 
+    // const templateField = await TemplateFieldModel.findAll({
+    //     where:{}
+    // })
+
     if (!filterUser) {
         throw new Error('Filter user not found');
     }
