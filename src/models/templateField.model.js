@@ -10,7 +10,7 @@ export const TemplateFieldModel = sequelize.define(
       primaryKey: true,
     },
     template_id: { type: DataTypes.UUID, allowNull: false },
-    field_name: { type: DataTypes.STRING, allowNull: false },
+    field_name: { type: DataTypes.STRING, allowNull: false }, 
     field_type: {
       type: DataTypes.STRING,
       allowNull: false,
