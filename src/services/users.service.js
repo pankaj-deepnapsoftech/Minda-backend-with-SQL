@@ -469,13 +469,22 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
     const filteredUsers = allUsers.filter(user => shouldIncludeUser(user));
 
     // Helper function to filter group_users for a specific user's employee_plant
-    const filterGroupUsersForUser = (workflowSteps, employeePlant) => {
+    const filterGroupUsersForUser = (workflowSteps, employeePlant,templateId) => {
+        // console.log(employeePlant,workflowSteps);
         if (!workflowSteps || workflowSteps.length === 0) return workflowSteps;
         
         return workflowSteps.map((step, index) => {
+            // console.log(step)
+
+            let fields = [];
             // Skip index 0 (HOD step), only filter from index 1 onwards
             if (index === 0 || step.group === "HOD") {
-                return step;
+                fields = templateField.filter(tf => tf.template_id === templateId && tf.type === "HOD" )
+                return {
+                    ...step,
+                    fields
+                };
+
             }
             
             if (!step.group_users || step.group_users.length === 0) {
@@ -487,18 +496,22 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
                 try {
                     const plantsArray = JSON.parse(gu.plants_id);
                     const plantMatches = plantsArray.includes(employeePlant);
-                    const userIdMatches = gu.user_id === filterUserId;
+                    // const userIdMatches = gu.user_id === filterUserId;
+                fields = templateField.filter(tf => tf.template_id === templateId && tf.type === "Approval" && tf.group_id===step.group )
+
                     
-                    return plantMatches && userIdMatches;
+                    return plantMatches ;
                 } catch (error) {
                     return false;
                 }
             });
+
             
             // Return the step with only the matching user, or empty array if no match
             return {
                 ...step,
-                group_users: matchingGroupUser ? [matchingGroupUser] : []
+                group_users: matchingGroupUser ? [matchingGroupUser] : [],
+                fields
             };
         });
     };
@@ -553,7 +566,7 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
                 // Filter workflow to show only matching group_user for this user's employee_plant
                 const filteredWorkflow = workflow ? {
                     ...workflow,
-                    workflow: filterGroupUsersForUser(workflow.workflow, user.employee_plant)
+                    workflow: filterGroupUsersForUser(workflow.workflow, user.employee_plant,template._id)
                 } : null;
                 
                 const approvalsKey = `${template._id}_${user._id}`;
