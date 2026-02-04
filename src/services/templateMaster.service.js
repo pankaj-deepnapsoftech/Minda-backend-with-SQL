@@ -103,9 +103,11 @@ export const createTemplateService = async ({
   return created
 }
 
-export const listTemplatesService = async () => {
+export const listTemplatesService = async (skip, limit) => {
   return await TemplateMasterModel.findAll({
     include: [assignedUserInclude, workflowInclude],
+    offset: skip,
+    limit,
     order: [['createdAt', 'DESC']],
   })
 }
@@ -175,8 +177,8 @@ export const addFieldToTemplateService = async (
     is_mandatory: Boolean(is_mandatory),
     sort_order: Number.isFinite(Number(sort_order)) ? Number(sort_order) : 0,
     dropdown_options: dropdownOptionsString,
-    type, 
-    group_id 
+    type,
+    group_id,
   })
 
   return created
@@ -335,12 +337,13 @@ export const deleteTemplateService = async (templateId) => {
   return true
 }
 
-export const getAssignedTemplatesService = async (userId) => {
+export const getAssignedTemplatesService = async (userId,limit,skip) => {
   // Fetch all active templates
   const allTemplates = await TemplateMasterModel.findAll({
     where: {
       is_active: true,
     },
+    offset:skip,limit,
     include: [templateFieldsInclude, assignedUserInclude],
     order: [['createdAt', 'DESC']],
   })
@@ -617,7 +620,7 @@ export const getTemplateStatusListService = async (
             group_name: groupInfo?.group_name || null,
             group_department: groupInfo?.group_department || null,
             groupDetail: groupDetail,
-            approvals: stageApprovals, 
+            approvals: stageApprovals,
           }
         })
       }
