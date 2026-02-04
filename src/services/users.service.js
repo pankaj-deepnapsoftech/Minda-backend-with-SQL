@@ -200,9 +200,11 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         raw: true
     });
 
-    // const templateField = await TemplateFieldModel.findAll({
-    //     where:{}
-    // })
+    const templateField = await TemplateFieldModel.findAll({
+        where:{
+            type:{[Op.in]:['HOD','Approval']}
+        }
+    });
 
     if (!filterUser) {
         throw new Error('Filter user not found');
