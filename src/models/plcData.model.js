@@ -25,6 +25,7 @@ export const PlcDataModel = sequelize.define(
     production_count: { type: DataTypes.INTEGER, allowNull: true },
     model: { type: DataTypes.STRING(255), allowNull: true },
     alarm: { type: DataTypes.STRING(255), allowNull: true },
+    extra_data: { type: DataTypes.JSON, allowNull: true }, // Dynamic fields - kitni bhi aaye, sab store
   },
   {
     timestamps: true,
@@ -36,5 +37,14 @@ export const PlcDataModel = sequelize.define(
 
 PlcDataModel.prototype.toJSON = function () {
   const values = { ...this.get() };
-  return values;
+  let extra = values.extra_data || {};
+  if (typeof extra === "string") {
+    try {
+      extra = JSON.parse(extra);
+    } catch (_) {
+      extra = {};
+    }
+  }
+  delete values.extra_data;
+  return { ...values, ...extra };
 };
