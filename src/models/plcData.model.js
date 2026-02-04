@@ -35,6 +35,17 @@ export const PlcDataModel = sequelize.define(
   }
 );
 
+// Response structure: input JSON jaisa (companyname, parameters nested, etc.)
+const PARAMS_MAP = {
+  latch_force: "LATCH_FORCE",
+  claw_force: "CLAW_FORCE",
+  safety_lever: "SAFETY_LEVER",
+  claw_lever: "CLAW_LEVER",
+  stroke: "STROKE",
+  production_count: "PRODUCTION_COUNT",
+  alarm: "ALARM",
+};
+
 PlcDataModel.prototype.toJSON = function () {
   const values = { ...this.get() };
   let extra = values.extra_data || {};
@@ -45,6 +56,27 @@ PlcDataModel.prototype.toJSON = function () {
       extra = {};
     }
   }
-  delete values.extra_data;
-  return { ...values, ...extra };
+
+  const parameters = { ...extra };
+  for (const [dbCol, paramKey] of Object.entries(PARAMS_MAP)) {
+    if (values[dbCol] !== undefined && values[dbCol] !== null) {
+      parameters[paramKey] = values[dbCol];
+    }
+  }
+
+  return {
+    _id: values._id,
+    companyname: values.company_name,
+    plantname: values.plant_name,
+    linenumber: values.line_number,
+    device_id: values.device_id,
+    timestamp: values.timestamp,
+    Start_time: values.start_time,
+    Stop_time: values.stop_time,
+    Status: values.status,
+    machine: values.model ? { model: values.model } : {},
+    parameters,
+    created_at: values.created_at,
+    updated_at: values.updated_at,
+  };
 };
