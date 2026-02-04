@@ -59,6 +59,7 @@ export const updateTemplateSubmissionService = async (submissionId, data) => {
   const updateData = {
     form_data: data.form_data !== undefined ? data.form_data : submission.form_data,
     status: data.status !== undefined ? data.status : (submission.status === "SUBMITTED" ? "DRAFT" : submission.status),
+    edit_count: submission.edit_count + 1,
   };
 
   await submission.update(updateData);
