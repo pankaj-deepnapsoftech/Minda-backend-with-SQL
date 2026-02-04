@@ -4,7 +4,7 @@ import { UserModel } from "../models/user.modal.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 
 export const createTemplateSubmissionService = async (data) => {
-  const { template_id, user_id, form_data, status } = data;
+  const { template_id, user_id, form_data, status,filled_by } = data;
 
   if (!template_id || !user_id) {
     throw new BadRequestError("Template ID and User ID are required", "createTemplateSubmissionService()");
@@ -44,6 +44,7 @@ export const createTemplateSubmissionService = async (data) => {
     user_id,
     form_data: form_data || {},
     status: status || "DRAFT",
+    filled_by,
   });
 
   return submission;

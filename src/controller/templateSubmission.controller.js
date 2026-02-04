@@ -24,6 +24,7 @@ export const createTemplateSubmission = AsyncHandler(async (req, res) => {
     user_id,
     form_data,
     status,
+    filled_by: userId,
   });
 
   res.status(StatusCodes.CREATED).json({
