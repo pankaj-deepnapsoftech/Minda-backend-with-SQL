@@ -36,6 +36,8 @@ export const TemplateFieldModel = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    type: { type: DataTypes.ENUM("HOD",'User','Approval'), allowNull: true,defaultValue:'User' },
+    group_id: { type: DataTypes.UUID, allowNull: true },
   },
   {
     timestamps: true,
