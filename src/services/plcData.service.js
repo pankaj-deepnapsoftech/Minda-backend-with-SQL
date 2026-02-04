@@ -1,6 +1,27 @@
 import { PlcDataModel } from "../models/plcData.model.js";
+import { PlcProductModel } from "../models/plcProduct.model.js";
 import { NotFoundError } from "../utils/errorHandler.js";
 import { Op } from "sequelize";
+
+/** Attach product name (from plc_products) to plc data by device_id = machine_name */
+async function attachProductToPlcData(plcDataOrList) {
+  const list = Array.isArray(plcDataOrList) ? plcDataOrList : [plcDataOrList];
+  const products = await PlcProductModel.findAll({});
+  const productNameByMachine = {};
+  products.forEach((p) => {
+    if (p.machine_name && p.machine_name.trim()) {
+      const name = p.material_description || p.part_no || p.model_code || p.material_code || p.machine_name;
+      productNameByMachine[p.machine_name.trim()] = name;
+    }
+  });
+  list.forEach((item) => {
+    const product = item.device_id && item.device_id.trim()
+      ? productNameByMachine[item.device_id.trim()] || null
+      : null;
+    item.setDataValue("product", product);
+  });
+  return plcDataOrList;
+}
 
 // Known fields: incoming key -> DB column (for backward compatibility & filtering)
 const KNOWN_MAP = {
@@ -97,6 +118,7 @@ export const createPlcDataService = async (data) => {
       if (status != null) updatePayload.status = status;
       if (timestamp != null) updatePayload.timestamp = timestamp;
       await openRow.update(updatePayload);
+      await attachProductToPlcData(openRow);
       return openRow;
     }
   }
@@ -106,6 +128,7 @@ export const createPlcDataService = async (data) => {
     extra_data: Object.keys(extra).length ? extra : null,
   });
 
+  await attachProductToPlcData(plcData);
   return plcData;
 };
 
@@ -141,6 +164,7 @@ export const getAllPlcDataService = async (filters = {}) => {
     order: [["created_at", "DESC"]],
   });
 
+  await attachProductToPlcData(plcDataList);
   return plcDataList;
 };
 
@@ -149,6 +173,7 @@ export const getPlcDataByIdService = async (id) => {
   if (!plcData) {
     throw new NotFoundError("PLC Data not found", "getPlcDataByIdService()");
   }
+  await attachProductToPlcData(plcData);
   return plcData;
 };
 
@@ -167,6 +192,7 @@ export const updatePlcDataService = async (id, data) => {
   }
 
   await plcData.update(updateData);
+  await attachProductToPlcData(plcData);
 
   return plcData;
 };
