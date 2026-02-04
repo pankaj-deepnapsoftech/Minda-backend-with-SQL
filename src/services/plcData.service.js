@@ -1,98 +1,109 @@
 import { PlcDataModel } from "../models/plcData.model.js";
-import { NotFoundError, BadRequestError } from "../utils/errorHandler.js";
+import { NotFoundError } from "../utils/errorHandler.js";
 import { Op } from "sequelize";
 
-export const createPlcDataService = async (data) => {
-  // New payload example:
-  // {
-  //   companyname, plantname, linenumber, device_id,
-  //   timestamp, Start_time, Stop_time, Status,
-  //   machine: { model },
-  //   parameters: { LATCH_FORCE, ... }
-  // }
+// Known fields: incoming key -> DB column (for backward compatibility & filtering)
+const KNOWN_MAP = {
+  companyname: "company_name",
+  company_name: "company_name",
+  plantname: "plant_name",
+  plant_name: "plant_name",
+  linenumber: "line_number",
+  line_number: "line_number",
+  device_id: "device_id",
+  timestamp: "timestamp",
+  Start_time: "start_time",
+  start_time: "start_time",
+  Stop_time: "stop_time",
+  stop_time: "stop_time",
+  Status: "status",
+  status: "status",
+  model: "model",
+  MODEL: "model",
+  LATCH_FORCE: "latch_force",
+  latch_force: "latch_force",
+  CLAW_FORCE: "claw_force",
+  claw_force: "claw_force",
+  SAFETY_LEVER: "safety_lever",
+  safety_lever: "safety_lever",
+  CLAW_LEVER: "claw_lever",
+  claw_lever: "claw_lever",
+  STROKE: "stroke",
+  stroke: "stroke",
+  PRODUCTION_COUNT: "production_count",
+  "PRODUCTION-COUNT": "production_count",
+  production_count: "production_count",
+  ALARM: "alarm",
+  alarm: "alarm",
+};
 
-  const company_name = data.companyname || null;
-  const plant_name = data.plantname || null;
-  const line_number = data.linenumber || null;
+const DATE_FIELDS = ["timestamp", "start_time", "stop_time"];
 
-  let device_id = null;
-  let timestamp = null;
-  let start_time = null;
-  let stop_time = null;
-  let status = null;
-  let model = null;
-  let latch_force = null;
-  let claw_force = null;
-  let safety_lever = null;
-  let claw_lever = null;
-  let stroke = null;
-  let production_count = null;
-  let alarm = null;
+/** Flatten nested payload (parameters, machine) into single object */
+function flattenPayload(data) {
+  if (!data || typeof data !== "object") return {};
+  const flat = { ...data };
+  if (data.machine && typeof data.machine === "object") {
+    Object.assign(flat, data.machine);
+  }
+  if (data.parameters && typeof data.parameters === "object") {
+    Object.assign(flat, data.parameters);
+  }
+  return flat;
+}
 
-  if (data.device_id || data.machine || data.parameters) {
-    // New nested format
-    device_id = data.device_id || null;
-    timestamp = data.timestamp ? new Date(data.timestamp) : null;
-    start_time = data.Start_time ? new Date(data.Start_time) : null;
-    stop_time = data.Stop_time ? new Date(data.Stop_time) : null;
-    status = data.Status || null;
-    model = data.machine && data.machine.model ? data.machine.model : null;
-
-    const params = data.parameters || {};
-    latch_force = params.LATCH_FORCE ?? null;
-    claw_force = params.CLAW_FORCE ?? null;
-    safety_lever = params.SAFETY_LEVER ?? null;
-    claw_lever = params.CLAW_LEVER ?? null;
-    stroke = params.STROKE ?? null;
-    production_count = params.PRODUCTION_COUNT ?? params["PRODUCTION-COUNT"] ?? null;
-    alarm = params.ALARM ?? params.alarm ?? null;
-
-    // Jab stop_time aaye: pehle wali row (jisme start_time thi, stop_time null) update karo — naya row mat bnao
-    if (stop_time && device_id) {
-      const openRow = await PlcDataModel.findOne({
-        where: { device_id, stop_time: null },
-        order: [["start_time", "DESC"]],
-      });
-      if (openRow) {
-        await openRow.update({
-          stop_time,
-          ...(status != null && { status }),
-          ...(timestamp != null && { timestamp }),
-        });
-        return openRow;
+/** Extract known columns + extra_data (dynamic fields) from flattened payload */
+function extractKnownAndExtra(flat) {
+  const known = {};
+  const extra = {};
+  for (const [key, value] of Object.entries(flat)) {
+    if (key === "machine" || key === "parameters") continue;
+    const dbCol = KNOWN_MAP[key];
+    if (dbCol) {
+      let val = value;
+      if (DATE_FIELDS.includes(dbCol) && val) val = new Date(val);
+      known[dbCol] = val ?? null;
+    } else {
+      // Dynamic field - jo bhi aaya, store
+      let val = value;
+      if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value)) {
+        try {
+          val = new Date(value);
+        } catch (_) {}
       }
+      extra[key] = val;
     }
-  } else {
-    // Support older flat format for backward compatibility
-    device_id = data.device_id || null;
-    timestamp = data.timestamp ? new Date(data.timestamp) : null;
-    status = data.Status || null;
-    model = data.MODEL || data.model || null;
-    latch_force = data.LATCH_FORCE ?? null;
-    claw_force = data.CLAW_FORCE ?? null;
-    safety_lever = data.SAFETY_LEVER ?? null;
-    claw_lever = data.CLAW_LEVER ?? null;
-    stroke = data.STROKE ?? null;
-    production_count = data["PRODUCTION-COUNT"] ?? data.PRODUCTION_COUNT ?? null;
+  }
+  return { known, extra };
+}
+
+export const createPlcDataService = async (data) => {
+  const flat = flattenPayload(data);
+  const { known, extra } = extractKnownAndExtra(flat);
+
+  const { stop_time, device_id, status, timestamp } = known;
+
+  // Jab stop_time aaye: pehle wali row update karo
+  if (stop_time && device_id) {
+    const openRow = await PlcDataModel.findOne({
+      where: { device_id, stop_time: null },
+      order: [["start_time", "DESC"]],
+    });
+    if (openRow) {
+      const updatePayload = {
+        stop_time,
+        extra_data: { ...(openRow.extra_data || {}), ...extra },
+      };
+      if (status != null) updatePayload.status = status;
+      if (timestamp != null) updatePayload.timestamp = timestamp;
+      await openRow.update(updatePayload);
+      return openRow;
+    }
   }
 
   const plcData = await PlcDataModel.create({
-    company_name,
-    plant_name,
-    line_number,
-    device_id,
-    timestamp,
-    start_time,
-    stop_time,
-    status,
-    latch_force,
-    claw_force,
-    safety_lever,
-    claw_lever,
-    stroke,
-    production_count,
-    model,
-    alarm,
+    ...known,
+    extra_data: Object.keys(extra).length ? extra : null,
   });
 
   return plcData;
@@ -147,44 +158,12 @@ export const updatePlcDataService = async (id, data) => {
     throw new NotFoundError("PLC Data not found", "updatePlcDataService()");
   }
 
-  const updateData = {};
+  const flat = flattenPayload(data);
+  const { known, extra } = extractKnownAndExtra(flat);
 
-  if (data.companyname !== undefined) updateData.company_name = data.companyname;
-  if (data.plantname !== undefined) updateData.plant_name = data.plantname;
-  if (data.linenumber !== undefined) updateData.line_number = data.linenumber;
-
-  // Handle new nested payload structure
-  if (data.device_id !== undefined) updateData.device_id = data.device_id;
-  if (data.timestamp !== undefined) updateData.timestamp = new Date(data.timestamp);
-  if (data.Start_time !== undefined) updateData.start_time = new Date(data.Start_time);
-  if (data.Stop_time !== undefined) updateData.stop_time = new Date(data.Stop_time);
-  if (data.Status !== undefined) updateData.status = data.Status;
-  if (data.machine && data.machine.model !== undefined) updateData.model = data.machine.model;
-
-  if (data.parameters) {
-    const params = data.parameters;
-    if (params.LATCH_FORCE !== undefined) updateData.latch_force = params.LATCH_FORCE;
-    if (params.CLAW_FORCE !== undefined) updateData.claw_force = params.CLAW_FORCE;
-    if (params.SAFETY_LEVER !== undefined) updateData.safety_lever = params.SAFETY_LEVER;
-    if (params.CLAW_LEVER !== undefined) updateData.claw_lever = params.CLAW_LEVER;
-    if (params.STROKE !== undefined) updateData.stroke = params.STROKE;
-    if (params.PRODUCTION_COUNT !== undefined || params["PRODUCTION-COUNT"] !== undefined) {
-      updateData.production_count =
-        params.PRODUCTION_COUNT !== undefined ? params.PRODUCTION_COUNT : params["PRODUCTION-COUNT"];
-    }
-  } else {
-    // Handle old flat format
-    if (data.LATCH_FORCE !== undefined) updateData.latch_force = data.LATCH_FORCE;
-    if (data.CLAW_FORCE !== undefined) updateData.claw_force = data.CLAW_FORCE;
-    if (data.SAFETY_LEVER !== undefined) updateData.safety_lever = data.SAFETY_LEVER;
-    if (data.CLAW_LEVER !== undefined) updateData.claw_lever = data.CLAW_LEVER;
-    if (data.STROKE !== undefined) updateData.stroke = data.STROKE;
-    if (data.PRODUCTION_COUNT !== undefined || data["PRODUCTION-COUNT"] !== undefined) {
-      updateData.production_count =
-        data.PRODUCTION_COUNT !== undefined ? data.PRODUCTION_COUNT : data["PRODUCTION-COUNT"];
-    }
-    if (data.MODEL !== undefined) updateData.model = data.MODEL;
-    if (data.Status !== undefined) updateData.status = data.Status;
+  const updateData = { ...known };
+  if (Object.keys(extra).length) {
+    updateData.extra_data = { ...(plcData.extra_data || {}), ...extra };
   }
 
   await plcData.update(updateData);
