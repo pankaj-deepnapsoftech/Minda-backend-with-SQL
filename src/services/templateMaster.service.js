@@ -126,7 +126,7 @@ export const getTemplateByIdService = async (id) => {
 
 export const addFieldToTemplateService = async (
   templateId,
-  { field_name, field_type, is_mandatory, sort_order, dropdown_options },
+  { field_name, field_type, is_mandatory, sort_order, dropdown_options, type, group_id },
 ) => {
   const template = await TemplateMasterModel.findByPk(templateId)
   if (!template) {
@@ -175,6 +175,8 @@ export const addFieldToTemplateService = async (
     is_mandatory: Boolean(is_mandatory),
     sort_order: Number.isFinite(Number(sort_order)) ? Number(sort_order) : 0,
     dropdown_options: dropdownOptionsString,
+    type, 
+    group_id 
   })
 
   return created

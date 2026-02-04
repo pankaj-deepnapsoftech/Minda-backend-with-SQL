@@ -12,7 +12,7 @@
     "database": "JPMDO",
     "host": "localhost",
     "dialect": "mssql",
-    "port" :""
+    "port" :"49680"
   }
 }
 
