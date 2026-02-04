@@ -1,8 +1,8 @@
 {
   "development": {
     "username": "sa",
-    "password": "admin@123",
-    "database": "test",
+    "password": "Deepakrai@123",
+    "database": "Minda",
     "host": "localhost",
     "dialect": "mssql"
   },
@@ -12,7 +12,7 @@
     "database": "JPMDO",
     "host": "localhost",
     "dialect": "mssql",
-    "port" :""
+    "port" :"49680"
   }
 }
 
