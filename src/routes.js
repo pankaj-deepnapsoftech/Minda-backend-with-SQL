@@ -22,6 +22,7 @@ import WorkflowRoutes from "./routes/workflow.routes.js";
 import TemplateSubmissionRoutes from "./routes/templateSubmission.routes.js";
 import PlcDataRoutes from "./routes/plcData.routes.js";
 import PlcProductRoutes from "./routes/plcProduct.routes.js";
+import QualityCheckRoutes from "./routes/qualityCheck.routes.js";
 import StatusHistourRoutes from "./routes/statusHistory.routes.js"
 
 
@@ -50,6 +51,7 @@ routes.use("/template-submission", Authorization, TemplateSubmissionRoutes);
 routes.get("/plc-data/ping", (_req, res) => res.status(200).json({ message: "plc-data route reachable" }));
 routes.use("/plc-data",            Authorization, PlcDataRoutes);
 routes.use("/plc-products",        Authorization, PlcProductRoutes);
+routes.use("/quality-check",       Authorization, QualityCheckRoutes);
 routes.use("/status-history",      Authorization,StatusHistourRoutes)
 
 
