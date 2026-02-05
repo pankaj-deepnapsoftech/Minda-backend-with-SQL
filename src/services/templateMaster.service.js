@@ -136,8 +136,14 @@ export const getTemplateByIdService = async (isAdmin, id, user_id) => {
 
   // filter User type fields
   if (!isAdmin) {
-    // plainResult.assigned_users = plainResult.assigned_users?.filter((au) => au.user_id === user_id)[0]
+    plainResult.assigned_users = plainResult.assigned_users?.filter((au) => au.user_id === user_id)[0]
     plainResult.fields = plainResult.fields.filter((item) => item.type === 'User')
+    plainResult.assignedUser = await UserModel.findOne({
+      where:{
+        _id: plainResult.assigned_users?.user_id
+      },
+      attributes: ['_id', 'full_name', 'email', 'user_id','additional_plants','employee_plant'],
+    })
   }
 
   if (plainResult?.assignedUser?.additional_plants !== null && plainResult?.assignedUser?.additional_plants !== undefined  && plainResult?.assignedUser?.additional_plants.length > 0) {
