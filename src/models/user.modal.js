@@ -23,7 +23,15 @@ export const UserModel = sequelize.define(
         is_admin: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
         department_id:{type:DataTypes.UUID,allowNull:true},
         is_hod:{type:DataTypes.BOOLEAN,allowNull:false,defaultValue:false},
-        hod_id:{type:DataTypes.UUID,allowNull:true}
+        hod_id:{type:DataTypes.UUID,allowNull:true},
+        additional_plants:{type:DataTypes.TEXT,allowNull:true,
+            get(){
+                return JSON.parse(this.getDataValue("additional_plants")) || [];
+            },
+            set(value){
+                this.setDataValue("additional_plants", JSON.stringify(value || []));
+            }
+        },
     },
     {
         tableName: "users",

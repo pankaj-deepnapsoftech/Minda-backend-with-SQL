@@ -24,8 +24,13 @@ export const createTemplate = AsyncHandler(async (req, res) => {
   })
 })
 
-export const listTemplates = AsyncHandler(async (_req, res) => {
-  const result = await listTemplatesService()
+export const listTemplates = AsyncHandler(async (req, res) => {
+  let { page, limit } = req.query
+
+  page = parseInt(page) || 1
+  limit = parseInt(limit) || 10
+  const skip = (page - 1) * limit
+  const result = await listTemplatesService(skip, limit)
   res.status(StatusCodes.OK).json({
     message: 'Templates fetched successfully',
     data: result,
@@ -33,7 +38,8 @@ export const listTemplates = AsyncHandler(async (_req, res) => {
 })
 
 export const getTemplateById = AsyncHandler(async (req, res) => {
-  const result = await getTemplateByIdService(req.params.id)
+  const user = req.currentUser;
+  const result = await getTemplateByIdService(user.is_admin,req.params.id,user._id)
   res.status(StatusCodes.OK).json({
     message: 'Template fetched successfully',
     data: result,
@@ -79,8 +85,12 @@ export const deleteTemplate = AsyncHandler(async (req, res) => {
 })
 
 export const getAssignedTemplates = AsyncHandler(async (req, res) => {
-  const userId = req.currentUser._id
-  const result = await getAssignedTemplatesService(userId)
+  const userId = req.currentUser._id ;
+  let { page, limit } = req.query
+  page = parseInt(page) || 1
+  limit = parseInt(limit) || 10
+  const skip = (page - 1) * limit
+  const result = await getAssignedTemplatesService(userId, limit, skip)
   res.status(StatusCodes.OK).json({
     message: 'Assigned templates fetched successfully',
     data: result,
@@ -95,9 +105,8 @@ export const getTemplateStatusList = AsyncHandler(async (req, res) => {
   search = typeof search === 'string' ? search.trim() : ''
   status = typeof status === 'string' ? status.trim() : ''
 
-  
-  const userId = req.currentUser?._id  || null
-  const isAdmin =  req.currentUser?.is_admin === true || false
+  const userId = req.currentUser?._id || null
+  const isAdmin = req.currentUser?.is_admin === true || false
 
   const result = await getTemplateStatusListService(skip, limit, search, status, userId, isAdmin)
   res.status(StatusCodes.OK).json({

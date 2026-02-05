@@ -8,6 +8,7 @@ import { WorkflowApprovalModel } from '../models/workflowApproval.model.js'
 import { GroupUsersModel } from '../models/groupUsers.model.js'
 import { BadRequestError, NotFoundError } from '../utils/errorHandler.js'
 import { ReleseGroupModel } from '../models/ReleseGroup.modal.js'
+import { PlantModel } from '../models/plant.modal.js'
 
 // Normalize to [{ user_id, status }]. Accepts: [id], [{ user_id, status? }], [{ _id }]
 function toAssignedUsersArray(raw) {
@@ -37,7 +38,7 @@ const assignedUserInclude = {
   model: UserModel,
   as: 'assignedUser',
   required: false,
-  attributes: ['_id', 'full_name', 'email', 'user_id'],
+  attributes: ['_id', 'full_name', 'email', 'user_id','additional_plants','employee_plant'],
 }
 
 const workflowInclude = {
@@ -103,26 +104,55 @@ export const createTemplateService = async ({
   return created
 }
 
-export const listTemplatesService = async () => {
+export const listTemplatesService = async (skip, limit) => {
   return await TemplateMasterModel.findAll({
     include: [assignedUserInclude, workflowInclude],
+    offset: skip,
+    limit,
     order: [['createdAt', 'DESC']],
   })
 }
 
-export const getTemplateByIdService = async (id) => {
+export const getTemplateByIdService = async (isAdmin, id, user_id) => {
   const result = await TemplateMasterModel.findByPk(id, {
     include: [templateFieldsInclude, assignedUserInclude, workflowInclude],
   })
+
   if (!result) {
     throw new NotFoundError('Template not found', 'getTemplateByIdService()')
   }
-  // Sequelize 'order' inside include does not reliably sort hasMany; sort in-memory
-  if (result.fields && Array.isArray(result.fields)) {
-    result.fields.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+
+  // convert Sequelize instance → plain object
+  const plainResult = result.get({ plain: true })
+
+
+
+  // sort fields
+  if (Array.isArray(plainResult.fields)) {
+    plainResult.fields.sort(
+      (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
+    )
   }
-  return result
+
+  // filter User type fields
+  if (!isAdmin) {
+    // plainResult.assigned_users = plainResult.assigned_users?.filter((au) => au.user_id === user_id)[0]
+    plainResult.fields = plainResult.fields.filter((item) => item.type === 'User')
+  }
+
+  if (plainResult?.assignedUser?.additional_plants !== null && plainResult?.assignedUser?.additional_plants !== undefined  && plainResult?.assignedUser?.additional_plants.length > 0) {
+    plainResult.assignedUser.additional_plants = [...plainResult.assignedUser.additional_plants, plainResult.assignedUser.employee_plant]
+
+    plainResult.plant_option = await PlantModel.findAll({
+      where: {
+        _id: { [Op.in]: plainResult.assignedUser.additional_plants }
+      }
+    })
+  }
+
+  return plainResult
 }
+
 
 export const addFieldToTemplateService = async (
   templateId,
@@ -175,8 +205,8 @@ export const addFieldToTemplateService = async (
     is_mandatory: Boolean(is_mandatory),
     sort_order: Number.isFinite(Number(sort_order)) ? Number(sort_order) : 0,
     dropdown_options: dropdownOptionsString,
-    type, 
-    group_id 
+    type,
+    group_id
   })
 
   return created
@@ -335,15 +365,18 @@ export const deleteTemplateService = async (templateId) => {
   return true
 }
 
-export const getAssignedTemplatesService = async (userId) => {
+export const getAssignedTemplatesService = async (userId, limit, skip) => {
   // Fetch all active templates
   const allTemplates = await TemplateMasterModel.findAll({
     where: {
       is_active: true,
     },
+    offset: skip, limit,
     include: [templateFieldsInclude, assignedUserInclude],
     order: [['createdAt', 'DESC']],
   })
+
+  // console.log(allTemplates[0].dataValues.fields);
 
   // Sequelize 'order' inside include does not reliably sort hasMany; sort in-memory
   allTemplates.forEach((t) => {
@@ -352,14 +385,23 @@ export const getAssignedTemplatesService = async (userId) => {
     }
   })
 
+
+
+  // console.log(templateFields);
   // Filter templates where user is in assigned_user or in assigned_users[].user_id
   const assignedTemplates = allTemplates.filter((template) => {
     if (template.assigned_user === userId) return true
     const list = template.assigned_users || []
-    return list.some((a) => a && (a.user_id === userId || (typeof a === 'string' && a === userId)))
-  })
+    return list?.some((a) => a && (a.user_id === userId || (typeof a === 'string' && a === userId)))
+  });
 
-  return assignedTemplates
+
+
+  // console.log(assignedTemplates);
+
+
+  return allTemplates;
+
 }
 
 export const getTemplateStatusListService = async (
@@ -617,7 +659,7 @@ export const getTemplateStatusListService = async (
             group_name: groupInfo?.group_name || null,
             group_department: groupInfo?.group_department || null,
             groupDetail: groupDetail,
-            approvals: stageApprovals, 
+            approvals: stageApprovals,
           }
         })
       }
@@ -798,10 +840,10 @@ export const getTemplateWorkflowStatusService = async (
   const hodUsers =
     hodUserIds.length > 0
       ? await UserModel.findAll({
-          where: { _id: { [Op.in]: hodUserIds } },
-          attributes: ['_id', 'full_name'],
-          raw: true,
-        })
+        where: { _id: { [Op.in]: hodUserIds } },
+        attributes: ['_id', 'full_name'],
+        raw: true,
+      })
       : []
   const hodNameById = Object.fromEntries((hodUsers || []).map((u) => [u._id, u.full_name || 'HOD']))
 
@@ -837,13 +879,13 @@ export const getTemplateWorkflowStatusService = async (
       const matchedUser =
         assignedUserPlantId != null
           ? users.find((gu) => {
-              try {
-                const plantsArray = JSON.parse(gu.plants_id || '[]')
-                return plantsArray.includes(assignedUserPlantId)
-              } catch {
-                return false
-              }
-            })
+            try {
+              const plantsArray = JSON.parse(gu.plants_id || '[]')
+              return plantsArray.includes(assignedUserPlantId)
+            } catch {
+              return false
+            }
+          })
           : users[0] || null // If no assigned user/plant, fallback to first user
       if (matchedUser) {
         const u =
@@ -1003,14 +1045,14 @@ export const getCurrentApproverForTemplateAssignee = async (templateId, assignee
   const allowedReassignUserIds =
     nextStage > 0
       ? [
-          ...new Set(
-            chain
-              .slice(0, nextStage)
-              .map((c) => c.user_id)
-              .filter(Boolean)
-              .map(String),
-          ),
-        ]
+        ...new Set(
+          chain
+            .slice(0, nextStage)
+            .map((c) => c.user_id)
+            .filter(Boolean)
+            .map(String),
+        ),
+      ]
       : []
 
   return {
@@ -1191,9 +1233,9 @@ export const testing = async (hodId) => {
           // Add workflow object with hod_id
           const workflowObj = tpl.workflow
             ? {
-                ...(tpl.workflow.toJSON ? tpl.workflow.toJSON() : tpl.workflow),
-                hod_id: hodId,
-              }
+              ...(tpl.workflow.toJSON ? tpl.workflow.toJSON() : tpl.workflow),
+              hod_id: hodId,
+            }
             : null
 
           // Add is_approved_by_hod field to workflow approvals based on approved_by

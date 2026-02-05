@@ -60,7 +60,7 @@ const KNOWN_MAP = {
 
 const DATE_FIELDS = ["timestamp", "start_time", "stop_time"];
 
-/** Flatten nested payload (parameters, machine, extraFields) - kitne bhi params/fields add ho skte h */
+/** Flatten nested payload (parameters, machine) into single object */
 function flattenPayload(data) {
   if (!data || typeof data !== "object") return {};
   const flat = { ...data };
@@ -70,26 +70,22 @@ function flattenPayload(data) {
   if (data.parameters && typeof data.parameters === "object") {
     Object.assign(flat, data.parameters);
   }
-  if (data.extraFields && typeof data.extraFields === "object") {
-    Object.assign(flat, data.extraFields);
-  }
   return flat;
 }
 
-/** Extract known columns + extra_data (dynamic fields) - parameters kitne bhi add ho skte h */
+/** Extract known columns + extra_data (dynamic fields) from flattened payload */
 function extractKnownAndExtra(flat) {
   const known = {};
   const extra = {};
-  const skipKeys = new Set(["machine", "parameters", "extraFields"]);
   for (const [key, value] of Object.entries(flat)) {
-    if (skipKeys.has(key)) continue;
+    if (key === "machine" || key === "parameters") continue;
     const dbCol = KNOWN_MAP[key];
     if (dbCol) {
       let val = value;
       if (DATE_FIELDS.includes(dbCol) && val) val = new Date(val);
       known[dbCol] = val ?? null;
     } else {
-      // Dynamic field - jo bhi aaya (any new param/extraField), store in extra_data
+      // Dynamic field - jo bhi aaya, store
       let val = value;
       if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value)) {
         try {
@@ -149,14 +145,6 @@ export const getAllPlcDataService = async (filters = {}, pagination = {}) => {
 
   if (filters.status) {
     where.status = { [Op.like]: `%${filters.status}%` };
-  }
-
-  if (filters.company_name) {
-    where.company_name = { [Op.like]: `%${filters.company_name}%` };
-  }
-
-  if (filters.plant_name) {
-    where.plant_name = { [Op.like]: `%${filters.plant_name}%` };
   }
 
   if (filters.startDate && filters.endDate) {

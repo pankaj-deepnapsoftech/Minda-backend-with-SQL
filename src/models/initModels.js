@@ -154,8 +154,8 @@ export const initModels = () => {
         constraints: false,
     });
 
-    UserModel.hasMany(TemplateSubmissionModel, { foreignKey: "filled_by", as: "filledSubmissions" });
-    TemplateSubmissionModel.belongsTo(UserModel, { foreignKey: "filled_by", as: "filledBy" });
+    PlantModel.hasMany(TemplateSubmissionModel, { foreignKey: "plant_id", as: "plantSubmissions" });
+    TemplateSubmissionModel.belongsTo(PlantModel, { foreignKey: "plant_id", as: "plant" });
 
 
 
