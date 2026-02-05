@@ -21,6 +21,7 @@ export const createTemplateSubmissionService = async (data) => {
     where: {
       template_id,
       user_id,
+      plant_id
     },
   });
 

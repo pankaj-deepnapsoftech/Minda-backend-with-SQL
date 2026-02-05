@@ -249,6 +249,7 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         fieldIdToNameMap.set(field._id, field.field_name);
     });
 
+
     // Fetch only SUBMITTED template submissions
     const templateSubmissions = await TemplateSubmissionModel.findAll({
         where: {
@@ -264,12 +265,15 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
     templateSubmissions.forEach(submission => {
         const key = `${submission.template_id}_${submission.user_id}`;
 
+        // console.log(submission)
+
         // Convert form_data from field_id to field_name
         const originalFormData = submission.form_data || {};
         const convertedFormData = {};
 
         Object.keys(originalFormData).forEach(fieldId => {
             const fieldName = fieldIdToNameMap.get(fieldId);
+            console.log(fieldId)
             if (fieldName) {
                 convertedFormData[fieldName] = originalFormData[fieldId];
             } else {
