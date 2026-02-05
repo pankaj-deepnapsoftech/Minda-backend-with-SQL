@@ -73,6 +73,11 @@ export const WorkflowApprovalModel = sequelize.define(
       allowNull: false,
       defaultValue: false,
     },
+    edit_count:{
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    }
   },
   {
     timestamps: true,

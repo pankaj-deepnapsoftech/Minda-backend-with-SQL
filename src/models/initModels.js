@@ -143,6 +143,21 @@ export const initModels = () => {
     CheckListModal.hasMany(ItemCheckTimeModel, { foreignKey: "item_id", as: "time" });
     ItemCheckTimeModel.belongsTo(CheckListModal, { foreignKey: "item_id", as: "checklistItem" });
 
+    ReleseGroupModel.hasMany(TemplateFieldModel, {
+        foreignKey: "group_id",
+        as: "templateFields",
+        constraints: false,
+    });
+    TemplateFieldModel.belongsTo(ReleseGroupModel, {
+        foreignKey: "group_id",
+        as: "releaseGroup",
+        constraints: false,
+    });
+
+    PlantModel.hasMany(TemplateSubmissionModel, { foreignKey: "plant_id", as: "plantSubmissions" });
+    TemplateSubmissionModel.belongsTo(PlantModel, { foreignKey: "plant_id", as: "plant" });
+
+
 
     modelsInitialized = true;
 
