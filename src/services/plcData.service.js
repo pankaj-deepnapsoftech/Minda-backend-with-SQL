@@ -60,7 +60,7 @@ const KNOWN_MAP = {
 
 const DATE_FIELDS = ["timestamp", "start_time", "stop_time"];
 
-/** Flatten nested payload (parameters, machine) into single object */
+/** Flatten nested payload (parameters, machine, extraFields) - kitne bhi params/fields add ho skte h */
 function flattenPayload(data) {
   if (!data || typeof data !== "object") return {};
   const flat = { ...data };
@@ -70,22 +70,26 @@ function flattenPayload(data) {
   if (data.parameters && typeof data.parameters === "object") {
     Object.assign(flat, data.parameters);
   }
+  if (data.extraFields && typeof data.extraFields === "object") {
+    Object.assign(flat, data.extraFields);
+  }
   return flat;
 }
 
-/** Extract known columns + extra_data (dynamic fields) from flattened payload */
+/** Extract known columns + extra_data (dynamic fields) - parameters kitne bhi add ho skte h */
 function extractKnownAndExtra(flat) {
   const known = {};
   const extra = {};
+  const skipKeys = new Set(["machine", "parameters", "extraFields"]);
   for (const [key, value] of Object.entries(flat)) {
-    if (key === "machine" || key === "parameters") continue;
+    if (skipKeys.has(key)) continue;
     const dbCol = KNOWN_MAP[key];
     if (dbCol) {
       let val = value;
       if (DATE_FIELDS.includes(dbCol) && val) val = new Date(val);
       known[dbCol] = val ?? null;
     } else {
-      // Dynamic field - jo bhi aaya, store
+      // Dynamic field - jo bhi aaya (any new param/extraField), store in extra_data
       let val = value;
       if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value)) {
         try {
