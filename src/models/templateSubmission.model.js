@@ -50,7 +50,7 @@ export const TemplateSubmissionModel = sequelize.define(
       allowNull:true,
       defaultValue:0
     },
-    filled_by:{
+    plant_id:{
       type: DataTypes.UUID,
       allowNull: true,
     }
