@@ -112,7 +112,7 @@ export const listTemplatesService = async (skip, limit) => {
   })
 }
 
-export const getTemplateByIdService = async (id) => {
+export const getTemplateByIdService = async ( isAdmin,id) => {
   const result = await TemplateMasterModel.findByPk(id, {
     include: [templateFieldsInclude, assignedUserInclude, workflowInclude],
   })
@@ -132,9 +132,9 @@ export const getTemplateByIdService = async (id) => {
   }
 
   // filter User type fields
-  plainResult.fields = plainResult.fields.filter(
-    (item) => item.type === "User"
-  )
+ if (!isAdmin) {
+   plainResult.fields = plainResult.fields.filter((item) => item.type === 'User')
+ }
 
   return plainResult
 }

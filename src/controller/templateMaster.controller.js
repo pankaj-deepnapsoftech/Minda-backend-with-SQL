@@ -38,7 +38,8 @@ export const listTemplates = AsyncHandler(async (req, res) => {
 })
 
 export const getTemplateById = AsyncHandler(async (req, res) => {
-  const result = await getTemplateByIdService(req.params.id)
+  const user = req.currentUser;
+  const result = await getTemplateByIdService(user.is_admin,req.params.id)
   res.status(StatusCodes.OK).json({
     message: 'Template fetched successfully',
     data: result,
