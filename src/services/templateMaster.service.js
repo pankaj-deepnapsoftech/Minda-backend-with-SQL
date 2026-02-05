@@ -399,15 +399,28 @@ export const getAssignedTemplatesService = async (userId, limit, skip) => {
   const assignedTemplates = allTemplates.filter((template) => {
     if (template.assigned_user === userId) return true
     const list = template.assigned_users || []
-    return list?.some((a) => a && (a.user_id === userId || (typeof a === 'string' && a === userId)))
+    return list?.filter((a) => a && (a.user_id === userId || (typeof a === 'string' && a === userId)))
   });
 
+  
 
+  const filteredData = assignedTemplates.map((item) => {
+  const plainItem = item.toJSON(); // 🔥 IMPORTANT
+
+  const filteredUser = plainItem.assigned_users?.find(
+    (as) => as.user_id === userId
+  );
+
+  return {
+    ...plainItem,
+    assigned_users: filteredUser || null,
+  };
+});
 
   // console.log(assignedTemplates);
 
 
-  return allTemplates;
+  return filteredData;
 
 }
 
