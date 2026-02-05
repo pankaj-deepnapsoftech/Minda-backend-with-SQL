@@ -14,6 +14,9 @@ export const PlcProductModel = sequelize.define(
     part_no: { type: DataTypes.STRING(255), allowNull: true },
     model_code: { type: DataTypes.STRING(255), allowNull: true },
     machine_name: { type: DataTypes.STRING(255), allowNull: true },
+    company_name: { type: DataTypes.STRING(255), allowNull: true },
+    plant_name: { type: DataTypes.STRING(255), allowNull: true },
+    product_name: { type: DataTypes.STRING(255), allowNull: true },
   },
   {
     timestamps: true,
