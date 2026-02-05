@@ -32,21 +32,8 @@ export const Start = (app) => {
     Connections()
 }
 
-// Fix double-encoded JSON: if body is a string that looks like JSON, parse it
-function fixDoubleEncodedJson(req, _res, next) {
-    if (typeof req.body === "string" && (req.body.trim().startsWith("{") || req.body.trim().startsWith("["))) {
-        try {
-            req.body = JSON.parse(req.body);
-        } catch {
-            // Leave as-is if re-parse fails
-        }
-    }
-    next();
-}
-
 function middlewares(app) {
-    app.use(json({ limit: "20mb", strict: false }));
-    app.use(fixDoubleEncodedJson);
+    app.use(json({ limit: "20mb" }));
     app.use(urlencoded({ extended: true, limit: "20mb" }));
     app.set('trust proxy', true)
     app.use(express.static(path.join(__dirname, 'pages')));
@@ -74,11 +61,6 @@ function errorHandler(app) {
         if (err instanceof Customerror) {
             logger.error(`error coming from ${err?.comingfrom} with message: ${err.message} and status code: ${err.statusCode}`);
             return res.status(err.statusCode).json(err.seriyalizeErrors());
-        }
-        // Handle JSON parse errors (malformed request body)
-        if (err instanceof SyntaxError && err.status === 400 && "body" in err) {
-            logger.error(`Invalid JSON in request body: ${err.message}`);
-            return res.status(400).json({ message: "Invalid JSON in request body. Ensure you send valid JSON (e.g. {\"key\":\"value\"}) and avoid double-encoding." });
         }
         next(err);
     });

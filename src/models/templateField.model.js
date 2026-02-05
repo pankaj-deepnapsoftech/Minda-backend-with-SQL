@@ -10,7 +10,7 @@ export const TemplateFieldModel = sequelize.define(
       primaryKey: true,
     },
     template_id: { type: DataTypes.UUID, allowNull: false },
-    field_name: { type: DataTypes.STRING, allowNull: false },
+    field_name: { type: DataTypes.STRING, allowNull: false }, 
     field_type: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -36,6 +36,8 @@ export const TemplateFieldModel = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    type: { type: DataTypes.ENUM("HOD",'User','Approval'), allowNull: true,defaultValue:'User' },
+    group_id: { type: DataTypes.UUID, allowNull: true },
   },
   {
     timestamps: true,

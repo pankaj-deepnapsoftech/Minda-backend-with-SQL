@@ -4,7 +4,7 @@ import { UserModel } from "../models/user.modal.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
 
 export const createTemplateSubmissionService = async (data) => {
-  const { template_id, user_id, form_data, status } = data;
+  const { template_id, user_id, form_data, status,plant_id } = data;
 
   if (!template_id || !user_id) {
     throw new BadRequestError("Template ID and User ID are required", "createTemplateSubmissionService()");
@@ -44,6 +44,7 @@ export const createTemplateSubmissionService = async (data) => {
     user_id,
     form_data: form_data || {},
     status: status || "DRAFT",
+    plant_id
   });
 
   return submission;
@@ -59,6 +60,7 @@ export const updateTemplateSubmissionService = async (submissionId, data) => {
   const updateData = {
     form_data: data.form_data !== undefined ? data.form_data : submission.form_data,
     status: data.status !== undefined ? data.status : (submission.status === "SUBMITTED" ? "DRAFT" : submission.status),
+    edit_count: submission.edit_count + 1,
   };
 
   await submission.update(updateData);

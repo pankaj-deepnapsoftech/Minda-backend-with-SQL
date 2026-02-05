@@ -17,13 +17,14 @@ import { logger } from "../utils/logger.js";
 
 export const createTemplateSubmission = AsyncHandler(async (req, res) => {
   const userId = req.currentUser._id;
-  const { template_id, form_data, status } = req.body;
+  const { template_id, form_data, status,user_id,plant_id } = req.body;
 
   const result = await createTemplateSubmissionService({
     template_id,
-    user_id: userId,
+    user_id,
     form_data,
     status,
+    plant_id
   });
 
   res.status(StatusCodes.CREATED).json({
