@@ -146,7 +146,8 @@ export const getTemplateByIdService = async (isAdmin, id, user_id) => {
     plainResult.plant_option = await PlantModel.findAll({
       where: {
         _id: { [Op.in]: plainResult.assignedUser.additional_plants }
-      }
+      },
+      attributes:["_id","plant_name","plant_code"]
     })
   }
 
