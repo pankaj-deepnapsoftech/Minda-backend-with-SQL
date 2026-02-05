@@ -2,45 +2,26 @@
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
-  async up (queryInterface, Sequelize) {
-    /**
-     * Add altering commands here.
-     *
-     * Example:
-     * await queryInterface.createTable('users', { id: Sequelize.INTEGER });
-     */
+  async up(queryInterface, Sequelize) {
+
+    // 1. Add plant_id column
     await queryInterface.addColumn('template_submissions', 'plant_id', {
-      type: Sequelize.INTEGER,
-      allowNull: true,
-      references: {
-        model: 'plants',
-        key: 'id'
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'SET NULL'
-    });
-
-    await queryInterface.removeColumn('template_submissions',"filled_by");
-  },
-
-  async down (queryInterface, Sequelize) {
-    /**
-     * Add reverting commands here.
-     *
-     * Example:
-     * await queryInterface.dropTable('users');
-     */
-    await queryInterface.removeColumn('template_submissions', 'plant_id');
-
-    await queryInterface.addColumn('template_submissions',"filled_by", {
       type: Sequelize.UUID,
       allowNull: true,
       references: {
-        model: 'users',
-        key: '_id'
+        model: 'plants',
+        key: 'id',
       },
       onUpdate: 'CASCADE',
-      onDelete: 'SET NULL'
+      onDelete: 'SET NULL',
     });
-  }
+
+  
+  },
+
+  async down(queryInterface) {
+
+    // 2. Remove plant_id
+    await queryInterface.removeColumn('template_submissions', 'plant_id');
+  },
 };

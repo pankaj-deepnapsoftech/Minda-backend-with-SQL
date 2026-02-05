@@ -8,6 +8,7 @@ import { WorkflowApprovalModel } from '../models/workflowApproval.model.js'
 import { GroupUsersModel } from '../models/groupUsers.model.js'
 import { BadRequestError, NotFoundError } from '../utils/errorHandler.js'
 import { ReleseGroupModel } from '../models/ReleseGroup.modal.js'
+import { PlantModel } from '../models/plant.modal.js'
 
 // Normalize to [{ user_id, status }]. Accepts: [id], [{ user_id, status? }], [{ _id }]
 function toAssignedUsersArray(raw) {
@@ -37,7 +38,7 @@ const assignedUserInclude = {
   model: UserModel,
   as: 'assignedUser',
   required: false,
-  attributes: ['_id', 'full_name', 'email', 'user_id'],
+  attributes: ['_id', 'full_name', 'email', 'user_id','additional_plants','employee_plant'],
 }
 
 const workflowInclude = {
@@ -112,7 +113,7 @@ export const listTemplatesService = async (skip, limit) => {
   })
 }
 
-export const getTemplateByIdService = async ( isAdmin,id) => {
+export const getTemplateByIdService = async (isAdmin, id, user_id) => {
   const result = await TemplateMasterModel.findByPk(id, {
     include: [templateFieldsInclude, assignedUserInclude, workflowInclude],
   })
@@ -124,6 +125,8 @@ export const getTemplateByIdService = async ( isAdmin,id) => {
   // convert Sequelize instance → plain object
   const plainResult = result.get({ plain: true })
 
+
+
   // sort fields
   if (Array.isArray(plainResult.fields)) {
     plainResult.fields.sort(
@@ -132,9 +135,20 @@ export const getTemplateByIdService = async ( isAdmin,id) => {
   }
 
   // filter User type fields
- if (!isAdmin) {
-   plainResult.fields = plainResult.fields.filter((item) => item.type === 'User')
- }
+  if (!isAdmin) {
+    // plainResult.assigned_users = plainResult.assigned_users?.filter((au) => au.user_id === user_id)[0]
+    plainResult.fields = plainResult.fields.filter((item) => item.type === 'User')
+  }
+
+  if (plainResult?.assignedUser?.additional_plants !== null && plainResult?.assignedUser?.additional_plants !== undefined  && plainResult?.assignedUser?.additional_plants.length > 0) {
+    plainResult.assignedUser.additional_plants = [...plainResult.assignedUser.additional_plants, plainResult.assignedUser.employee_plant]
+
+    plainResult.plant_option = await PlantModel.findAll({
+      where: {
+        _id: { [Op.in]: plainResult.assignedUser.additional_plants }
+      }
+    })
+  }
 
   return plainResult
 }
@@ -351,43 +365,43 @@ export const deleteTemplateService = async (templateId) => {
   return true
 }
 
-export const getAssignedTemplatesService = async (userId,limit,skip) => {
+export const getAssignedTemplatesService = async (userId, limit, skip) => {
   // Fetch all active templates
   const allTemplates = await TemplateMasterModel.findAll({
     where: {
       is_active: true,
     },
-    offset:skip,limit,
+    offset: skip, limit,
     include: [templateFieldsInclude, assignedUserInclude],
     order: [['createdAt', 'DESC']],
   })
 
-    // console.log(allTemplates[0].dataValues.fields);
+  // console.log(allTemplates[0].dataValues.fields);
 
-    // Sequelize 'order' inside include does not reliably sort hasMany; sort in-memory
-    allTemplates.forEach((t) => {
-      if (t.fields && Array.isArray(t.fields)) {
-        t.fields.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-      }
-    })
-
-
-
-    // console.log(templateFields);
-    // Filter templates where user is in assigned_user or in assigned_users[].user_id
-    const assignedTemplates = allTemplates.filter((template) => {
-      if (template.assigned_user === userId) return true
-      const list = template.assigned_users || []
-      return list?.some((a) => a && (a.user_id === userId || (typeof a === 'string' && a === userId)))
-    });
+  // Sequelize 'order' inside include does not reliably sort hasMany; sort in-memory
+  allTemplates.forEach((t) => {
+    if (t.fields && Array.isArray(t.fields)) {
+      t.fields.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    }
+  })
 
 
 
-    // console.log(assignedTemplates);
-    
+  // console.log(templateFields);
+  // Filter templates where user is in assigned_user or in assigned_users[].user_id
+  const assignedTemplates = allTemplates.filter((template) => {
+    if (template.assigned_user === userId) return true
+    const list = template.assigned_users || []
+    return list?.some((a) => a && (a.user_id === userId || (typeof a === 'string' && a === userId)))
+  });
 
-    return allTemplates;
-  
+
+
+  // console.log(assignedTemplates);
+
+
+  return allTemplates;
+
 }
 
 export const getTemplateStatusListService = async (
