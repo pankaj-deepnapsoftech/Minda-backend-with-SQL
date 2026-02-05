@@ -115,7 +115,7 @@ export const listTemplatesService = async (skip, limit) => {
 
 export const getTemplateByIdService = async (isAdmin, id, user_id) => {
   const result = await TemplateMasterModel.findByPk(id, {
-    include: [templateFieldsInclude, assignedUserInclude, workflowInclude],
+    include: [templateFieldsInclude, workflowInclude],
   })
 
   if (!result) {
