@@ -132,7 +132,7 @@ export const createPlcDataService = async (data) => {
   return plcData;
 };
 
-export const getAllPlcDataService = async (filters = {}) => {
+export const getAllPlcDataService = async (filters = {}, pagination = {}) => {
   const where = {};
 
   if (filters.device_id) {
@@ -162,11 +162,14 @@ export const getAllPlcDataService = async (filters = {}) => {
   const plcDataList = await PlcDataModel.findAll({
     where,
     order: [["created_at", "DESC"]],
+    limit: pagination.limit,
+    offset: pagination.offset,
   });
 
   await attachProductToPlcData(plcDataList);
   return plcDataList;
 };
+
 
 export const getPlcDataByIdService = async (id) => {
   const plcData = await PlcDataModel.findByPk(id);
