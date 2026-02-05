@@ -1,8 +1,8 @@
 {
   "development": {
     "username": "sa",
-    "password": "admin@123",
-    "database": "test",
+    "password": "harshkaushik",
+    "database": "Minda",
     "host": "localhost",
     "dialect": "mssql"
   },
