@@ -49,6 +49,10 @@ export const TemplateSubmissionModel = sequelize.define(
       type:DataTypes.INTEGER,
       allowNull:true,
       defaultValue:0
+    },
+    filled_by:{
+      type: DataTypes.UUID,
+      allowNull: true,
     }
   },
   {

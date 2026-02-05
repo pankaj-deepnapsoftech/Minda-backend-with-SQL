@@ -17,25 +17,46 @@ export const createPlcData = AsyncHandler(async (req, res) => {
 });
 
 export const getAllPlcData = AsyncHandler(async (req, res) => {
-  const { device_id, model, status, startDate, endDate, timestampStart, timestampEnd, company_name, plant_name } = req.query;
+  let {
+    device_id,
+    model,
+    status,
+    startDate,
+    endDate,
+    timestampStart,
+    timestampEnd,
+    page,
+    limit
+  } = req.query;
+
+  page = parseInt(page) || 1;
+  limit = parseInt(limit) || 10;
+  const offset = (page - 1) * limit;
+
   const filters = {};
-  
+
   if (device_id) filters.device_id = device_id;
   if (model) filters.model = model;
   if (status) filters.status = status;
-  if (company_name) filters.company_name = company_name;
-  if (plant_name) filters.plant_name = plant_name;
-  if (startDate) filters.startDate = startDate;
-  if (endDate) filters.endDate = endDate;
-  if (timestampStart) filters.timestampStart = timestampStart;
-  if (timestampEnd) filters.timestampEnd = timestampEnd;
+  if (startDate && endDate) {
+    filters.startDate = startDate;
+    filters.endDate = endDate;
+  }
+  if (timestampStart && timestampEnd) {
+    filters.timestampStart = timestampStart;
+    filters.timestampEnd = timestampEnd;
+  }
 
-  const result = await getAllPlcDataService(filters);
+  const result = await getAllPlcDataService(filters, { limit, offset });
+
   res.status(StatusCodes.OK).json({
     message: "PLC Data fetched successfully",
     data: result,
+    page,
+    limit
   });
 });
+
 
 export const getPlcDataById = AsyncHandler(async (req, res) => {
   const result = await getPlcDataByIdService(req.params.id);

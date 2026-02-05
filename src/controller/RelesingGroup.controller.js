@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import { createReleseGroup, DeleteRelesGroup, getReleaseGroupByNames, getRelesGroup, updateRelesGroup } from "../services/releaseGroup.service.js";
+import { createReleseGroup, DeleteRelesGroup, getAllReleaseGroups, getReleaseGroupByNames, getRelesGroup, updateRelesGroup } from "../services/releaseGroup.service.js";
 import { AsyncHandler } from "../utils/asyncHandler.js";
 import { CreateGroupUsersService, DeleteManyGroupUsersService, GetGroupUsersService } from "../services/groupUser.service.js";
 import { BadRequestError, NotFoundError } from "../utils/errorHandler.js";
@@ -119,7 +119,15 @@ export const UpdateReleasingGroup = AsyncHandler(async (req, res) => {
     res.status(StatusCodes.OK).json({
         message:"Release Updated Successfully"
     });
-})
+});
+
+
+export const GetAllReleaseGroups = AsyncHandler(async (req, res) => {
+    const result = await getAllReleaseGroups();
+    res.status(StatusCodes.OK).json({
+        data: result
+    });
+});
 
 
 
