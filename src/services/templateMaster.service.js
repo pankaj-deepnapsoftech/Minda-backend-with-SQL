@@ -103,14 +103,16 @@ export const createTemplateService = async ({
   return created
 }
 
-export const listTemplatesService = async () => {
+export const listTemplatesService = async (skip, limit) => {
   return await TemplateMasterModel.findAll({
     include: [assignedUserInclude, workflowInclude],
+    offset: skip,
+    limit,
     order: [['createdAt', 'DESC']],
   })
 }
 
-export const getTemplateByIdService = async (id) => {
+export const getTemplateByIdService = async ( isAdmin,id) => {
   const result = await TemplateMasterModel.findByPk(id, {
     include: [templateFieldsInclude, assignedUserInclude, workflowInclude],
   })
@@ -130,9 +132,9 @@ export const getTemplateByIdService = async (id) => {
   }
 
   // filter User type fields
-  plainResult.fields = plainResult.fields.filter(
-    (item) => item.type === "User"
-  )
+ if (!isAdmin) {
+   plainResult.fields = plainResult.fields.filter((item) => item.type === 'User')
+ }
 
   return plainResult
 }
@@ -349,15 +351,16 @@ export const deleteTemplateService = async (templateId) => {
   return true
 }
 
-export const getAssignedTemplatesService = async (userId) => {
-      // Fetch all active templates
-    const allTemplates = await TemplateMasterModel.findAll({
-      where: {
-        is_active: true,
-      },
-      include: [templateFieldsInclude, assignedUserInclude],
-      order: [['createdAt', 'DESC']],
-    })
+export const getAssignedTemplatesService = async (userId,limit,skip) => {
+  // Fetch all active templates
+  const allTemplates = await TemplateMasterModel.findAll({
+    where: {
+      is_active: true,
+    },
+    offset:skip,limit,
+    include: [templateFieldsInclude, assignedUserInclude],
+    order: [['createdAt', 'DESC']],
+  })
 
     // console.log(allTemplates[0].dataValues.fields);
 
