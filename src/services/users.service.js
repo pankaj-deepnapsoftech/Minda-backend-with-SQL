@@ -210,7 +210,6 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         throw new Error('Filter user not found');
     }
 
-
     // Get all non-admin users with HOD
     const allUsers = await UserModel.findAll({
         where: {
@@ -228,14 +227,13 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         raw: false
     });
 
-
     // Get all template IDs
     const templateIds = templates.map(t => t._id);
 
     // Get all user IDs
     const userIds = allUsers.map(u => u._id);
 
-    // Fetch all template fields for field_id to field_name mapping only
+    // Fetch all template fields for field_id to field_name mapping
     const templateFields = await TemplateFieldModel.findAll({
         where: {
             template_id: { [Op.in]: templateIds }
@@ -243,29 +241,28 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         raw: true
     });
 
-    // Create a map of field_id to field_name (for form_data conversion)
+    // Create a map of field_id to field_name
     const fieldIdToNameMap = new Map();
     templateFields.forEach(field => {
         fieldIdToNameMap.set(field._id, field.field_name);
     });
-
 
     // Fetch only SUBMITTED template submissions
     const templateSubmissions = await TemplateSubmissionModel.findAll({
         where: {
             template_id: { [Op.in]: templateIds },
             user_id: { [Op.in]: userIds },
-            status: "SUBMITTED" // Only get submitted submissions
+            status: "SUBMITTED"
         },
         raw: false
     });
 
-    // Create a map of template_id + user_id to submission
-    const submissionsMap = new Map();
+    // Create a map: user_id -> array of submissions
+    const userSubmissionsMap = new Map();
     templateSubmissions.forEach(submission => {
-        const key = `${submission.template_id}_${submission.user_id}`;
-
-        // console.log(submission)
+        if (!userSubmissionsMap.has(submission.user_id)) {
+            userSubmissionsMap.set(submission.user_id, []);
+        }
 
         // Convert form_data from field_id to field_name
         const originalFormData = submission.form_data || {};
@@ -273,7 +270,6 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
 
         Object.keys(originalFormData).forEach(fieldId => {
             const fieldName = fieldIdToNameMap.get(fieldId);
-            console.log(fieldId)
             if (fieldName) {
                 convertedFormData[fieldName] = originalFormData[fieldId];
             } else {
@@ -281,17 +277,17 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
             }
         });
 
-        submissionsMap.set(key, {
+        userSubmissionsMap.get(submission.user_id).push({
             submission_id: submission._id,
+            template_id: submission.template_id,
+            plant_id: submission.plant_id,
             status: submission.status,
             form_data: convertedFormData,
             submitted_at: submission.createdAt,
             updated_at: submission.updatedAt,
-            prev:submission.form_data
+            prev: submission.form_data
         });
     });
-
-    // console.log("Submissions Map Size:", submissionsMap);
 
     // Get all unique workflow IDs from templates
     const workflowIds = [...new Set(
@@ -310,15 +306,18 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         raw: true
     });
 
-    // Create a map of template_id + user_id to approvals array
+    // Create a map: template_id + user_id + plant_id -> approvals array
     const approvalsMap = new Map();
-    // Rejected checklists: template_id_user_id - agar reject hua to next approver ko dikhana nahi
     const rejectedKeys = new Set();
+    
     workflowApprovals.forEach(approval => {
-        const key = `${approval.template_id}_${approval.user_id}`;
+        const plantId = approval.plant_id || 'default';
+        const key = `${approval.template_id}_${approval.user_id}_${plantId}`;
+        
         if (!approvalsMap.has(key)) {
             approvalsMap.set(key, []);
         }
+        
         approvalsMap.get(key).push({
             approval_id: approval._id,
             current_stage: approval.current_stage,
@@ -331,15 +330,15 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
             approved_by: approval.approved_by,
             approved_at: approval.createdAt,
             updated_at: approval.updatedAt,
-        })
-        // Agar HOD/approver ne reject kiya, next wale ko approval list mein mat dikhao
+        });
+        
         const isRejected = (approval.status || "").toLowerCase() === "reject" || approval.status === "rejected";
         if (isRejected) {
             rejectedKeys.add(key);
         }
     });
 
-    // Fetch all workflows at once
+    // Fetch all workflows
     const workflows = await WorkflowModel.findAll({
         where: {
             _id: { [Op.in]: workflowIds }
@@ -347,7 +346,7 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         raw: false
     });
 
-    // Extract all unique release group IDs from all workflows
+    // Extract release group IDs
     const releaseGroupIds = new Set();
     workflows.forEach(workflow => {
         const workflowSteps = workflow.workflow || [];
@@ -358,7 +357,7 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         });
     });
 
-    // Fetch all group users for these release groups
+    // Fetch group users
     const groupUsers = await GroupUsersModel.findAll({
         where: {
             relese_group_id: { [Op.in]: Array.from(releaseGroupIds) }
@@ -367,7 +366,7 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         raw: true
     });
 
-    // Create a map of release_group_id to array of group users
+    // Map: release_group_id -> group users
     const groupUsersMap = new Map();
     groupUsers.forEach(gu => {
         if (!groupUsersMap.has(gu.relese_group_id)) {
@@ -416,11 +415,13 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         })
     );
 
+    // Get approval user names
     const approvalUserIds = new Set();
     workflowApprovals.forEach(a => {
         if (a.approved_by) approvalUserIds.add(a.approved_by);
         if (a.reassign_user_id) approvalUserIds.add(a.reassign_user_id);
     });
+    
     const approvalUsersList = approvalUserIds.size > 0
         ? await UserModel.findAll({
             where: { _id: [...approvalUserIds] },
@@ -429,6 +430,9 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         })
         : [];
     const approvalUserMap = new Map(approvalUsersList.map(u => [String(u._id), u.full_name || ""]));
+
+    // Create template map for quick lookup
+    const templateMap = new Map(templates.map(t => [t._id, t]));
 
     // Function to check if user should be included
     const shouldIncludeUser = (user) => {
@@ -472,49 +476,56 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         return false;
     };
 
-    // Filter users based on the logic
+    // Filter users
     const filteredUsers = allUsers.filter(user => shouldIncludeUser(user));
 
-    // Helper function to filter group_users for a specific user's employee_plant
-    const filterGroupUsersForUser = (workflowSteps, employeePlant, templateId) => {
-        // console.log(employeePlant,workflowSteps);
+    // Helper function to filter group_users for a specific submission plant_id
+    const filterGroupUsersForPlant = (workflowSteps, submissionPlantId, templateId) => {
         if (!workflowSteps || workflowSteps.length === 0) return workflowSteps;
 
         return workflowSteps.map((step, index) => {
-            // console.log(step)
-
             let fields = [];
-            // Skip index 0 (HOD step), only filter from index 1 onwards
+            
+            // HOD step - no filtering needed, return as is
             if (index === 0 || step.group === "HOD") {
-                fields = templateField.filter(tf => tf.template_id === templateId && tf.type === "HOD")
+                fields = templateField.filter(tf => tf.template_id === templateId && tf.type === "HOD");
                 return {
                     ...step,
                     fields
                 };
-
             }
 
+            // For approval steps (index > 0), filter based on submission's plant_id
             if (!step.group_users || step.group_users.length === 0) {
-                return step;
+                fields = templateField.filter(tf => 
+                    tf.template_id === templateId && 
+                    tf.type === "Approval" && 
+                    tf.group_id === step.group
+                );
+                return {
+                    ...step,
+                    fields
+                };
             }
 
-            // Find the matching group_user
+            // Find group_user whose plants_id array contains the submission's plant_id
             const matchingGroupUser = step.group_users.find(gu => {
                 try {
                     const plantsArray = JSON.parse(gu.plants_id);
-                    const plantMatches = plantsArray.includes(employeePlant);
-                    // const userIdMatches = gu.user_id === filterUserId;
-                    fields = templateField.filter(tf => tf.template_id === templateId && tf.type === "Approval" && tf.group_id === step.group)
-
-
-                    return plantMatches;
+                    // Check if submission's plant_id is in this group_user's plants
+                    return plantsArray.includes(submissionPlantId);
                 } catch (error) {
                     return false;
                 }
             });
 
+            // Get fields for this approval group
+            fields = templateField.filter(tf => 
+                tf.template_id === templateId && 
+                tf.type === "Approval" && 
+                tf.group_id === step.group
+            );
 
-            // Return the step with only the matching user, or empty array if no match
             return {
                 ...step,
                 group_users: matchingGroupUser ? [matchingGroupUser] : [],
@@ -523,27 +534,43 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         });
     };
 
-    // Map filtered users to result; only show template to user if they are the current approver (handles reassign)
+    // Build result structure: User -> Submissions -> Template details
     const result = await Promise.all(filteredUsers.map(async (user) => {
-        const templatesForUser = templates.filter(template => {
-            const assignedUsers = template.assigned_users;
-            return assignedUsers.some(au =>
-                (au.user_id || au._id) === user._id
-            );
-        });
+        const userSubmissions = userSubmissionsMap.get(user._id) || [];
+        
+        if (userSubmissions.length === 0) {
+            return null;
+        }
 
+        // Get all reassign users needed
         const allAllowedReassignIds = new Set();
-        const templateApproversMap = new Map();
-        for (const template of templatesForUser) {
-            const submissionKey = `${template._id}_${user._id}`;
-            const submission = submissionsMap.get(submissionKey) || null;
-            if (!submission) continue;
-            if (rejectedKeys.has(`${template._id}_${user._id}`)) continue;
+        const submissionApproverMap = new Map();
 
-            const currentApprover = await getCurrentApproverForTemplateAssignee(template._id, user._id);
+        // Process each submission
+        for (const submission of userSubmissions) {
+            const template = templateMap.get(submission.template_id);
+            if (!template) continue;
+
+            const plantId = submission.plant_id || 'default';
+            const rejectionKey = `${submission.template_id}_${user._id}_${plantId}`;
+            
+            if (rejectedKeys.has(rejectionKey)) continue;
+
+            // Check if user is assigned to this template
+            const assignedUsers = template.assigned_users || [];
+            const isAssigned = assignedUsers.some(au => (au.user_id || au._id) === user._id);
+            if (!isAssigned) continue;
+
+            const currentApprover = await getCurrentApproverForTemplateAssignee(
+                submission.template_id,
+                user._id,
+                plantId
+            );
+
             if (String(currentApprover.currentApproverUserId) !== String(filterUserId)) continue;
 
-            templateApproversMap.set(String(template._id), currentApprover);
+            const mapKey = `${submission.submission_id}`;
+            submissionApproverMap.set(mapKey, currentApprover);
             (currentApprover.allowedReassignUserIds || []).forEach(id => allAllowedReassignIds.add(id));
         }
 
@@ -556,27 +583,34 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
             : [];
         const reassignUserMap = new Map(reassignUserList.map(u => [String(u._id), u]));
 
-        const assignedTemplates = [];
-        for (const template of templatesForUser) {
-            const submissionKey = `${template._id}_${user._id}`;
-            const submission = submissionsMap.get(submissionKey) || null;
-            if (!submission) continue;
-            if (rejectedKeys.has(`${template._id}_${user._id}`)) continue;
+        // Build submissions array with template details
+        const submissionsWithTemplates = [];
 
-            const currentApprover = templateApproversMap.get(String(template._id));
-            if (!currentApprover || String(currentApprover.currentApproverUserId) !== String(filterUserId)) continue;
+        for (const submission of userSubmissions) {
+            const template = templateMap.get(submission.template_id);
+            if (!template) continue;
 
-            const workflow = template.workflow_id
-                ? workflowMap.get(template.workflow_id)
-                : null;
+            const plantId = submission.plant_id || 'default';
+            const rejectionKey = `${submission.template_id}_${user._id}_${plantId}`;
+            
+            if (rejectedKeys.has(rejectionKey)) continue;
 
-            // Filter workflow to show only matching group_user for this user's employee_plant
+            const mapKey = `${submission.submission_id}`;
+            const currentApprover = submissionApproverMap.get(mapKey);
+            
+            if (!currentApprover) continue;
+
+            // Get workflow for this template
+            const workflow = template.workflow_id ? workflowMap.get(template.workflow_id) : null;
+            
+            // Filter workflow based on SUBMISSION's plant_id (not user's employee_plant)
             const filteredWorkflow = workflow ? {
                 ...workflow,
-                workflow: filterGroupUsersForUser(workflow.workflow, user.employee_plant, template._id)
+                workflow: filterGroupUsersForPlant(workflow.workflow, submission.plant_id, template._id)
             } : null;
 
-            const approvalsKey = `${template._id}_${user._id}`;
+            // Get approvals for this submission
+            const approvalsKey = `${submission.template_id}_${user._id}_${plantId}`;
             const rawApprovals = approvalsMap.get(approvalsKey) || [];
             const approvals = rawApprovals.map(a => ({
                 ...a,
@@ -590,18 +624,29 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
                 .filter(Boolean)
                 .map(u => ({ user_id: u._id, full_name: u.full_name || "" }));
 
-            assignedTemplates.push({
-                template_id: template._id,
-                template_name: template.template_name,
-                template_type: template.template_type,
-                workflow: filteredWorkflow,  // Using filtered workflow
-                submission: submission,
-                approvals: approvals,
-                has_submission: true,
-                current_approver_stage: currentApprover.currentStage,
-                allowed_reassign_user_ids: allowedReassignUserIds,
-                allowed_reassign_users
+            submissionsWithTemplates.push({
+                submission_id: submission.submission_id,
+                plant_id: submission.plant_id,
+                status: submission.status,
+                form_data: submission.form_data,
+                submitted_at: submission.submitted_at,
+                updated_at: submission.updated_at,
+                prev: submission.prev,
+                template: {
+                    template_id: template._id,
+                    template_name: template.template_name,
+                    template_type: template.template_type,
+                    workflow: filteredWorkflow,
+                    approvals: approvals,
+                    current_approver_stage: currentApprover.currentStage,
+                    allowed_reassign_user_ids: allowedReassignUserIds,
+                    allowed_reassign_users: allowed_reassign_users
+                }
             });
+        }
+
+        if (submissionsWithTemplates.length === 0) {
+            return null;
         }
 
         return {
@@ -612,14 +657,13 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
             employee_plant: user.employee_plant,
             department_id: user.department_id,
             hod_id: user.hod_id,
-            assigned_templates: assignedTemplates
+            submissions: submissionsWithTemplates
         };
     }))
-        .then(users => users.filter(user => user.assigned_templates.length > 0));
+    .then(users => users.filter(user => user !== null));
 
     return result;
 };
-
 
 
 
