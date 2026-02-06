@@ -10,7 +10,7 @@ module.exports = {
       allowNull: true,
       references: {
         model: 'plants',
-        key: 'id',
+        key: '_id',
       },
       onUpdate: 'CASCADE',
       onDelete: 'SET NULL',

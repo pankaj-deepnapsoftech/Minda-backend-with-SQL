@@ -17,6 +17,8 @@ export const PlcProductModel = sequelize.define(
     company_name: { type: DataTypes.STRING(255), allowNull: true },
     plant_name: { type: DataTypes.STRING(255), allowNull: true },
     product_name: { type: DataTypes.STRING(255), allowNull: true },
+    approve_quantity: { type: DataTypes.INTEGER, allowNull: true, defaultValue: 0 },
+    reject_quantity: { type: DataTypes.INTEGER, allowNull: true, defaultValue: 0 },
   },
   {
     timestamps: true,

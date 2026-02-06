@@ -13,6 +13,8 @@ export const createQualityCheckService = async (data) => {
     remarks: data.remarks || null,
     checked_by: data.checked_by || null,
     checked_at: data.checked_at ? new Date(data.checked_at) : null,
+    approve_quantity: data.approve_quantity ?? 0,
+    reject_quantity: data.reject_quantity ?? 0,
   });
   return qc;
 };
@@ -83,6 +85,8 @@ export const updateQualityCheckService = async (id, data) => {
   if (data.remarks !== undefined) updateData.remarks = data.remarks;
   if (data.checked_by !== undefined) updateData.checked_by = data.checked_by;
   if (data.checked_at !== undefined) updateData.checked_at = data.checked_at ? new Date(data.checked_at) : null;
+  if (data.approve_quantity !== undefined) updateData.approve_quantity = data.approve_quantity;
+  if (data.reject_quantity !== undefined) updateData.reject_quantity = data.reject_quantity;
 
   await qc.update(updateData);
   return qc;

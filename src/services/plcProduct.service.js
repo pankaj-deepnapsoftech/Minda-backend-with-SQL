@@ -12,6 +12,8 @@ export const createPlcProductService = async (data) => {
     company_name: data.company_name || null,
     plant_name: data.plant_name || null,
     product_name: data.product_name || null,
+    approve_quantity: data.approve_quantity ?? 0,
+    reject_quantity: data.reject_quantity ?? 0,
   });
 
   return product;
@@ -69,6 +71,8 @@ export const updatePlcProductService = async (id, data) => {
   if (data.company_name !== undefined) updateData.company_name = data.company_name;
   if (data.plant_name !== undefined) updateData.plant_name = data.plant_name;
   if (data.product_name !== undefined) updateData.product_name = data.product_name;
+  if (data.approve_quantity !== undefined) updateData.approve_quantity = data.approve_quantity;
+  if (data.reject_quantity !== undefined) updateData.reject_quantity = data.reject_quantity;
 
   await product.update(updateData);
   return product;
