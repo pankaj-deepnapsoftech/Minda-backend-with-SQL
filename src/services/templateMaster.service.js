@@ -115,7 +115,7 @@ export const listTemplatesService = async (skip, limit) => {
 
 export const getTemplateByIdService = async (isAdmin, id, user_id) => {
   const result = await TemplateMasterModel.findByPk(id, {
-    include: [templateFieldsInclude, assignedUserInclude, workflowInclude],
+    include: [templateFieldsInclude, workflowInclude],
   })
 
   if (!result) {
@@ -136,8 +136,14 @@ export const getTemplateByIdService = async (isAdmin, id, user_id) => {
 
   // filter User type fields
   if (!isAdmin) {
-    // plainResult.assigned_users = plainResult.assigned_users?.filter((au) => au.user_id === user_id)[0]
-    plainResult.fields = plainResult.fields.filter((item) => item.type === 'User')
+    plainResult.assigned_users = plainResult.assigned_users?.filter((au) => au.user_id === user_id)[0]
+    plainResult.fields = plainResult.fields.filter((item) => item.type === 'User');
+    plainResult.assignedUser = await UserModel.findOne({
+      where:{
+        _id: plainResult.assigned_users?.user_id
+      },
+      attributes: ['_id', 'full_name', 'email', 'user_id','additional_plants','employee_plant'],
+    })
   }
 
   if (plainResult?.assignedUser?.additional_plants !== null && plainResult?.assignedUser?.additional_plants !== undefined  && plainResult?.assignedUser?.additional_plants.length > 0) {
@@ -149,7 +155,19 @@ export const getTemplateByIdService = async (isAdmin, id, user_id) => {
       },
       attributes:["_id","plant_name","plant_code"]
     })
-  }
+  };
+
+  plainResult.fields = await Promise.all(plainResult.fields.map(async (field) => {
+    if(field.type === 'Approval'){
+      const getGroup = await ReleseGroupModel.findByPk(field.group_id);
+      return {
+        ...field,
+        groupDetail: getGroup ? getGroup.toJSON() : null
+      }
+    }
+    return field
+  }));
+
 
   return plainResult
 }
@@ -393,15 +411,28 @@ export const getAssignedTemplatesService = async (userId, limit, skip) => {
   const assignedTemplates = allTemplates.filter((template) => {
     if (template.assigned_user === userId) return true
     const list = template.assigned_users || []
-    return list?.some((a) => a && (a.user_id === userId || (typeof a === 'string' && a === userId)))
+    return list?.filter((a) => a && (a.user_id === userId || (typeof a === 'string' && a === userId)))
   });
 
+  
 
+  const filteredData = assignedTemplates.map((item) => {
+  const plainItem = item.toJSON(); // 🔥 IMPORTANT
+
+  const filteredUser = plainItem.assigned_users?.find(
+    (as) => as.user_id === userId
+  );
+
+  return {
+    ...plainItem,
+    assigned_users: filteredUser || null,
+  };
+});
 
   // console.log(assignedTemplates);
 
 
-  return allTemplates;
+  return filteredData;
 
 }
 
