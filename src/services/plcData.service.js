@@ -147,6 +147,14 @@ export const getAllPlcDataService = async (filters = {}, pagination = {}) => {
     where.status = { [Op.like]: `%${filters.status}%` };
   }
 
+  if (filters.company_name) {
+    where.company_name = { [Op.like]: `%${filters.company_name}%` };
+  }
+
+  if (filters.plant_name) {
+    where.plant_name = { [Op.like]: `%${filters.plant_name}%` };
+  }
+
   if (filters.startDate && filters.endDate) {
     where.created_at = {
       [Op.between]: [filters.startDate, filters.endDate],
