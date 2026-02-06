@@ -200,6 +200,7 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         raw: true
     });
 
+    // Fetch HOD and Approval type fields separately (for workflow fields)
     const templateField = await TemplateFieldModel.findAll({
         where: {
             type: { [Op.in]: ['HOD', 'Approval'] }
@@ -233,17 +234,17 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
     // Get all user IDs
     const userIds = allUsers.map(u => u._id);
 
-    // Fetch all template fields for field_id to field_name mapping
-    const templateFields = await TemplateFieldModel.findAll({
+    // Fetch ALL template fields for field_id to field_name mapping (including normal fields)
+    const allTemplateFields = await TemplateFieldModel.findAll({
         where: {
             template_id: { [Op.in]: templateIds }
         },
         raw: true
     });
 
-    // Create a map of field_id to field_name
+    // Create a map of field_id to field_name for form_data conversion
     const fieldIdToNameMap = new Map();
-    templateFields.forEach(field => {
+    allTemplateFields.forEach(field => {
         fieldIdToNameMap.set(field._id, field.field_name);
     });
 
@@ -268,10 +269,10 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         const originalFormData = submission.form_data || {};
         const convertedFormData = {};
 
-        Object.keys(originalFormData).forEach(fieldId => {
+        Object.keys(originalFormData).forEach((fieldId,index) => {
             const fieldName = fieldIdToNameMap.get(fieldId);
             if (fieldName) {
-                convertedFormData[fieldName] = originalFormData[fieldId];
+                convertedFormData[fieldName + "~" + index] = originalFormData[fieldId];
             } else {
                 convertedFormData[fieldId] = originalFormData[fieldId];
             }
