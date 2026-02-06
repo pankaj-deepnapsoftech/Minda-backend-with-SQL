@@ -64,9 +64,9 @@ export const getTemplateSubmission = AsyncHandler(async (req, res) => {
 
 export const getUserTemplateSubmissions = AsyncHandler(async (req, res) => {
   const userId = req.currentUser._id;
-  const { template_id } = req.query;
+  const { template_id,plant_id } = req.query;
 
-  const result = await getUserTemplateSubmissionsService(userId, template_id || null);
+  const result = await getUserTemplateSubmissionsService(userId, template_id || null, plant_id || null)
 
   return res.status(StatusCodes.OK).json({
     message: "Template submissions fetched successfully",
