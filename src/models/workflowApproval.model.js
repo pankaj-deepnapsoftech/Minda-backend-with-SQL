@@ -77,6 +77,10 @@ export const WorkflowApprovalModel = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,
+    },
+    submition_id:{
+      type: DataTypes.UUID,
+      allowNull:false,
     }
   },
   {
