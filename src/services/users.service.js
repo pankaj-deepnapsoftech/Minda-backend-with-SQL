@@ -248,12 +248,12 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         fieldIdToNameMap.set(field._id, field.field_name);
     });
 
-    // ✅ FETCH ALL SUBMISSIONS (not just SUBMITTED status)
+    // Fetch only SUBMITTED template submissions
     const templateSubmissions = await TemplateSubmissionModel.findAll({
         where: {
             template_id: { [Op.in]: templateIds },
             user_id: { [Op.in]: userIds },
-            status: { [Op.notIn]: ["REJECTED", "CANCELLED"] } // ✅ Sirf rejected/cancelled ko exclude karo
+            status: "SUBMITTED"
         },
         raw: false
     });
@@ -269,7 +269,7 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         const originalFormData = submission.form_data || {};
         const convertedFormData = {};
 
-        Object.keys(originalFormData).forEach((fieldId, index) => {
+        Object.keys(originalFormData).forEach((fieldId,index) => {
             const fieldName = fieldIdToNameMap.get(fieldId);
             if (fieldName) {
                 convertedFormData[fieldName + "~" + index] = originalFormData[fieldId];
@@ -297,28 +297,23 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
             .filter(Boolean)
     )];
 
-    // Get submission IDs for approval filtering
-    const submissionIds = templateSubmissions.map(s => s._id);
-
-    // ✅ FETCH WORKFLOW APPROVALS WITH SUBMISSION_ID FILTER
+    // Fetch all workflow approvals
     const workflowApprovals = await WorkflowApprovalModel.findAll({
         where: {
             template_id: { [Op.in]: templateIds },
-            user_id: { [Op.in]: userIds },
-            submission_id: { [Op.in]: submissionIds } // ✅ Submission-wise filtering
+            user_id: { [Op.in]: userIds }
         },
         order: [['current_stage', 'ASC']],
         raw: true
     });
 
-    // ✅ SUBMISSION-LEVEL APPROVAL TRACKING
+    // Create a map: template_id + user_id + plant_id -> approvals array
     const approvalsMap = new Map();
-    const rejectedSubmissions = new Set(); // Track rejected submissions by submission_id
+    const rejectedKeys = new Set();
     
     workflowApprovals.forEach(approval => {
         const plantId = approval.plant_id || 'default';
-        // ✅ KEY INCLUDES SUBMISSION_ID NOW
-        const key = `${approval.submission_id}_${approval.template_id}_${approval.user_id}_${plantId}`;
+        const key = `${approval.template_id}_${approval.user_id}_${plantId}`;
         
         if (!approvalsMap.has(key)) {
             approvalsMap.set(key, []);
@@ -340,7 +335,7 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
         
         const isRejected = (approval.status || "").toLowerCase() === "reject" || approval.status === "rejected";
         if (isRejected) {
-            rejectedSubmissions.add(approval.submission_id); // ✅ Track by submission_id
+            rejectedKeys.add(key);
         }
     });
 
@@ -558,21 +553,19 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
             if (!template) continue;
 
             const plantId = submission.plant_id || 'default';
+            const rejectionKey = `${submission.template_id}_${user._id}_${plantId}`;
             
-            // ✅ CHECK REJECTION BY SUBMISSION_ID
-            if (rejectedSubmissions.has(submission.submission_id)) continue;
+            if (rejectedKeys.has(rejectionKey)) continue;
 
             // Check if user is assigned to this template
             const assignedUsers = template.assigned_users || [];
             const isAssigned = assignedUsers.some(au => (au.user_id || au._id) === user._id);
             if (!isAssigned) continue;
 
-            // ✅ PASS SUBMISSION_ID TO getCurrentApproverForTemplateAssignee
             const currentApprover = await getCurrentApproverForTemplateAssignee(
                 submission.template_id,
                 user._id,
-                plantId,
-                submission.submission_id  // ✅ SUBMISSION ID PASS KARO
+                plantId
             );
 
             if (String(currentApprover.currentApproverUserId) !== String(filterUserId)) continue;
@@ -599,9 +592,9 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
             if (!template) continue;
 
             const plantId = submission.plant_id || 'default';
+            const rejectionKey = `${submission.template_id}_${user._id}_${plantId}`;
             
-            // ✅ CHECK REJECTION BY SUBMISSION_ID
-            if (rejectedSubmissions.has(submission.submission_id)) continue;
+            if (rejectedKeys.has(rejectionKey)) continue;
 
             const mapKey = `${submission.submission_id}`;
             const currentApprover = submissionApproverMap.get(mapKey);
@@ -617,8 +610,8 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
                 workflow: filterGroupUsersForPlant(workflow.workflow, submission.plant_id, template._id)
             } : null;
 
-            // ✅ GET APPROVALS BY SUBMISSION_ID
-            const approvalsKey = `${submission.submission_id}_${submission.template_id}_${user._id}_${plantId}`;
+            // Get approvals for this submission
+            const approvalsKey = `${submission.template_id}_${user._id}_${plantId}`;
             const rawApprovals = approvalsMap.get(approvalsKey) || [];
             const approvals = rawApprovals.map(a => ({
                 ...a,
