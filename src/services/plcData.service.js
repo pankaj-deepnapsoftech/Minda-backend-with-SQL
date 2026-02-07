@@ -342,3 +342,132 @@ export const getPlcDowntimeByMachineService = async (filters = {}) => {
     value: parseFloat((r.value_seconds / 3600).toFixed(2)) // Seconds to Hours
   })).filter(r => r.value > 0);
 };
+
+export const getPlcTimeDistributionService = async (filters = {}) => {
+  const where = {};
+
+  if (filters.device_id) where.device_id = { [Op.like]: `%${filters.device_id}%` };
+  if (filters.model) where.model = { [Op.like]: `%${filters.model}%` };
+  if (filters.status) where.status = { [Op.like]: `%${filters.status}%` };
+  if (filters.company_name) where.company_name = { [Op.like]: `%${filters.company_name}%` };
+  if (filters.plant_name) where.plant_name = { [Op.like]: `%${filters.plant_name}%` };
+
+  if (filters.startDate && filters.endDate) {
+    where.created_at = { [Op.between]: [filters.startDate, filters.endDate] };
+  }
+  if (filters.timestampStart && filters.timestampEnd) {
+    where.timestamp = { [Op.between]: [filters.timestampStart, filters.timestampEnd] };
+  }
+
+  // Same data scope as PlcStoppage: order created_at DESC, limit 1000 when no date filter
+  const queryOpts = {
+    attributes: ['_id', 'device_id', 'start_time', 'stop_time', 'timestamp', 'production_count', 'status', 'created_at'],
+    where,
+    order: [['created_at', 'DESC']],
+    raw: true
+  };
+  if (!filters.startDate || !filters.endDate) {
+    queryOpts.limit = 1000;
+  }
+  const records = await PlcDataModel.findAll(queryOpts);
+
+  // Normalize like PlcStoppage: _ts = timestamp || created_at || start_time
+  const allRecords = records.map((r) => {
+    const ts = r.timestamp || r.created_at || r.start_time;
+    return {
+      ...r,
+      _ts: ts ? new Date(ts).getTime() : 0,
+      _start: r.start_time ? new Date(r.start_time).getTime() : null,
+      _stop: r.stop_time ? new Date(r.stop_time).getTime() : null
+    };
+  });
+
+  let totalRunMins = 0;
+  let totalStopMins = 0;
+  let totalIdleMins = 0;
+
+  const grouped = {};
+  allRecords.forEach((r) => {
+    const dId = r.device_id || "unknown";
+    if (!grouped[dId]) grouped[dId] = [];
+    grouped[dId].push(r);
+  });
+
+  Object.keys(grouped).forEach((deviceId) => {
+    const group = grouped[deviceId].sort((a, b) => a._ts - b._ts);
+
+    // A) Sessions - same as PlcStoppage (Run/Stop from session status, gaps -> Stop)
+    const sessions = group.filter((r) => r.start_time || r.stop_time);
+
+    sessions.forEach((row, index) => {
+      const start = row.start_time ? new Date(row.start_time).getTime() : (row.timestamp ? new Date(row.timestamp).getTime() : 0);
+      const stop = row.stop_time ? new Date(row.stop_time).getTime() : null;
+      const statusLower = (row.status || "").toLowerCase();
+      const durationMins = start && stop && stop > start ? (stop - start) / 60000 : 0;
+
+      if (durationMins > 0) {
+        if (statusLower.includes("stop")) {
+          totalRunMins += durationMins;
+        } else {
+          totalStopMins += durationMins;
+        }
+      }
+
+      if (index > 0) {
+        const prev = sessions[index - 1];
+        if (prev._stop && row._start && row._start > prev._stop) {
+          totalStopMins += (row._start - prev._stop) / 60000;
+        }
+      }
+    });
+
+    // B) Idle - production_count same for 30+ sec (same as PlcStoppage)
+    let lastProdCount = -1;
+    let lastProdChangeTime = 0;
+    let isIdling = false;
+    let idleStartTs = 0;
+
+    group.forEach((r) => {
+      const currentTs = r._ts;
+      const currentProd = r.production_count;
+      if (!currentTs) return;
+      const currProd = currentProd != null ? currentProd : lastProdCount;
+
+      if (lastProdCount === -1) {
+        lastProdCount = currProd;
+        lastProdChangeTime = currentTs;
+        return;
+      }
+
+      if (currProd !== lastProdCount) {
+        if (isIdling) {
+          const durationMins = (currentTs - idleStartTs) / 60000;
+          if (durationMins > 0) totalIdleMins += durationMins;
+          isIdling = false;
+        }
+        lastProdCount = currProd;
+        lastProdChangeTime = currentTs;
+      } else {
+        const diffMs = currentTs - lastProdChangeTime;
+        if (!isIdling && diffMs > 30000) {
+          isIdling = true;
+          idleStartTs = lastProdChangeTime + 30000;
+        }
+      }
+    });
+
+    if (isIdling && group.length > 0) {
+      const lastRecord = group[group.length - 1];
+      const endTs = lastRecord._ts;
+      if (endTs > idleStartTs) {
+        totalIdleMins += (endTs - idleStartTs) / 60000;
+      }
+    }
+  });
+
+  return {
+    runTime: Math.round(totalRunMins),
+    stopTime: Math.round(totalStopMins),
+    idleTime: Math.round(totalIdleMins)
+  };
+};
