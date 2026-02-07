@@ -132,7 +132,7 @@ export const createPlcDataService = async (data) => {
   return plcData;
 };
 
-export const getAllPlcDataService = async (filters = {}) => {
+export const getAllPlcDataService = async (filters = {}, pagination = {}) => {
   const where = {};
 
   if (filters.device_id) {
@@ -145,6 +145,14 @@ export const getAllPlcDataService = async (filters = {}) => {
 
   if (filters.status) {
     where.status = { [Op.like]: `%${filters.status}%` };
+  }
+
+  if (filters.company_name) {
+    where.company_name = { [Op.like]: `%${filters.company_name}%` };
+  }
+
+  if (filters.plant_name) {
+    where.plant_name = { [Op.like]: `%${filters.plant_name}%` };
   }
 
   if (filters.startDate && filters.endDate) {
@@ -162,11 +170,14 @@ export const getAllPlcDataService = async (filters = {}) => {
   const plcDataList = await PlcDataModel.findAll({
     where,
     order: [["created_at", "DESC"]],
+    limit: pagination.limit,
+    offset: pagination.offset,
   });
 
   await attachProductToPlcData(plcDataList);
   return plcDataList;
 };
+
 
 export const getPlcDataByIdService = async (id) => {
   const plcData = await PlcDataModel.findByPk(id);

@@ -9,6 +9,11 @@ export const createPlcProductService = async (data) => {
     part_no: data.part_no || null,
     model_code: data.model_code || null,
     machine_name: data.machine_name || null,
+    company_name: data.company_name || null,
+    plant_name: data.plant_name || null,
+    product_name: data.product_name || null,
+    approve_quantity: data.approve_quantity ?? 0,
+    reject_quantity: data.reject_quantity ?? 0,
   });
 
   return product;
@@ -29,6 +34,9 @@ export const getAllPlcProductsService = async (filters = {}) => {
       { part_no: { [Op.like]: searchTerm } },
       { model_code: { [Op.like]: searchTerm } },
       { machine_name: { [Op.like]: searchTerm } },
+      { company_name: { [Op.like]: searchTerm } },
+      { plant_name: { [Op.like]: searchTerm } },
+      { product_name: { [Op.like]: searchTerm } },
     ];
   }
 
@@ -60,6 +68,11 @@ export const updatePlcProductService = async (id, data) => {
   if (data.part_no !== undefined) updateData.part_no = data.part_no;
   if (data.model_code !== undefined) updateData.model_code = data.model_code;
   if (data.machine_name !== undefined) updateData.machine_name = data.machine_name;
+  if (data.company_name !== undefined) updateData.company_name = data.company_name;
+  if (data.plant_name !== undefined) updateData.plant_name = data.plant_name;
+  if (data.product_name !== undefined) updateData.product_name = data.product_name;
+  if (data.approve_quantity !== undefined) updateData.approve_quantity = data.approve_quantity;
+  if (data.reject_quantity !== undefined) updateData.reject_quantity = data.reject_quantity;
 
   await product.update(updateData);
   return product;

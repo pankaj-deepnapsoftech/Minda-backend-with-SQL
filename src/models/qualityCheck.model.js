@@ -18,6 +18,8 @@ export const QualityCheckModel = sequelize.define(
     remarks: { type: DataTypes.TEXT, allowNull: true },
     checked_by: { type: DataTypes.STRING(255), allowNull: true },
     checked_at: { type: DataTypes.DATE, allowNull: true },
+    approve_quantity: { type: DataTypes.INTEGER, allowNull: true, defaultValue: 0 },
+    reject_quantity: { type: DataTypes.INTEGER, allowNull: true, defaultValue: 0 },
   },
   {
     timestamps: true,
