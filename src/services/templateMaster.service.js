@@ -38,7 +38,7 @@ const assignedUserInclude = {
   model: UserModel,
   as: 'assignedUser',
   required: false,
-  attributes: ['_id', 'full_name', 'email', 'user_id','additional_plants','employee_plant'],
+  attributes: ['_id', 'full_name', 'email', 'user_id', 'additional_plants', 'employee_plant'],
 }
 
 const workflowInclude = {
@@ -139,26 +139,26 @@ export const getTemplateByIdService = async (isAdmin, id, user_id) => {
     plainResult.assigned_users = plainResult.assigned_users?.filter((au) => au.user_id === user_id)[0]
     plainResult.fields = plainResult.fields.filter((item) => item.type === 'User');
     plainResult.assignedUser = await UserModel.findOne({
-      where:{
+      where: {
         _id: plainResult.assigned_users?.user_id
       },
-      attributes: ['_id', 'full_name', 'email', 'user_id','additional_plants','employee_plant'],
+      attributes: ['_id', 'full_name', 'email', 'user_id', 'additional_plants', 'employee_plant'],
     })
   }
 
-  if (plainResult?.assignedUser?.additional_plants !== null && plainResult?.assignedUser?.additional_plants !== undefined  && plainResult?.assignedUser?.additional_plants.length > 0) {
+  if (plainResult?.assignedUser?.additional_plants !== null && plainResult?.assignedUser?.additional_plants !== undefined && plainResult?.assignedUser?.additional_plants.length > 0) {
     plainResult.assignedUser.additional_plants = [...plainResult.assignedUser.additional_plants, plainResult.assignedUser.employee_plant]
 
     plainResult.plant_option = await PlantModel.findAll({
       where: {
         _id: { [Op.in]: plainResult.assignedUser.additional_plants }
       },
-      attributes:["_id","plant_name","plant_code"]
+      attributes: ["_id", "plant_name", "plant_code"]
     })
   };
 
   plainResult.fields = await Promise.all(plainResult.fields.map(async (field) => {
-    if(field.type === 'Approval'){
+    if (field.type === 'Approval') {
       const getGroup = await ReleseGroupModel.findByPk(field.group_id);
       return {
         ...field,
@@ -414,20 +414,20 @@ export const getAssignedTemplatesService = async (userId, limit, skip) => {
     return list?.filter((a) => a && (a.user_id === userId || (typeof a === 'string' && a === userId)))
   });
 
-  
+
 
   const filteredData = assignedTemplates.map((item) => {
-  const plainItem = item.toJSON(); // 🔥 IMPORTANT
+    const plainItem = item.toJSON(); // 🔥 IMPORTANT
 
-  const filteredUser = plainItem.assigned_users?.find(
-    (as) => as.user_id === userId
-  );
+    const filteredUser = plainItem.assigned_users?.find(
+      (as) => as.user_id === userId
+    );
 
-  return {
-    ...plainItem,
-    assigned_users: filteredUser || null,
-  };
-});
+    return {
+      ...plainItem,
+      assigned_users: filteredUser || null,
+    };
+  });
 
   // console.log(assignedTemplates);
 
@@ -1002,7 +1002,7 @@ export const getTemplateWorkflowStatusService = async (
  * Used to filter "pending for me" list: show template only to currentApproverUserId.
  * Handles reassign: if last action is reassigned, current approver = reassign_user_id.
  */
-export const getCurrentApproverForTemplateAssignee = async (templateId, assigneeUserId,submission_id) => {
+export const getCurrentApproverForTemplateAssignee = async (templateId, assigneeUserId, submission_id, edit_count) => {
   const status = await getTemplateWorkflowStatusService(templateId, assigneeUserId, {
     fullChain: true,
   })
@@ -1017,7 +1017,7 @@ export const getCurrentApproverForTemplateAssignee = async (templateId, assignee
     }
 
   const approvals = await WorkflowApprovalModel.findAll({
-    where: { template_id: templateId, user_id: assigneeUserId, submission_id: submission_id },
+    where: { template_id: templateId, user_id: assigneeUserId, submission_id: submission_id, edit_count },
     order: [['createdAt', 'ASC']],
     attributes: ['current_stage', 'status', 'reassign_user_id', 'approved_by'],
     raw: true,

@@ -570,7 +570,8 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
             const currentApprover = await getCurrentApproverForTemplateAssignee(
                 submission.template_id,
                 user._id,
-                submission.submission_id
+                submission.submission_id,
+                submission.edit_count
             );
 
 

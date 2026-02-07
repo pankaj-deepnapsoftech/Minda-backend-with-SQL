@@ -39,11 +39,12 @@ export const createTemplateSubmission = AsyncHandler(async (req, res) => {
 
 export const updateTemplateSubmission = AsyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { form_data, status } = req.body;
+  const { form_data, status, edit_count } = req.body;
 
   const result = await updateTemplateSubmissionService(id, {
     form_data,
     status,
+    edit_count
   });
 
   return res.status(StatusCodes.OK).json({
