@@ -1002,7 +1002,7 @@ export const getTemplateWorkflowStatusService = async (
  * Used to filter "pending for me" list: show template only to currentApproverUserId.
  * Handles reassign: if last action is reassigned, current approver = reassign_user_id.
  */
-export const getCurrentApproverForTemplateAssignee = async (templateId, assigneeUserId) => {
+export const getCurrentApproverForTemplateAssignee = async (templateId, assigneeUserId,submission_id) => {
   const status = await getTemplateWorkflowStatusService(templateId, assigneeUserId, {
     fullChain: true,
   })
@@ -1017,11 +1017,11 @@ export const getCurrentApproverForTemplateAssignee = async (templateId, assignee
     }
 
   const approvals = await WorkflowApprovalModel.findAll({
-    where: { template_id: templateId, user_id: assigneeUserId },
+    where: { template_id: templateId, user_id: assigneeUserId, submission_id: submission_id },
     order: [['createdAt', 'ASC']],
     attributes: ['current_stage', 'status', 'reassign_user_id', 'approved_by'],
     raw: true,
-  })
+  });
 
   const userToStage = new Map(chain.map((c) => [String(c.user_id), c.stage_index]))
   let nextStage = 0
