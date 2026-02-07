@@ -8,6 +8,7 @@ import { CreateTemplateApprovalNotification, singleNotification } from "../servi
 import { sendNewNotification } from "../socket/notification.socket.js";
 import { logger } from "../utils/logger.js";
 import { WorkflowApprovalModel } from "../models/workflowApproval.model.js";
+import { TemplateSubmissionModel } from "../models/templateSubmission.model.js";
 
 
 export const createStatusHistory = AsyncHandler(async (req, res) => {
@@ -41,10 +42,13 @@ export const createStatusHistory = AsyncHandler(async (req, res) => {
         if (updated[0] > 0) {
             logger.info("Reassign approved: updated reassign_status to true for template", check.template_id);
         }
+
+        await TemplateSubmissionModel.update({ _id: result?.submission_id }, { process_approved: true });
     }
 
     if (check?.status === "reject" || check?.status === "rejected") {
         await updateAssignedUserStatusService(check?.template_id, { user_id: check?.user_id, status: "rejected" })
+        await TemplateSubmissionModel.update({ _id: result?.submission_id }, { process_approved: true })
     }
 
     if (check?.status === "reassigned" && check?.template_id && check?.user_id) {

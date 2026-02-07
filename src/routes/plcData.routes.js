@@ -5,11 +5,17 @@ import {
   getPlcDataById,
   updatePlcData,
   deletePlcData,
+  getPlcErrorDistribution,
+  getPlcDowntimeByMachine,
+  getPlcTimeDistribution,
 } from "../controller/plcData.controller.js";
 
 const router = Router();
 
 router.post("/", createPlcData);
+router.get("/analytics/error-distribution", getPlcErrorDistribution);
+router.get("/analytics/downtime-by-machine", getPlcDowntimeByMachine);
+router.get("/analytics/time-distribution", getPlcTimeDistribution);
 router.get("/", getAllPlcData);
 router.get("", getAllPlcData);
 router.get("/:id", getPlcDataById);

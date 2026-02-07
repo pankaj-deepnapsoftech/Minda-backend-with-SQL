@@ -6,6 +6,9 @@ import {
   getPlcDataByIdService,
   updatePlcDataService,
   deletePlcDataService,
+  getPlcErrorDistributionService,
+  getPlcDowntimeByMachineService,
+  getPlcTimeDistributionService,
 } from "../services/plcData.service.js";
 
 export const createPlcData = AsyncHandler(async (req, res) => {
@@ -64,5 +67,57 @@ export const deletePlcData = AsyncHandler(async (req, res) => {
   await deletePlcDataService(req.params.id);
   res.status(StatusCodes.OK).json({
     message: "PLC Data deleted successfully",
+  });
+});
+
+export const getPlcErrorDistribution = AsyncHandler(async (req, res) => {
+  const { startDate, endDate, companyName, plantName, deviceId, model } = req.query;
+  const filters = {};
+  if (startDate) filters.startDate = startDate;
+  if (endDate) filters.endDate = endDate;
+  if (companyName) filters.companyName = companyName;
+  if (plantName) filters.plantName = plantName;
+  if (deviceId) filters.deviceId = deviceId;
+  if (model) filters.model = model;
+
+  const result = await getPlcErrorDistributionService(filters);
+  res.status(StatusCodes.OK).json({
+    message: "PLC Error distribution fetched successfully",
+    data: result,
+  });
+});
+
+export const getPlcDowntimeByMachine = AsyncHandler(async (req, res) => {
+  const { startDate, endDate, companyName, plantName, deviceId, model } = req.query;
+  const filters = {};
+  if (startDate) filters.startDate = startDate;
+  if (endDate) filters.endDate = endDate;
+  if (companyName) filters.companyName = companyName;
+  if (plantName) filters.plantName = plantName;
+  if (deviceId) filters.deviceId = deviceId;
+  if (model) filters.model = model;
+
+  const result = await getPlcDowntimeByMachineService(filters);
+  res.status(StatusCodes.OK).json({
+    message: "PLC Downtime fetched successfully",
+    data: result,
+  });
+});
+
+export const getPlcTimeDistribution = AsyncHandler(async (req, res) => {
+  const { startDate, endDate, companyName, plantName, deviceId, model, status } = req.query;
+  const filters = {};
+  if (startDate) filters.startDate = startDate;
+  if (endDate) filters.endDate = endDate;
+  if (companyName) filters.company_name = companyName;
+  if (plantName) filters.plant_name = plantName;
+  if (deviceId) filters.device_id = deviceId;
+  if (model) filters.model = model;
+  if (status) filters.status = status;
+
+  const result = await getPlcTimeDistributionService(filters);
+  res.status(StatusCodes.OK).json({
+    message: "PLC Time Distribution fetched successfully",
+    data: result,
   });
 });
