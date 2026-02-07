@@ -53,6 +53,11 @@ export const TemplateSubmissionModel = sequelize.define(
     plant_id:{
       type: DataTypes.UUID,
       allowNull: true,
+    },
+    process_approved:{
+      type:DataTypes.BOOLEAN,
+      allowNull:true,
+      defaultValue:false
     }
   },
   {
