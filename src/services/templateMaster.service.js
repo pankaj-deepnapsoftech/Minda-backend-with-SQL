@@ -523,10 +523,10 @@ export const getTemplateStatusListService = async (
   const SubmitionData = await TemplateSubmissionModel.findAll({
     where:{
       template_id: templateIds,
-    }
+    },
+    attributes:["_id","template_id","user_id","status","createdAt","plant_id"],
   });
 
-  console.log(SubmitionData);
 
   const allHodIds = new Set()
   users.forEach((user) => {
@@ -712,18 +712,24 @@ export const getTemplateStatusListService = async (
           item?.dataValues?.template_id === templateJson?._id,
       )
 
+      const submitionCounter = SubmitionData.filter((item) => item.dataValues.template_id === templateJson._id && item.dataValues.user_id === currentUser._id);
+
+
+
       const mapWorkFlowApproval = filterWorkflowApproval.map((item) => {
         const workflowObj = workflowForUser?.workflow[item?.dataValues?.current_stage]
         const { approvals, ...workflowWithoutApprovals } = Object(workflowObj || {})
 
         return { ...item.dataValues, workflowWithoutApprovals }
-      })
+      });
+
 
       result.push({
         user_id: au.user_id,
         status: au.status,
         userDetail: currentUser || null,
         mapWorkFlowApproval,
+        submitionCounter,
         template_data: {
           _id: templateJson._id,
           template_name: templateJson.template_name,

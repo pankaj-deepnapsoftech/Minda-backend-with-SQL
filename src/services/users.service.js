@@ -317,8 +317,8 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
     const rejectedKeys = new Set();
     
     workflowApprovals.forEach(approval => {
-        const plantId = approval.plant_id || 'default';
-        const key = `${approval.template_id}_${approval.user_id}_${plantId}`;
+        const plantId = approval.submission_id || 'default';
+        const key = `${approval.template_id}_${approval.user_id}_${plantId}_${approval.edit_count}`;
         
         if (!approvalsMap.has(key)) {
             approvalsMap.set(key, []);
@@ -598,7 +598,7 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
             const template = templateMap.get(submission.template_id);
             if (!template) continue;
 
-            const plantId = submission.plant_id || 'default';
+            const plantId = submission.submission_id || 'default';
             const rejectionKey = `${submission.template_id}_${user._id}_${plantId}`;
             
             if (rejectedKeys.has(rejectionKey)) continue;
@@ -618,13 +618,14 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
             } : null;
 
             // Get approvals for this submission
-            const approvalsKey = `${submission.template_id}_${user._id}_${plantId}`;
+            const approvalsKey = `${submission.template_id}_${user._id}_${plantId}_${submission.edit_count}`;
             const rawApprovals = approvalsMap.get(approvalsKey) || [];
-            const approvals = rawApprovals.map(a => ({
+            const approvals = rawApprovals.map(a => { 
+                return {
                 ...a,
                 approved_by_name: a.approved_by ? approvalUserMap.get(String(a.approved_by)) : null,
                 reassign_to_name: a.reassign_user_id ? approvalUserMap.get(String(a.reassign_user_id)) : null,
-            }));
+            }});
 
             const allowedReassignUserIds = currentApprover.allowedReassignUserIds || [];
             const allowed_reassign_users = allowedReassignUserIds

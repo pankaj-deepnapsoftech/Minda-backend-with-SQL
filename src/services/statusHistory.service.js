@@ -24,7 +24,7 @@ export const CreateStatusHistoryService = async (data) => {
         if (!payload.template_id || !payload.user_id) {
             throw new BadRequestError("template_id and user_id are required for reassign", "CreateStatusHistoryService()");
         }
-        const current = await getCurrentApproverForTemplateAssignee(payload.template_id, payload.user_id);
+        const current = await getCurrentApproverForTemplateAssignee(payload.template_id, payload.user_id, payload.submission_id, payload.edit_count);
         if (String(current.currentApproverUserId) !== String(payload.approved_by)) {
             throw new BadRequestError("Only the current approver can reassign", "CreateStatusHistoryService()");
         }
