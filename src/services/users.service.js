@@ -255,12 +255,14 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
             user_id: { [Op.in]: userIds },
             status: "SUBMITTED"
         },
+        include:[{model:PlantModel,as:"plant",attributes:["_id","plant_name","plant_code"]}],
         raw: false
     });
 
     // Create a map: user_id -> array of submissions
     const userSubmissionsMap = new Map();
     templateSubmissions.forEach(submission => {
+
         if (!userSubmissionsMap.has(submission.user_id)) {
             userSubmissionsMap.set(submission.user_id, []);
         }
@@ -280,8 +282,10 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
 
         userSubmissionsMap.get(submission.user_id).push({
             submission_id: submission._id,
+            edit_count: submission.edit_count,
             template_id: submission.template_id,
             plant_id: submission.plant_id,
+            plant_detail: submission.plant,
             status: submission.status,
             form_data: convertedFormData,
             submitted_at: submission.createdAt,
@@ -289,6 +293,7 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
             prev: submission.form_data
         });
     });
+
 
     // Get all unique workflow IDs from templates
     const workflowIds = [...new Set(
@@ -628,7 +633,9 @@ export const GetTemplateAssignModuleServiceByUser = async (filterUserId) => {
 
             submissionsWithTemplates.push({
                 submission_id: submission.submission_id,
+                submission_edit_count: submission.edit_count,
                 plant_id: submission.plant_id,
+                plant_detail: submission.plant_detail,
                 status: submission.status,
                 form_data: submission.form_data,
                 submitted_at: submission.submitted_at,
