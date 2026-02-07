@@ -21,6 +21,7 @@ export const createTemplateSubmissionService = async (data) => {
     where: {
       template_id,
       user_id,
+      plant_id
     },
   });
 
@@ -91,8 +92,8 @@ export const getTemplateSubmissionService = async (submissionId) => {
   return submission;
 };
 
-export const getUserTemplateSubmissionsService = async (userId, templateId = null) => {
-  const where = { user_id: userId };
+export const getUserTemplateSubmissionsService = async (userId, templateId = null,plant_id = null) => {
+  const where = { user_id: userId, plant_id }
   if (templateId) {
     where.template_id = templateId;
   }

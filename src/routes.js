@@ -30,29 +30,29 @@ import StatusHistourRoutes from "./routes/statusHistory.routes.js"
 const routes = Router();
 
 
-routes.use("/users",            usersRoutes);
-routes.use("/company",           Authorization, companyRoutes);
-routes.use("/plant",             Authorization, plantRoutes);
-routes.use("/roles",             Authorization, roleRoutes);
-routes.use("/process",           Authorization, processRoutes);
-routes.use("/assembly",          Authorization, AssemblyRoutes);
-routes.use("/parts",             Authorization, PartRoutes);
-routes.use("/checkitem",         Authorization, CheckItemRoutes);
+routes.use("/users", usersRoutes);
+routes.use("/company", Authorization, companyRoutes);
+routes.use("/plant", Authorization, plantRoutes);
+routes.use("/roles", Authorization, roleRoutes);
+routes.use("/process", Authorization, processRoutes);
+routes.use("/assembly", Authorization, AssemblyRoutes);
+routes.use("/parts", Authorization, PartRoutes);
+routes.use("/checkitem", Authorization, CheckItemRoutes);
 routes.use("/checkitem-history", Authorization, CheckListHistoryRoutes);
-routes.use("/dashboard",         Authorization, DashboardRoutes);
-routes.use("/types",             Authorization,TypesRoutes);
-routes.use("/notification",      Authorization,NotificationRoutes);
-routes.use("/department",        Authorization,departmentRoutes);
-routes.use("/document",          Authorization,documentsRoutes);
-routes.use("/release-group",      Authorization,ReleaseGroupRoutes);
-routes.use("/template-master",    Authorization, TemplateMasterRoutes);
-routes.use("/workflow",            Authorization, WorkflowRoutes);
+routes.use("/dashboard", Authorization, DashboardRoutes);
+routes.use("/types", Authorization, TypesRoutes);
+routes.use("/notification", Authorization, NotificationRoutes);
+routes.use("/department", Authorization, departmentRoutes);
+routes.use("/document", Authorization, documentsRoutes);
+routes.use("/release-group", Authorization, ReleaseGroupRoutes);
+routes.use("/template-master", Authorization, TemplateMasterRoutes);
+routes.use("/workflow", Authorization, WorkflowRoutes);
 routes.use("/template-submission", Authorization, TemplateSubmissionRoutes);
 routes.get("/plc-data/ping", (_req, res) => res.status(200).json({ message: "plc-data route reachable" }));
-routes.use("/plc-data",            Authorization, PlcDataRoutes);
-routes.use("/plc-products",        Authorization, PlcProductRoutes);
-routes.use("/quality-check",       Authorization, QualityCheckRoutes);
-routes.use("/status-history",      Authorization,StatusHistourRoutes)
+routes.use("/plc-data", Authorization, PlcDataRoutes);
+routes.use("/plc-products", Authorization, PlcProductRoutes);
+routes.use("/quality-check", Authorization, QualityCheckRoutes);
+routes.use("/status-history", Authorization, StatusHistourRoutes)
 
 
 
