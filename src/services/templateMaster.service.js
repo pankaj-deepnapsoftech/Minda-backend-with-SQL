@@ -9,6 +9,7 @@ import { GroupUsersModel } from '../models/groupUsers.model.js'
 import { BadRequestError, NotFoundError } from '../utils/errorHandler.js'
 import { ReleseGroupModel } from '../models/ReleseGroup.modal.js'
 import { PlantModel } from '../models/plant.modal.js'
+import { TemplateSubmissionModel } from '../models/templateSubmission.model.js'
 
 // Normalize to [{ user_id, status }]. Accepts: [id], [{ user_id, status? }], [{ _id }]
 function toAssignedUsersArray(raw) {
@@ -517,7 +518,15 @@ export const getTemplateStatusListService = async (
       ['current_stage', 'ASC'],
       ['createdAt', 'ASC'],
     ],
-  })
+  });
+
+  const SubmitionData = await TemplateSubmissionModel.findAll({
+    where:{
+      template_id: templateIds,
+    }
+  });
+
+  console.log(SubmitionData);
 
   const allHodIds = new Set()
   users.forEach((user) => {
