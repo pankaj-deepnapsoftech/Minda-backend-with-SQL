@@ -1,7 +1,7 @@
 import { PlcDataModel } from "../models/plcData.model.js";
 import { PlcProductModel } from "../models/plcProduct.model.js";
 import { NotFoundError } from "../utils/errorHandler.js";
-import { Op } from "sequelize";
+import { Op, Sequelize } from "sequelize";
 
 /** Attach product name (from plc_products) to plc data by device_id = machine_name */
 async function attachProductToPlcData(plcDataOrList) {
@@ -216,4 +216,129 @@ export const deletePlcDataService = async (id) => {
 
   await plcData.destroy();
   return true;
+};
+
+export const getPlcErrorDistributionService = async (filters = {}) => {
+  const where = {};
+
+  if (filters.startDate && filters.endDate) {
+    where.created_at = {
+      [Op.between]: [filters.startDate, filters.endDate],
+    };
+  }
+
+  if (filters.companyName) {
+    where.companyname = {
+      [Op.like]: `%${filters.companyName}%`,
+    };
+  }
+
+  if (filters.plantName) {
+    where.plantname = {
+      [Op.like]: `%${filters.plantName}%`,
+    };
+  }
+
+  if (filters.deviceId) {
+    where.device_id = {
+      [Op.like]: `%${filters.deviceId}%`,
+    };
+  }
+
+  if (filters.model) {
+    where.model = {
+      [Op.like]: `%${filters.model}%`,
+    };
+  }
+
+  const results = await PlcDataModel.findAll({
+    attributes: [
+      [Sequelize.literal("JSON_VALUE(extra_data, '$.ERROR_CODE')"), 'name'],
+      [Sequelize.fn('COUNT', Sequelize.col('_id')), 'value']
+    ],
+    where: {
+      ...where,
+    },
+    group: [Sequelize.literal("JSON_VALUE(extra_data, '$.ERROR_CODE')")],
+    raw: true
+  });
+
+  return results.filter(item => item.name);
+};
+
+export const getPlcDowntimeByMachineService = async (filters = {}) => {
+  const where = {};
+
+  // If status is 'Stopped' or 'Stop', then stop_time - start_time is downtime.
+  // We need to filter by status or just check where stop_time is not null?
+  // User said "stoppage jo meri stopped time aa rha h". 
+  // Let's assume records with non-null stop_time contribute to downtime, 
+  // or specifically status='Stopped'.
+  // However, often stop_time - start_time IS the duration of the state.
+  // If status is 'Running', it's runtime. If 'Stopped', it's downtime.
+  
+  // Let's try to filter for status NOT 'Running' (case insensitive)
+  where.status = {
+    [Op.notLike]: 'Running' 
+  };
+  // Or maybe better: where status LIKE 'Stop%' or similar.
+  // Let's assume anything NOT Running is downtime for now, or check for non-null Stop_time.
+  // But wait, if Stop_time is present, it means the cycle finished.
+  // If Status was 'Running' during that cycle, then Stop - Start is Run Time.
+  // If Status was 'Stopped', then Stop - Start is Stop Time.
+  // So we must filter by Status = 'Stopped' or similar.
+  
+  // Refined Logic:
+  // 1. Filter by date range
+  if (filters.startDate && filters.endDate) {
+    where.created_at = {
+      [Op.between]: [filters.startDate, filters.endDate],
+    };
+  }
+  
+  if (filters.companyName) where.companyname = { [Op.like]: `%${filters.companyName}%` };
+  if (filters.plantName) where.plantname = { [Op.like]: `%${filters.plantName}%` };
+  if (filters.deviceId) where.device_id = { [Op.like]: `%${filters.deviceId}%` };
+  if (filters.model) where.model = { [Op.like]: `%${filters.model}%` };
+
+  // 2. Filter for Stopped status
+  // We'll search for status containing 'Stop' or 'Error' or 'Alarm'?
+  // User specifically said "stopped time aa rha h".
+  // Let's assume status='Stopped'.
+  // But to be safe, let's include anything that is not 'Running'.
+  // Actually, let's stick to what the user implies: downtime.
+  where.status = {
+    [Op.or]: [
+      { [Op.like]: '%Stop%' },
+      { [Op.like]: '%Down%' },
+      { [Op.like]: '%Error%' },
+      { [Op.like]: '%Alarm%' }
+    ]
+  };
+
+  // 3. Sum (stop_time - start_time) in seconds/minutes
+  // SQL Server: DATEDIFF(SECOND, start_time, stop_time)
+  
+  const results = await PlcDataModel.findAll({
+    attributes: [
+      ['device_id', 'name'],
+      [Sequelize.fn('SUM', Sequelize.literal("DATEDIFF(SECOND, start_time, stop_time)")), 'value_seconds']
+    ],
+    where: {
+      ...where,
+      start_time: { [Op.ne]: null },
+      stop_time: { [Op.ne]: null }
+    },
+    group: ['device_id'],
+    order: [[Sequelize.literal('value_seconds'), 'DESC']],
+    raw: true
+  });
+
+  // Convert seconds to hours for display (or keep as minutes/seconds depending on magnitude)
+  // User chart says "183 h", so let's return hours (or minutes and let frontend format).
+  // Let's return hours rounded to 2 decimal for better precision.
+  return results.map(r => ({
+    name: r.name,
+    value: parseFloat((r.value_seconds / 3600).toFixed(2)) // Seconds to Hours
+  })).filter(r => r.value > 0);
 };
