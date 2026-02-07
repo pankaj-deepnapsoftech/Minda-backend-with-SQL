@@ -51,6 +51,7 @@ export const CreateStatusHistoryService = async (data) => {
         approved_by: payload.approved_by || null,
         reassign_status: payload.status === "reassigned" ? false : false,
         submission_id: payload.submission_id,
+        edit_count:payload.edit_count
     };
     if (payload.reassign_stage != null) createData.reassign_stage = Number(payload.reassign_stage);
     if (payload.status === "reassigned" && payload.reassign_user_id) createData.reassign_user_id = payload.reassign_user_id;
